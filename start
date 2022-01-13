@@ -1,0 +1,38 @@
+#!/usr/bin/env sh
+if [ -z "$(docker network ls --filter name=^ffc-pay$ --format={{.Name}})" ]; then
+  echo "Creating ffc-pay Docker network"
+  docker network create ffc-pay
+fi
+set -e
+projectRoot="$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pwd)"
+
+show_help() {
+  echo "
+    Usage: scripts/test [OPTION...]
+    Build and run payment services.
+
+    Options:
+      -h, --help       display this help text
+    "
+}
+
+while :; do
+  case $1 in
+    -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
+      show_help
+      exit
+      ;;
+    *)
+      break
+  esac
+
+  shift
+done
+
+cd "${projectRoot}"
+./ffc-pay-batch-processor/scripts/start -d && \
+  ./ffc-pay-enrichment/scripts/start -d && \
+  ./ffc-pay-processing/scripts/start -d && \
+  ./ffc-pay-submission/scripts/start -d && \
+  ./ffc-pay-responses/scripts/start -d && \
+  ./ffc-pay-web/scripts/start -d

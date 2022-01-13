@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+
+# Clone repositories managed by this project
+set -e
+projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pwd)
+
+(
+  cd "${projectRoot}"
+
+  printf "\nCloning repositories\n"
+
+  test -d ffc-pay-enrichment\
+    && >&2 echo "The 'ffc-pay-enrichment' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-enrichment.git
+  test -d ffc-pay-processing\
+    && >&2 echo "The 'ffc-pay-processing' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-processing.git
+  test -d ffc-pay-submission\
+    && >&2 echo "The 'ffc-pay-submission' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-submission.git
+  test -d ffc-pay-responses\
+    && >&2 echo "The 'ffc-pay-responses' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-responses.git
+  test -d ffc-pay-batch-processor\
+    && >&2 echo "The 'ffc-pay-batch-processor' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-batch-processor.git
+  test -d ffc-pay-web\
+    && >&2 echo "The 'ffc-pay-web' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-web.git
+)
