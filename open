@@ -1,0 +1,42 @@
+#!/usr/bin/env sh
+set -e
+projectRoot="$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pwd)"
+
+show_help() {
+  echo "
+    Usage: scripts/test [OPTION...]
+    Build and run payment services.
+
+    Options:
+      -h, --help       display this help text
+    "
+}
+
+while :; do
+  case $1 in
+    -p|--payments)
+      payments="true"
+      ;;
+
+    -g|--gateway)
+      gateway="true"
+      ;;
+
+    -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
+      show_help
+      exit
+      ;;
+    *)
+      break
+  esac
+
+  shift
+done
+
+cd "${projectRoot}"
+code ./ffc-pay-batch-processor && \
+  code ./ffc-pay-enrichment && \
+  code ./ffc-pay-processing && \
+  code ./ffc-pay-submission && \
+  code ./ffc-pay-responses && \
+  code ./ffc-pay-web
