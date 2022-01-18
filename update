@@ -49,3 +49,7 @@ cd "${projectRoot}"
 cd ./ffc-pay-web && \
   git checkout main && \
   git pull
+cd "${projectRoot}"
+cd ./ffc-pay-request-editor && \
+  git checkout main && \
+  git pull

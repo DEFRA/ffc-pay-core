@@ -35,4 +35,5 @@ cd "${projectRoot}"
   ./ffc-pay-processing/scripts/start -d && \
   ./ffc-pay-submission/scripts/start -d && \
   ./ffc-pay-responses/scripts/start -d && \
-  ./ffc-pay-web/scripts/start -d
+  ./ffc-pay-web/scripts/start -d && \
+  ./ffc-pay-request-editor/scripts/start -d
