@@ -43,3 +43,6 @@ cd ./ffc-pay-responses && \
 cd "${projectRoot}"
 cd ./ffc-pay-web && \
   docker-compose build
+cd "${projectRoot}"
+cd ./ffc-pay-request-editor && \
+  docker-compose build

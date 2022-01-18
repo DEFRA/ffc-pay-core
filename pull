@@ -44,3 +44,6 @@ cd ./ffc-pay-responses && \
 cd "${projectRoot}"
 cd ./ffc-pay-web && \
   git pull
+cd "${projectRoot}"
+cd ./ffc-pay-request-editor && \
+  git pull

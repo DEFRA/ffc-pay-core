@@ -39,4 +39,5 @@ code ./ffc-pay-batch-processor && \
   code ./ffc-pay-processing && \
   code ./ffc-pay-submission && \
   code ./ffc-pay-responses && \
-  code ./ffc-pay-web
+  code ./ffc-pay-web && \
+  code ./ffc-pay-request-editor

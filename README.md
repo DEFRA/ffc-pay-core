@@ -36,8 +36,14 @@ Process payment responses from Dynamics 365.
 
 - https://github.com/DEFRA/ffc-pay-responses
 
-### Payment web
+### Payment management
 
 Internal user admin web application to manage payment holds and processing.
 
 - https://github.com/DEFRA/ffc-pay-web
+
+### Payment Request Editor
+
+Edit payment requests.
+
+- https://github.com/DEFRA/ffc-pay-request-editor

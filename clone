@@ -27,4 +27,7 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
   test -d ffc-pay-web\
     && >&2 echo "The 'ffc-pay-web' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-web.git
+  test -d ffc-pay-request-editor\
+    && >&2 echo "The 'ffc-pay-request-editor' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-request-editor.git
 )
