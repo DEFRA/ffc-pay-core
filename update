@@ -53,3 +53,15 @@ cd "${projectRoot}"
 cd ./ffc-pay-request-editor && \
   git checkout main && \
   git pull
+cd "${projectRoot}"
+cd ./ffc-pay-batch-validator && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-file-sender && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-file-consumer && \
+  git checkout main && \
+  git pull

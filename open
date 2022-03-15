@@ -14,14 +14,6 @@ show_help() {
 
 while :; do
   case $1 in
-    -p|--payments)
-      payments="true"
-      ;;
-
-    -g|--gateway)
-      gateway="true"
-      ;;
-
     -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
       show_help
       exit
@@ -40,4 +32,7 @@ code ./ffc-pay-batch-processor && \
   code ./ffc-pay-submission && \
   code ./ffc-pay-responses && \
   code ./ffc-pay-web && \
-  code ./ffc-pay-request-editor
+  code ./ffc-pay-request-editor && \
+  code ./ffc-pay-batch-validator && \
+  code ./ffc-pay-file-sender && \
+  code ./ffc-pay-file-consumer

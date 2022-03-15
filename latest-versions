@@ -20,3 +20,12 @@ echo 'ffc-pay-web' &&
 
 echo 'ffc-pay-request-editor' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-request-editor/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-batch-validator' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-batch-validator/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-file-sender' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-file-sender/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-file-consumer' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-file-consumer/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
