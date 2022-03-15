@@ -13,7 +13,6 @@ show_help() {
 
     Options:
       -h, --help       display this help text
-      -f, --functions  include Azure Functions as well as containers
     "
 }
 
@@ -22,10 +21,6 @@ while :; do
     -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
       show_help
       exit
-      ;;
-
-    -f|--functions)
-      functions="true"
       ;;
     *)
       break
@@ -42,9 +37,3 @@ cd "${projectRoot}"
   ./ffc-pay-responses/scripts/start -d && \
   ./ffc-pay-web/scripts/start -d && \
   ./ffc-pay-request-editor/scripts/start -d
-
-if [ "${functions}" = "true" ]; then
-  ./ffc-pay-batch-validator/scripts/start && \
-    ./ffc-pay-file-sender/scripts/start && \
-    ./ffc-pay-file-consumer/scripts/start
-fi
