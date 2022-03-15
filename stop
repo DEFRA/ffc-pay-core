@@ -9,6 +9,7 @@ show_help() {
 
     Options:
       -h, --help       display this help text
+      -f, --functions  include Azure Functions as well as containers
     "
 }
 
@@ -17,6 +18,10 @@ while :; do
     -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
       show_help
       exit
+      ;;
+
+    -f|--functions)
+      functions="true"
       ;;
     *)
       break

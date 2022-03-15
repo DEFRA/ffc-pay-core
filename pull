@@ -14,7 +14,6 @@ show_help() {
 
 while :; do
   case $1 in
-
     -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
       show_help
       exit
