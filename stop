@@ -51,3 +51,15 @@ cd ./ffc-pay-web && \
 cd "${projectRoot}"
 cd ./ffc-pay-request-editor && \
   docker-compose down $@
+
+if [ "${functions}" = "true" ]; then
+  cd "${projectRoot}"
+  cd ./ffc-pay-batch-validator && \
+    docker-compose down $@
+  cd "${projectRoot}"
+  cd ./ffc-pay-file-sender && \
+    docker-compose down $@
+  cd "${projectRoot}"
+  cd ./ffc-pay-file-consumer && \
+    docker-compose down $@
+fi
