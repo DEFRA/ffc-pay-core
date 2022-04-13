@@ -64,3 +64,4 @@ cd ./ffc-pay-event && \
 cd "${projectRoot}"
 cd ./ffc-pay-alerts && \
   docker-compose down $@
+  
