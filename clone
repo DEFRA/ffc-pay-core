@@ -39,4 +39,10 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
   test -d ffc-pay-file-consumer\
     && >&2 echo "The 'ffc-pay-file-consumer' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-file-consumer.git
+  test -d ffc-pay-event\
+    && >&2 echo "The 'ffc-pay-event' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-event.git
+  test -d ffc-pay-alerts\
+    && >&2 echo "The 'ffc-pay-alerts' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-alerts.git
 )
