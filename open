@@ -4,7 +4,7 @@ projectRoot="$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; p
 
 show_help() {
   echo "
-    Usage: path/to/ffc/pay/core [OPTION...]
+    Usage: path/to/ffc-pay-core [OPTION...]
     Open payment services in VS Code.
 
     Options:
