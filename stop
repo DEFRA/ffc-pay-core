@@ -50,18 +50,6 @@ cd "${projectRoot}"
 cd ./ffc-pay-request-editor && \
   docker-compose down $@
 cd "${projectRoot}"
-cd ./ffc-pay-batch-validator && \
-  docker-compose down $@
-cd "${projectRoot}"
-cd ./ffc-pay-file-sender && \
-  docker-compose down $@
-cd "${projectRoot}"
-cd ./ffc-pay-file-consumer && \
-  docker-compose down $@
-cd "${projectRoot}"
-cd ./ffc-pay-event && \
-  docker-compose down $@
-cd "${projectRoot}"
 cd ./ffc-pay-alerts && \
-  docker-compose down $@
-  
+  docker-compose down $@ && \
+  pgrep -f "^func start -p *" | xargs kill -9
