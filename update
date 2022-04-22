@@ -70,6 +70,10 @@ cd ./ffc-pay-event && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
+cd ./ffc-pay-event-projection && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-alerts && \
   git checkout main && \
   git pull

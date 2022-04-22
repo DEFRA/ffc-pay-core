@@ -41,4 +41,5 @@ cd "${projectRoot}"
   ./ffc-pay-file-sender/scripts/start -d && \
   ./ffc-pay-file-consumer/scripts/start -d && \
   ./ffc-pay-event/scripts/start -d && \
+  ./ffc-pay-event-projection/scripts/start -d && \
   ./ffc-pay-alerts/scripts/start -d

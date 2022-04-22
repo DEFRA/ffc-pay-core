@@ -53,3 +53,21 @@ cd "${projectRoot}"
 cd ./ffc-pay-alerts && \
   docker-compose down $@ && \
   pgrep -f "^func start -p *" | xargs kill -9
+cd ./ffc-pay-batch-validator && \
+  docker-compose down $@ && \
+  pgrep -f "^func start -p *" | xargs kill -9
+cd ./ffc-pay-file-sender && \
+  docker-compose down $@ && \
+  pgrep -f "^func start -p *" | xargs kill -9
+cd ./ffc-pay-file-consumer && \
+  docker-compose down $@ && \
+  pgrep -f "^func start -p *" | xargs kill -9
+cd ./ffc-pay-event && \
+  docker-compose down $@ && \
+  pgrep -f "^func start -p *" | xargs kill -9
+cd ./ffc-pay-event-projection && \
+  docker-compose down $@ && \
+  pgrep -f "^func start -p *" | xargs kill -9
+cd ./ffc-pay-alerts && \
+  docker-compose down $@ && \
+  pgrep -f "^func start -p *" | xargs kill -9
