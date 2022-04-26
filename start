@@ -12,12 +12,16 @@ show_help() {
     Run payment services.
 
     Options:
+      -f, --functions   include Azure Function Apps
       -h, --help       display this help text
     "
 }
 
 while :; do
   case $1 in
+     -f|--functions)
+      functions="true"
+      ;;
     -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
       show_help
       exit
@@ -36,10 +40,13 @@ cd "${projectRoot}"
   ./ffc-pay-submission/scripts/start -d && \
   ./ffc-pay-responses/scripts/start -d && \
   ./ffc-pay-web/scripts/start -d && \
-  ./ffc-pay-request-editor/scripts/start -d && \
+  ./ffc-pay-request-editor/scripts/start -d
+
+if [ "${functions}" = "true" ]; then
   ./ffc-pay-batch-validator/scripts/start -d && \
   ./ffc-pay-file-sender/scripts/start -d && \
   ./ffc-pay-file-consumer/scripts/start -d && \
   ./ffc-pay-event/scripts/start -d && \
   ./ffc-pay-event-projection/scripts/start -d && \
   ./ffc-pay-alerts/scripts/start -d
+fi
