@@ -25,24 +25,38 @@ while :; do
   shift
 done
 
+compose() {
+  cd "${projectRoot}"
+  cd ./$@ && docker-compose down -v
+  exit 0
+}
+
+(
+if [ ! -z "$1" ];
+then
+  compose "$1"
+else
+
 cd "${projectRoot}"
 cd ./ffc-pay-batch-processor && \
-  docker-compose down $@
+  docker-compose down -v
 cd "${projectRoot}"
 cd ./ffc-pay-enrichment && \
-  docker-compose down $@
+  docker-compose down -v
 cd "${projectRoot}"
 cd ./ffc-pay-processing && \
-  docker-compose down $@
+  docker-compose down -v
 cd "${projectRoot}"
 cd ./ffc-pay-submission && \
-  docker-compose down $@
+  docker-compose down -v
 cd "${projectRoot}"
 cd ./ffc-pay-responses && \
-  docker-compose down $@
+  docker-compose down -v
 cd "${projectRoot}"
 cd ./ffc-pay-web && \
-  docker-compose down $@
+  docker-compose down -v
 cd "${projectRoot}"
 cd ./ffc-pay-request-editor && \
-  docker-compose down $@
+  docker-compose down -v
+fi
+)

@@ -29,6 +29,18 @@ while :; do
   shift
 done
 
+compose() {
+  cd "${projectRoot}"
+  ./$@/scripts/start -d
+  exit 0
+}
+
+(
+if [ ! -z "$1" ];
+then
+  compose "$1"
+else
+
 cd "${projectRoot}"
 ./ffc-pay-batch-processor/scripts/start -d && \
   ./ffc-pay-enrichment/scripts/start -d && \
@@ -37,3 +49,5 @@ cd "${projectRoot}"
   ./ffc-pay-responses/scripts/start -d && \
   ./ffc-pay-web/scripts/start -d && \
   ./ffc-pay-request-editor/scripts/start -d
+  fi
+)
