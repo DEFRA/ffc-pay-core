@@ -64,3 +64,6 @@ cd ./ffc-pay-event-projection && \
 cd "${projectRoot}"
 cd ./ffc-pay-alerts && \
   sh ./scripts/stop
+cd "${projectRoot}"
+cd ./ffc-pay-mi-reporting && \
+  sh ./scripts/stop
