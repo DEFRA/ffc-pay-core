@@ -29,3 +29,18 @@ echo 'ffc-pay-file-sender' &&
 
 echo 'ffc-pay-file-consumer' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-file-consumer/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-event' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-event/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-event-projection' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-event-projection/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-alerts' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-alerts/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-mi-reporting' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-mi-reporting/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-event-signalr' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-event-signalr/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'

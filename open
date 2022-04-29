@@ -4,16 +4,20 @@ projectRoot="$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; p
 
 show_help() {
   echo "
-    Usage: scripts/test [OPTION...]
-    Build and run payment services.
+    Usage: path/to/ffc-pay-core [OPTION...]
+    Open payment services in VS Code.
 
     Options:
+      -f, --functions   include Azure Function Apps
       -h, --help       display this help text
     "
 }
 
 while :; do
   case $1 in
+    -f|--functions)
+      functions="true"
+      ;;
     -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
       show_help
       exit
@@ -26,13 +30,21 @@ while :; do
 done
 
 cd "${projectRoot}"
-code ./ffc-pay-batch-processor && \
-  code ./ffc-pay-enrichment && \
-  code ./ffc-pay-processing && \
-  code ./ffc-pay-submission && \
-  code ./ffc-pay-responses && \
-  code ./ffc-pay-web && \
-  code ./ffc-pay-request-editor && \
-  code ./ffc-pay-batch-validator && \
-  code ./ffc-pay-file-sender && \
-  code ./ffc-pay-file-consumer
+  code ./ffc-pay-batch-processor;
+  code ./ffc-pay-enrichment;
+  code ./ffc-pay-processing;
+  code ./ffc-pay-submission;
+  code ./ffc-pay-responses;
+  code ./ffc-pay-web;
+  code ./ffc-pay-request-editor;
+
+if [ "${functions}" = "true" ]; then
+  code ./ffc-pay-batch-validator;
+  code ./ffc-pay-file-sender;
+  code ./ffc-pay-file-consumer;
+  code ./ffc-pay-event;
+  code ./ffc-pay-event-projection;
+  code ./ffc-pay-alerts;
+  code ./ffc-pay-mi-reporting;
+  code ./ffc-pay-event-signalr;
+fi

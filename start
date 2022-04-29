@@ -3,21 +3,26 @@ if [ -z "$(docker network ls --filter name=^ffc-pay$ --format={{.Name}})" ]; the
   echo "Creating ffc-pay Docker network"
   docker network create ffc-pay
 fi
+
 set -e
 projectRoot="$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pwd)"
 
 show_help() {
   echo "
-    Usage: scripts/test [OPTION...]
-    Build and run payment services.
+    Usage: path/to/ffc-pay-core [OPTION...]
+    Run payment services.
 
     Options:
+      -f, --functions   include Azure Function Apps
       -h, --help       display this help text
     "
 }
 
 while :; do
   case $1 in
+     -f|--functions)
+      functions="true"
+      ;;
     -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
       show_help
       exit
@@ -30,10 +35,21 @@ while :; do
 done
 
 cd "${projectRoot}"
-./ffc-pay-batch-processor/scripts/start -d && \
-  ./ffc-pay-enrichment/scripts/start -d && \
-  ./ffc-pay-processing/scripts/start -d && \
-  ./ffc-pay-submission/scripts/start -d && \
-  ./ffc-pay-responses/scripts/start -d && \
-  ./ffc-pay-web/scripts/start -d && \
-  ./ffc-pay-request-editor/scripts/start -d
+  ./ffc-pay-batch-processor/scripts/start -d;
+  ./ffc-pay-enrichment/scripts/start -d;
+  ./ffc-pay-processing/scripts/start -d;
+  ./ffc-pay-submission/scripts/start -d;
+  ./ffc-pay-responses/scripts/start -d;
+  ./ffc-pay-web/scripts/start -d;
+  ./ffc-pay-request-editor/scripts/start -d;
+
+if [ "${functions}" = "true" ]; then
+  ./ffc-pay-batch-validator/scripts/start -d;
+  ./ffc-pay-file-sender/scripts/start -d;
+  ./ffc-pay-file-consumer/scripts/start -d;
+  ./ffc-pay-event/scripts/start -d;
+  ./ffc-pay-event-projection/scripts/start -d;
+  ./ffc-pay-alerts/scripts/start -d;
+  ./ffc-pay-mi-reporting/scripts/start -d;
+  ./ffc-pay-event-signalr/scripts/start -d;
+fi
