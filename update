@@ -81,3 +81,7 @@ cd "${projectRoot}"
 cd ./ffc-pay-mi-reporting && \
   git checkout main && \
   git pull
+cd "${projectRoot}"
+cd ./ffc-pay-event-signalr && \
+  git checkout main && \
+  git pull

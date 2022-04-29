@@ -46,4 +46,5 @@ if [ "${functions}" = "true" ]; then
   code ./ffc-pay-event-projection;
   code ./ffc-pay-alerts;
   code ./ffc-pay-mi-reporting;
+  code ./ffc-pay-event-signalr;
 fi

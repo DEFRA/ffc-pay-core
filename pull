@@ -67,3 +67,6 @@ cd ./ffc-pay-alerts && \
 cd "${projectRoot}"
 cd ./ffc-pay-mi-reporting && \
   git pull
+cd "${projectRoot}"
+cd ./ffc-pay-event-signalr && \
+  git pull

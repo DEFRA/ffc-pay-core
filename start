@@ -51,4 +51,5 @@ if [ "${functions}" = "true" ]; then
   ./ffc-pay-event-projection/scripts/start -d;
   ./ffc-pay-alerts/scripts/start -d;
   ./ffc-pay-mi-reporting/scripts/start -d;
+  ./ffc-pay-event-signalr/scripts/start -d;
 fi
