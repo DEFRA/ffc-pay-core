@@ -4,8 +4,8 @@ projectRoot="$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; p
 
 show_help() {
   echo "
-    Usage: scripts/test [OPTION...]
-    Build and run payment services.
+    Usage: path/to/ffc-pay-core [OPTION...]
+    Run git pull in payment services.
 
     Options:
       -h, --help       display this help text
@@ -54,4 +54,19 @@ cd ./ffc-pay-file-sender && \
   git pull
 cd "${projectRoot}"
 cd ./ffc-pay-file-consumer && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-event && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-event-projection && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-alerts && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-mi-reporting && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-event-signalr && \
   git pull
