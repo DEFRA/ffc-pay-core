@@ -44,3 +44,9 @@ echo 'ffc-pay-mi-reporting' &&
 
 echo 'ffc-pay-event-signalr' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-event-signalr/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-statement-constructor' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-constructor/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-statement-generator' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-generator/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'

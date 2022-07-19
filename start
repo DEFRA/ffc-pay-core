@@ -14,6 +14,7 @@ show_help() {
 
     Options:
       -f, --functions   include Azure Function Apps
+      -s, --statements  include statement services
       -h, --help       display this help text
     "
 }
@@ -22,6 +23,9 @@ while :; do
   case $1 in
      -f|--functions)
       functions="true"
+      ;;
+    -s|--statements)
+      statements="true"
       ;;
     -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
       show_help
@@ -42,6 +46,11 @@ cd "${projectRoot}"
   ./ffc-pay-responses/scripts/start -d;
   ./ffc-pay-web/scripts/start -d;
   ./ffc-pay-request-editor/scripts/start -d;
+
+if [ "${statements}" = "true" ]; then
+  ./ffc-pay-statement-constructor/scripts/start -d;
+  ./ffc-pay-statement-generator/scripts/start -d;
+fi
 
 if [ "${functions}" = "true" ]; then
   ./ffc-pay-batch-validator/scripts/start -d;

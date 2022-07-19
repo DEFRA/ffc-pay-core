@@ -5,7 +5,7 @@ Local development support for orchestrating all FFC payment microservices with D
 
 Ensure you have satisfied the prerequisites of all individual repositories.
 
-## Payment microservices
+## Payment delivery
 ### Payment batch processor
 
 Validate and process payment batch files from Siti Agri.
@@ -47,3 +47,16 @@ Internal user admin web application to manage payment holds and processing.
 Edit payment requests.
 
 - https://github.com/DEFRA/ffc-pay-request-editor
+
+## Payment statements
+### Payment Statement Constructor
+
+Build datasets for statement generation
+
+- https://github.com/DEFRA/ffc-pay-statement-constructor
+
+### Payment Statement Generator
+
+Generate PDF statements
+
+- https://github.com/DEFRA/ffc-pay-statement-generator

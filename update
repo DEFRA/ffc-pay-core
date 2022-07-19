@@ -85,3 +85,11 @@ cd "${projectRoot}"
 cd ./ffc-pay-event-signalr && \
   git checkout main && \
   git pull
+cd "${projectRoot}"
+cd ./ffc-pay-statement-constructor && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-statement-generator && \
+  git checkout main && \
+  git pull
