@@ -49,6 +49,12 @@ Edit payment requests.
 - https://github.com/DEFRA/ffc-pay-request-editor
 
 ## Payment statements
+### Payment Statement Data
+
+Support Data Warehouse integration for statement data
+
+- https://github.com/DEFRA/ffc-pay-statement-data
+
 ### Payment Statement Constructor
 
 Build datasets for statement generation

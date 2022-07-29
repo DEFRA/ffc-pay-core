@@ -86,6 +86,10 @@ cd ./ffc-pay-event-signalr && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
+cd ./ffc-pay-statement-data && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-statement-constructor && \
   git checkout main && \
   git pull

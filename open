@@ -43,6 +43,7 @@ cd "${projectRoot}"
   code ./ffc-pay-request-editor;
 
 if [ "${statements}" = "true" ]; then
+code ./ffc-pay-statement-data;
   code ./ffc-pay-statement-constructor;
   code ./ffc-pay-statement-generator;
 fi
