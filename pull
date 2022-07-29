@@ -70,3 +70,12 @@ cd ./ffc-pay-mi-reporting && \
 cd "${projectRoot}"
 cd ./ffc-pay-event-signalr && \
   git pull
+cd "${projectRoot}"
+cd ./ffc-pay-statement-data && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-statement-constructor && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-statement-generator && \
+  git pull
