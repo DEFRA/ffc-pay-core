@@ -46,6 +46,7 @@ if [ "${statements}" = "true" ]; then
 code ./ffc-pay-statement-data;
   code ./ffc-pay-statement-constructor;
   code ./ffc-pay-statement-generator;
+  code ./ffc-pay-statement-publisher;
 fi
 
 if [ "${functions}" = "true" ]; then

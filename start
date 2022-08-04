@@ -51,6 +51,7 @@ if [ "${statements}" = "true" ]; then
   ./ffc-pay-statement-data/scripts/start -d;
   ./ffc-pay-statement-constructor/scripts/start -d;
   ./ffc-pay-statement-generator/scripts/start -d;
+  ./ffc-pay-statement-publisher/scripts/start -d;
 fi
 
 if [ "${functions}" = "true" ]; then

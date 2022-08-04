@@ -53,3 +53,6 @@ echo 'ffc-pay-statement-constructor' &&
 
 echo 'ffc-pay-statement-generator' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-statement-generator/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-statement-publisher' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-statement-publisher/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'

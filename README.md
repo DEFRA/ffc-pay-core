@@ -66,3 +66,9 @@ Build datasets for statement generation
 Generate PDF statements
 
 - https://github.com/DEFRA/ffc-pay-statement-generator
+
+### Payment Statement Publisher
+
+Publish statements
+
+- https://github.com/DEFRA/ffc-pay-statement-publisher

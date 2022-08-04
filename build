@@ -55,3 +55,6 @@ cd ./ffc-pay-statement-constructor && \
 cd "${projectRoot}"
 cd ./ffc-pay-statement-generator && \
   docker-compose build
+cd "${projectRoot}"
+cd ./ffc-pay-statement-publisher && \
+  docker-compose build
