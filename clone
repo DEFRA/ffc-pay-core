@@ -67,4 +67,3 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
     && >&2 echo "The 'ffc-pay-statement-publisher' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-statement-publisher.git
 )
-)
