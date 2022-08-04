@@ -47,6 +47,18 @@ cd "${projectRoot}"
 cd ./ffc-pay-request-editor && \
   docker-compose down $@
 cd "${projectRoot}"
+cd ./ffc-pay-statement-data && \
+  docker-compose down $@
+cd "${projectRoot}"
+cd ./ffc-pay-statement-constructor && \
+  docker-compose down $@
+cd "${projectRoot}"
+cd ./ffc-pay-statement-generator && \
+  docker-compose down $@
+cd "${projectRoot}"
+cd ./ffc-pay-statement-publisher && \
+  docker-compose down $@
+cd "${projectRoot}"
 cd ./ffc-pay-batch-validator && \
   sh ./scripts/stop
 cd "${projectRoot}"
