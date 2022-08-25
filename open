@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 set -e
 projectRoot="$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pwd)"
+payments="false"
 
 show_help() {
   echo "
@@ -22,6 +23,9 @@ while :; do
     -s|--statements)
       statements="true"
       ;;
+    -S|--statements-only)
+      payments="false"
+      statements="true"
     -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
       show_help
       exit
@@ -34,6 +38,7 @@ while :; do
 done
 
 cd "${projectRoot}"
+if [ "${payments}" = "true" ]; then
   code ./ffc-pay-batch-processor;
   code ./ffc-pay-enrichment;
   code ./ffc-pay-processing;
@@ -41,6 +46,7 @@ cd "${projectRoot}"
   code ./ffc-pay-responses;
   code ./ffc-pay-web;
   code ./ffc-pay-request-editor;
+fi
 
 if [ "${statements}" = "true" ]; then
 code ./ffc-pay-statement-data;
