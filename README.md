@@ -77,7 +77,7 @@ topicLedger[Azure Service Bus Topic - ffc-pay-manual-ledger-check]
 topicLedgerResponse[Azure Service Bus Topic - ffc-pay-manual-ledger-response]
 topicEvent[Azure Service Bus Topic - ffc-pay-event]
 topicEventProjection[Azure Service Bus Topic - ffc-pay-event-projection]
-topicAlert[Azure Service Bus Topic - ffc-pay-alerts]
+topicAlerts[Azure Service Bus Topic - ffc-pay-alerts]
 topicStatementData[Azure Service Bus Topic - ffc-pay-statement-data]
 topicStatements[Azure Service Bus Topic - ffc-pay-statements]
 topicStatementPublish[Azure Service Bus Topic - ffc-pay-statement-publish]
@@ -86,6 +86,7 @@ storageBatch --> ffc-pay-batch-validator
 storageBatch --> ffc-pay-batch-processor
 ffc-pay-batch-processor --> topicRequest
 topicRequest --> ffc-pay-enrichment
+ffc-pay-enrichment --> topicResponse
 ffc-pay-enrichment --> topicProcessing
 topicProcessing --> ffc-pay-processing
 ffc-pay-processing --> topicSubmit
