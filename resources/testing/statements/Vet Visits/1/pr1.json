@@ -1,0 +1,26 @@
+{
+  "sourceSystem": "AHWR",
+  "sbi": 123456789,
+  "frn": 1000000001,
+  "marketingYear": 2022,
+  "paymentRequestNumber": 1,
+  "agreementNumber": "VV-1000-1000",
+  "value": 1000,
+  "invoiceLines": [{
+      "standardCode": "AHWR-Sheep",
+      "description": "G00 - Gross value of claim",
+      "value": 250
+    }, {
+      "standardCode": "AHWR-Dairy",
+      "description": "G00 - Gross value of claim",
+      "value": 250
+    }, {
+      "standardCode": "AHWR-Beef",
+      "description": "G00 - Gross value of claim",
+      "value": 250
+    }, {
+      "standardCode": "AHWR-Pigs",
+      "description": "G00 - Gross value of claim",
+      "value": 250
+    }]
+}
