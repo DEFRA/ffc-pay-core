@@ -82,6 +82,7 @@ topicStatementData[Azure Service Bus Topic - ffc-pay-statement-data]
 topicStatements[Azure Service Bus Topic - ffc-pay-statements]
 topicStatementPublish[Azure Service Bus Topic - ffc-pay-statement-publish]
 
+subgraph Payments
 storageBatch ==> ffc-pay-batch-validator
 storageBatch ==> ffc-pay-batch-processor
 ffc-pay-batch-processor ==> topicRequest
@@ -117,6 +118,9 @@ ffc-pay-web --> ffc-pay-processing
 ffc-pay-web --> storageReport
 ffc-pay-web --> storageProjection
 
+end
+subgraph Monitoring
+
 ffc-pay-batch-processor --> topicEvent
 ffc-pay-enrichment --> topicEvent
 ffc-pay-processing --> topicEvent
@@ -135,6 +139,9 @@ ffc-pay-event-projection --> storageProjection
 storageTable --> ffc-pay-mi-reporting
 ffc-pay-mi-reporting --> storageReports
 
+end
+subgraph Statements
+
 ffc-pay-statement-data ==> topicStatementData
 topicStatementData ==> ffc-pay-statement-constructor
 topicProcessing ==> ffc-pay-statement-constructor
@@ -146,6 +153,8 @@ ffc-pay-statement-generator ==> topicStatementPublish
 ffc-pay-statement-generator ==> storageStatements
 topicStatementPublish ==> ffc-pay-statement-publisher
 storageStatements ==> ffc-pay-statement-publisher
+
+end
 
 ```
 
