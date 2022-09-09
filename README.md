@@ -1,74 +1,150 @@
 # FFC Pay Core
-Local development support for orchestrating all FFC payment microservices with Docker Compose.
+Local development support for orchestrating all FFC payment and statement microservices.
 
 ## Prerequisites
 
 Ensure you have satisfied the prerequisites of all individual repositories.
 
-## Payment delivery
-### Payment batch processor
+## Repositories
+### Payments
+#### Processing
+- [ffc-pay-batch-validator](https://github.com/defra/ffc-pay-batch-validator)
+- [ffc-pay-batch-processor](https://github.com/defra/ffc-pay-batch-processor)
+- [ffc-pay-enrichment](https://github.com/defra/ffc-pay-enrichment)
+- [ffc-pay-processing](https://github.com/defra/ffc-pay-processing)
+- [ffc-pay-submission](https://github.com/defra/ffc-pay-submission)
+- [ffc-pay-responses](https://github.com/defra/ffc-pay-responses)
+- [ffc-pay-request-editor](https://github.com/defra/ffc-pay-request-editor)
+- [ffc-pay-web](https://github.com/defra/ffc-pay-web)
+- [ffc-pay-file-sender](https://github.com/defra/ffc-pay-file-sender)
+- [ffc-pay-file-consumer](https://github.com/defra/ffc-pay-file-consumer)
 
-Validate and process payment batch files from Siti Agri.
+#### Monitoring
+- [ffc-pay-event](https://github.com/defra/ffc-pay-event)
+- [ffc-pay-event-projection](https://github.com/defra/ffc-pay-event-projection)
+- [ffc-pay-alerts](https://github.com/defra/ffc-pay-alerts)
+- [ffc-pay-mi-reporting](https://github.com/defra/ffc-pay-mi-reporting)
 
-- https://github.com/DEFRA/ffc-pay-batch-processor
+### Statements
+- [ffc-pay-statement-data](https://github.com/defra/ffc-pay-statement-data)
+- [ffc-pay-statement-constructor](https://github.com/defra/ffc-pay-statement-constructor)
+- [ffc-pay-statement-generator](https://github.com/defra/ffc-pay-statement-generator)
+- [ffc-pay-statement-publisher](https://github.com/defra/ffc-pay-statement-publisher)
 
-### Payment enrichment
+## Sequence
 
-Validation and mapping of payment requests.
+```mermaid
+flowchart
+ffc-pay-batch-validator(ffc-pay-batch-validator)
+ffc-pay-batch-processor(ffc-pay-batch-processor)
+ffc-pay-enrichment(ffc-pay-enrichment)
+ffc-pay-processing(ffc-pay-processing)
+ffc-pay-submission(ffc-pay-submission)
+ffc-pay-responses(ffc-pay-responses)
+ffc-pay-request-editor(ffc-pay-request-editor)
+ffc-pay-web(ffc-pay-web)
+ffc-pay-file-sender(ffc-pay-file-sender)
+ffc-pay-file-consumer(ffc-pay-file-consumer)
 
-- https://github.com/DEFRA/ffc-pay-enrichment
+ffc-pay-event(ffc-pay-event)
+ffc-pay-event-projection(ffc-pay-event-projection)
+ffc-pay-alerts(ffc-pay-alerts)
+ffc-pay-mi-reporting(ffc-pay-mi-reporting)
 
-### Payment processing
+ffc-pay-statement-data(ffc-pay-statement-data)
+ffc-pay-statement-constructor(ffc-pay-statement-constructor)
+ffc-pay-statement-generator(ffc-pay-statement-generator)
+ffc-pay-statement-publisher(ffc-pay-statement-publisher)
 
-Processing of payment requests including post payment adjustment and ledger splitting.
+storageBatch[Azure Blob Storage - Batch]
+storageDAX[Azure Blob Storage - DAX]
+storageTable[Azure Table Storage - Event Projection]
+storageProjection[Azure Blob Storage - Event Projection]
+storageReport[Azure Blob Storage - Reports]
+storageStatements[Azure Blob Storage - Statements]
 
-- https://github.com/DEFRA/ffc-pay-processing
+topicRequest[Azure Service Bus Topic - ffc-pay-request]
+topicResponse[Azure Service Bus Topic - ffc-pay-request-response]
+topicProcessing[Azure Service Bus Topic - ffc-pay-processing]
+topicSubmit[Azure Service Bus Topic - ffc-pay-submit]
+topicFileSend[Azure Service Bus Topic - ffc-pay-file-send]
+topicFileConsume[Azure Service Bus Topic - ffc-pay-file-consume]
+topicReturn[Azure Service Bus Topic - ffc-pay-return]
+topicAck[Azure Service Bus Topic - ffc-pay-acknowledgement]
+topicDebt[Azure Service Bus Topic - ffc-pay-debt-data]
+topicDebtResponse[Azure Service Bus Topic - ffc-pay-debt-data-response]
+topicLedger[Azure Service Bus Topic - ffc-pay-manual-ledger-check]
+topicLedgerResponse[Azure Service Bus Topic - ffc-pay-manual-ledger-response]
+topicEvent[Azure Service Bus Topic - ffc-pay-event]
+topicEventProjection[Azure Service Bus Topic - ffc-pay-event-projection]
+topicAlert[Azure Service Bus Topic - ffc-pay-alerts]
+topicStatementData[Azure Service Bus Topic - ffc-pay-statement-data]
+topicStatements[Azure Service Bus Topic - ffc-pay-statements]
+topicStatementPublish[Azure Service Bus Topic - ffc-pay-statement-publish]
 
-### Payment submission
+storageBatch --> ffc-pay-batch-validator
+storageBatch --> ffc-pay-batch-processor
+ffc-pay-batch-processor --> topicRequest
+topicRequest --> ffc-pay-enrichment
+ffc-pay-enrichment --> topicProcessing
+topicProcessing --> ffc-pay-processing
+ffc-pay-processing --> topicSubmit
+topicSubmit --> ffc-pay-submission
+ffc-pay-submission --> storageDAX
+ffc-pay-submission --> topicFileSend
+topicFileSend --> ffc-pay-file-sender
+storageDAX --> ffc-pay-file-sender
 
-Publish payment requests to Dynamics 365.
+topicFileConsume --> ffc-pay-file-consumer
+ffc-pay-file-consumer --> storageDAX
+storageDAX --> ffc-pay-responses
+ffc-pay-responses --> topicAck
+ffc-pay-responses --> topicReturn
+topicAck --> ffc-pay-processing
+topicReturn --> ffc-pay-processing
 
-- https://github.com/DEFRA/ffc-pay-submission
+ffc-pay-processing --> topicDebt
+ffc-pay-processing --> topicLedger
+topicDebt --> ffc-pay-request-editor
+topicLedger --> ffc-pay-request-editor
+ffc-pay-request-editor --> topicDebtResponse
+ffc-pay-request-editor --> topicLedgerResponse
+topicDebtResponse --> ffc-pay-processing
+topicLedgerResponse --> ffc-pay-processing
 
-### Payment responses
+ffc-pay-web --> ffc-pay-processing
+ffc-pay-web --> storageReport
+ffc-pay-web --> storageProjection
 
-Process payment responses from Dynamics 365.
+ffc-pay-batch-processor --> topicEvent
+ffc-pay-enrichment --> topicEvent
+ffc-pay-processing --> topicEvent
+ffc-pay-submission --> topicEvent
+ffc-pay-responses --> topicEvent
+ffc-pay-request-editor --> topicEvent
+topicEvent --> ffc-pay-event
+ffc-pay-event --> topicAlerts
+ffc-pay-event --> topicEventProjection
+ffc-pay-event --> storageTable
+topicAlerts --> ffc-pay-alerts
+topicEventProjection --> ffc-pay-event-projection
+storageTable --> ffc-pay-event-projection
+ffc-pay-event-projection --> storageProjection
 
-- https://github.com/DEFRA/ffc-pay-responses
+storageTable --> ffc-pay-mi-reporting
+ffc-pay-mi-reporting --> storageReports
 
-### Payment management
+ffc-pay-statement-data --> topicStatementData
+topicStatementData --> ffc-pay-statement-constructor
+topicProcessing --> ffc-pay-statement-constructor
+topicSubmit --> ffc-pay-statement-constructor
+topicReturn --> ffc-pay-statement-constructor
+ffc-pay-statement-constructor --> topicStatements
+topicStatements --> ffc-pay-statement-generator
+ffc-pay-statement-generator --> topicStatementPublish
+ffc-pay-statement-generator --> storageStatements
+topicStatementPublish --> ffc-pay-statement-publisher
+storageStatements --> ffc-pay-statement-publisher
 
-Internal user admin web application to manage payment holds and processing.
+```
 
-- https://github.com/DEFRA/ffc-pay-web
-
-### Payment Request Editor
-
-Edit payment requests.
-
-- https://github.com/DEFRA/ffc-pay-request-editor
-
-## Payment statements
-### Payment Statement Data
-
-Support Data Warehouse integration for statement data
-
-- https://github.com/DEFRA/ffc-pay-statement-data
-
-### Payment Statement Constructor
-
-Build datasets for statement generation
-
-- https://github.com/DEFRA/ffc-pay-statement-constructor
-
-### Payment Statement Generator
-
-Generate PDF statements
-
-- https://github.com/DEFRA/ffc-pay-statement-generator
-
-### Payment Statement Publisher
-
-Publish statements
-
-- https://github.com/DEFRA/ffc-pay-statement-publisher
