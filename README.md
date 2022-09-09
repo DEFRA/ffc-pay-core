@@ -34,7 +34,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 ## Sequence
 
 ```mermaid
-flowchart LR
+flowchart
 ffc-pay-batch-validator(Azure Function - ffc-pay-batch-validator)
 ffc-pay-batch-processor(Kubernetes - ffc-pay-batch-processor)
 ffc-pay-enrichment(Kubernetes - ffc-pay-enrichment)
