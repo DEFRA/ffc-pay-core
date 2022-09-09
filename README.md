@@ -158,3 +158,71 @@ end
 
 ```
 
+## Scripts
+
+### Clone
+
+Clone all repositories from GitHub.  Repositories will cloned in the parent directory of this repository.
+
+[`./clone`](clone)
+
+### Update
+
+Switch to `main` branch in every repository and pull latest changes with `git pull`.
+
+[`./update`](update)
+
+### Build
+
+Build/rebuild Docker container for all microservices.
+
+[`./build`](build)
+
+### Start
+
+Run all payment services.
+
+[`./start`](start)
+
+#### Optional arguments
+- `-f` - include Azure Functions
+- `-s` - include Statement services
+- `-S` - only statement services
+
+### Stop
+
+Run all payment services.
+
+[`./stop`](stop)
+
+#### Optional arguments
+
+Any valid `docker-compose down` argument.
+
+### Open
+
+Open all payment services in Visual Studio Code.
+
+[`./open`](open)
+
+#### Optional arguments
+- `-f` - include Azure Functions
+- `-s` - include Statement services
+- `-S` - only statement services
+
+### Latest version
+
+List latest GitHub release version for each microservice.
+
+[`./latest-versions`](latest-versions)
+
+## Resources
+### Payments
+
+A set of test datasets and scripts to support testing of payments.
+
+### Statements
+
+A set of test datasets and scripts to support testing of statements.
+
+Instructions for use can be read [here](resources/testing/statements/Instructions.md).
