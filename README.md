@@ -35,26 +35,26 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 
 ```mermaid
 flowchart
-ffc-pay-batch-validator(ffc-pay-batch-validator)
-ffc-pay-batch-processor(ffc-pay-batch-processor)
-ffc-pay-enrichment(ffc-pay-enrichment)
-ffc-pay-processing(ffc-pay-processing)
-ffc-pay-submission(ffc-pay-submission)
-ffc-pay-responses(ffc-pay-responses)
-ffc-pay-request-editor(ffc-pay-request-editor)
-ffc-pay-web(ffc-pay-web)
-ffc-pay-file-sender(ffc-pay-file-sender)
-ffc-pay-file-consumer(ffc-pay-file-consumer)
+ffc-pay-batch-validator(Azure Function - ffc-pay-batch-validator)
+ffc-pay-batch-processor(Kubernetes - ffc-pay-batch-processor)
+ffc-pay-enrichment(Kubernetes - ffc-pay-enrichment)
+ffc-pay-processing(Kubernetes - ffc-pay-processing)
+ffc-pay-submission(Kubernetes - ffc-pay-submission)
+ffc-pay-responses(Kubernetes - ffc-pay-responses)
+ffc-pay-request-editor(Kubernetes - ffc-pay-request-editor)
+ffc-pay-web(Kubernetes - ffc-pay-web)
+ffc-pay-file-sender(Azure Function - ffc-pay-file-sender)
+ffc-pay-file-consumer(Azure Function - ffc-pay-file-consumer)
 
-ffc-pay-event(ffc-pay-event)
-ffc-pay-event-projection(ffc-pay-event-projection)
-ffc-pay-alerts(ffc-pay-alerts)
-ffc-pay-mi-reporting(ffc-pay-mi-reporting)
+ffc-pay-event(Azure Function - ffc-pay-event)
+ffc-pay-event-projection(Azure Function - ffc-pay-event-projection)
+ffc-pay-alerts(Azure Function - ffc-pay-alerts)
+ffc-pay-mi-reporting(Azure Function - ffc-pay-mi-reporting)
 
-ffc-pay-statement-data(ffc-pay-statement-data)
-ffc-pay-statement-constructor(ffc-pay-statement-constructor)
-ffc-pay-statement-generator(ffc-pay-statement-generator)
-ffc-pay-statement-publisher(ffc-pay-statement-publisher)
+ffc-pay-statement-data(Kubernetes - ffc-pay-statement-data)
+ffc-pay-statement-constructor(Kubernetes - ffc-pay-statement-constructor)
+ffc-pay-statement-generator(Kubernetes - ffc-pay-statement-generator)
+ffc-pay-statement-publisher(Kubernetes - ffc-pay-statement-publisher)
 
 storageBatch[Azure Blob Storage - Batch]
 storageDAX[Azure Blob Storage - DAX]
