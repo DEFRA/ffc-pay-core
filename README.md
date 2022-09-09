@@ -34,7 +34,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 ## Sequence
 
 ```mermaid
-flowchart
+flowchart LR
 ffc-pay-batch-validator(Azure Function - ffc-pay-batch-validator)
 ffc-pay-batch-processor(Kubernetes - ffc-pay-batch-processor)
 ffc-pay-enrichment(Kubernetes - ffc-pay-enrichment)
@@ -82,36 +82,36 @@ topicStatementData[Azure Service Bus Topic - ffc-pay-statement-data]
 topicStatements[Azure Service Bus Topic - ffc-pay-statements]
 topicStatementPublish[Azure Service Bus Topic - ffc-pay-statement-publish]
 
-storageBatch --> ffc-pay-batch-validator
-storageBatch --> ffc-pay-batch-processor
-ffc-pay-batch-processor --> topicRequest
-topicRequest --> ffc-pay-enrichment
-ffc-pay-enrichment --> topicResponse
-ffc-pay-enrichment --> topicProcessing
-topicProcessing --> ffc-pay-processing
-ffc-pay-processing --> topicSubmit
-topicSubmit --> ffc-pay-submission
-ffc-pay-submission --> storageDAX
-ffc-pay-submission --> topicFileSend
-topicFileSend --> ffc-pay-file-sender
-storageDAX --> ffc-pay-file-sender
+storageBatch ==> ffc-pay-batch-validator
+storageBatch ==> ffc-pay-batch-processor
+ffc-pay-batch-processor ==> topicRequest
+topicRequest ==> ffc-pay-enrichment
+ffc-pay-enrichment ==> topicResponse
+ffc-pay-enrichment ==> topicProcessing
+topicProcessing ==> ffc-pay-processing
+ffc-pay-processing ==> topicSubmit
+topicSubmit ==> ffc-pay-submission
+ffc-pay-submission ==> storageDAX
+ffc-pay-submission ==> topicFileSend
+topicFileSend ==> ffc-pay-file-sender
+storageDAX ==> ffc-pay-file-sender
 
-topicFileConsume --> ffc-pay-file-consumer
-ffc-pay-file-consumer --> storageDAX
-storageDAX --> ffc-pay-responses
-ffc-pay-responses --> topicAck
-ffc-pay-responses --> topicReturn
-topicAck --> ffc-pay-processing
-topicReturn --> ffc-pay-processing
+topicFileConsume ==> ffc-pay-file-consumer
+ffc-pay-file-consumer ==> storageDAX
+storageDAX ==> ffc-pay-responses
+ffc-pay-responses ==> topicAck
+ffc-pay-responses ==> topicReturn
+topicAck ==> ffc-pay-processing
+topicReturn ==> ffc-pay-processing
 
-ffc-pay-processing --> topicDebt
-ffc-pay-processing --> topicLedger
-topicDebt --> ffc-pay-request-editor
-topicLedger --> ffc-pay-request-editor
-ffc-pay-request-editor --> topicDebtResponse
-ffc-pay-request-editor --> topicLedgerResponse
-topicDebtResponse --> ffc-pay-processing
-topicLedgerResponse --> ffc-pay-processing
+ffc-pay-processing ==> topicDebt
+ffc-pay-processing ==> topicLedger
+topicDebt ==> ffc-pay-request-editor
+topicLedger ==> ffc-pay-request-editor
+ffc-pay-request-editor ==> topicDebtResponse
+ffc-pay-request-editor ==> topicLedgerResponse
+topicDebtResponse ==> ffc-pay-processing
+topicLedgerResponse ==> ffc-pay-processing
 
 ffc-pay-web --> ffc-pay-processing
 ffc-pay-web --> storageReport
@@ -135,17 +135,17 @@ ffc-pay-event-projection --> storageProjection
 storageTable --> ffc-pay-mi-reporting
 ffc-pay-mi-reporting --> storageReports
 
-ffc-pay-statement-data --> topicStatementData
-topicStatementData --> ffc-pay-statement-constructor
-topicProcessing --> ffc-pay-statement-constructor
-topicSubmit --> ffc-pay-statement-constructor
-topicReturn --> ffc-pay-statement-constructor
-ffc-pay-statement-constructor --> topicStatements
-topicStatements --> ffc-pay-statement-generator
-ffc-pay-statement-generator --> topicStatementPublish
-ffc-pay-statement-generator --> storageStatements
-topicStatementPublish --> ffc-pay-statement-publisher
-storageStatements --> ffc-pay-statement-publisher
+ffc-pay-statement-data ==> topicStatementData
+topicStatementData ==> ffc-pay-statement-constructor
+topicProcessing ==> ffc-pay-statement-constructor
+topicSubmit ==> ffc-pay-statement-constructor
+topicReturn ==> ffc-pay-statement-constructor
+ffc-pay-statement-constructor ==> topicStatements
+topicStatements ==> ffc-pay-statement-generator
+ffc-pay-statement-generator ==> topicStatementPublish
+ffc-pay-statement-generator ==> storageStatements
+topicStatementPublish ==> ffc-pay-statement-publisher
+storageStatements ==> ffc-pay-statement-publisher
 
 ```
 
