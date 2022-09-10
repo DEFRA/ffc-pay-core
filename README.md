@@ -33,6 +33,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 
 ## Sequence
 
+### Payments
 ```mermaid
 flowchart LR
 ffc-pay-batch-validator(Azure Function - ffc-pay-batch-validator)
@@ -46,22 +47,8 @@ ffc-pay-web(Kubernetes - ffc-pay-web)
 ffc-pay-file-sender(Azure Function - ffc-pay-file-sender)
 ffc-pay-file-consumer(Azure Function - ffc-pay-file-consumer)
 
-ffc-pay-event(Azure Function - ffc-pay-event)
-ffc-pay-event-projection(Azure Function - ffc-pay-event-projection)
-ffc-pay-alerts(Azure Function - ffc-pay-alerts)
-ffc-pay-mi-reporting(Azure Function - ffc-pay-mi-reporting)
-
-ffc-pay-statement-data(Kubernetes - ffc-pay-statement-data)
-ffc-pay-statement-constructor(Kubernetes - ffc-pay-statement-constructor)
-ffc-pay-statement-generator(Kubernetes - ffc-pay-statement-generator)
-ffc-pay-statement-publisher(Kubernetes - ffc-pay-statement-publisher)
-
 storageBatch[Azure Blob Storage - Batch]
 storageDAX[Azure Blob Storage - DAX]
-storageTable[Azure Table Storage - Event Projection]
-storageProjection[Azure Blob Storage - Event Projection]
-storageReport[Azure Blob Storage - Reports]
-storageStatements[Azure Blob Storage - Statements]
 
 topicRequest[Azure Service Bus Topic - ffc-pay-request]
 topicResponse[Azure Service Bus Topic - ffc-pay-request-response]
@@ -76,13 +63,7 @@ topicDebtResponse[Azure Service Bus Topic - ffc-pay-debt-data-response]
 topicLedger[Azure Service Bus Topic - ffc-pay-manual-ledger-check]
 topicLedgerResponse[Azure Service Bus Topic - ffc-pay-manual-ledger-response]
 topicEvent[Azure Service Bus Topic - ffc-pay-event]
-topicEventProjection[Azure Service Bus Topic - ffc-pay-event-projection]
-topicAlerts[Azure Service Bus Topic - ffc-pay-alerts]
-topicStatementData[Azure Service Bus Topic - ffc-pay-statement-data]
-topicStatements[Azure Service Bus Topic - ffc-pay-statements]
-topicStatementPublish[Azure Service Bus Topic - ffc-pay-statement-publish]
 
-subgraph Payments
 storageBatch ==> ffc-pay-batch-validator
 storageBatch ==> ffc-pay-batch-processor
 ffc-pay-batch-processor ==> topicRequest
@@ -117,9 +98,31 @@ topicLedgerResponse ==> ffc-pay-processing
 ffc-pay-web --> ffc-pay-processing
 ffc-pay-web --> storageReport
 ffc-pay-web --> storageProjection
+```
 
-end
-subgraph Monitoring
+### Monitoring
+```mermaid
+flowchart LR
+ffc-pay-batch-processor(Kubernetes - ffc-pay-batch-processor)
+ffc-pay-enrichment(Kubernetes - ffc-pay-enrichment)
+ffc-pay-processing(Kubernetes - ffc-pay-processing)
+ffc-pay-submission(Kubernetes - ffc-pay-submission)
+ffc-pay-responses(Kubernetes - ffc-pay-responses)
+ffc-pay-request-editor(Kubernetes - ffc-pay-request-editor)
+ffc-pay-web(Kubernetes - ffc-pay-web)
+
+ffc-pay-event(Azure Function - ffc-pay-event)
+ffc-pay-event-projection(Azure Function - ffc-pay-event-projection)
+ffc-pay-alerts(Azure Function - ffc-pay-alerts)
+ffc-pay-mi-reporting(Azure Function - ffc-pay-mi-reporting)
+
+storageTable[Azure Table Storage - Event Projection]
+storageProjection[Azure Blob Storage - Event Projection]
+storageReport[Azure Blob Storage - Reports]
+
+topicEvent[Azure Service Bus Topic - ffc-pay-event]
+topicEventProjection[Azure Service Bus Topic - ffc-pay-event-projection]
+topicAlerts[Azure Service Bus Topic - ffc-pay-alerts]
 
 ffc-pay-batch-processor --> topicEvent
 ffc-pay-enrichment --> topicEvent
@@ -139,8 +142,27 @@ ffc-pay-event-projection --> storageProjection
 storageTable --> ffc-pay-mi-reporting
 ffc-pay-mi-reporting --> storageReports
 
-end
-subgraph Statements
+ffc-pay-web --> storageReport
+ffc-pay-web --> storageProjection
+```
+
+### Statements
+```mermaid
+flowchart LR
+
+ffc-pay-statement-data(Kubernetes - ffc-pay-statement-data)
+ffc-pay-statement-constructor(Kubernetes - ffc-pay-statement-constructor)
+ffc-pay-statement-generator(Kubernetes - ffc-pay-statement-generator)
+ffc-pay-statement-publisher(Kubernetes - ffc-pay-statement-publisher)
+
+storageStatements[Azure Blob Storage - Statements]
+
+topicProcessing[Azure Service Bus Topic - ffc-pay-processing]
+topicSubmit[Azure Service Bus Topic - ffc-pay-submit]
+topicReturn[Azure Service Bus Topic - ffc-pay-return]
+topicStatementData[Azure Service Bus Topic - ffc-pay-statement-data]
+topicStatements[Azure Service Bus Topic - ffc-pay-statements]
+topicStatementPublish[Azure Service Bus Topic - ffc-pay-statement-publish]
 
 ffc-pay-statement-data ==> topicStatementData
 topicStatementData ==> ffc-pay-statement-constructor
@@ -153,9 +175,6 @@ ffc-pay-statement-generator ==> topicStatementPublish
 ffc-pay-statement-generator ==> storageStatements
 topicStatementPublish ==> ffc-pay-statement-publisher
 storageStatements ==> ffc-pay-statement-publisher
-
-end
-
 ```
 
 ## Scripts
