@@ -40,10 +40,12 @@ done
 
 cd "${projectRoot}"
 if [ "${payments}" = "true" ]; then
+  code ./ffc-pay-batch-verifier;
   code ./ffc-pay-batch-processor;
   code ./ffc-pay-enrichment;
   code ./ffc-pay-processing;
   code ./ffc-pay-submission;
+  code ./ffc-pay-file-publisher;
   code ./ffc-pay-responses;
   code ./ffc-pay-web;
   code ./ffc-pay-request-editor;

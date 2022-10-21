@@ -26,6 +26,10 @@ while :; do
 done
 
 cd "${projectRoot}"
+cd ./ffc-pay-batch-verifier && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-batch-processor && \
   git checkout main && \
   git pull
@@ -39,6 +43,10 @@ cd ./ffc-pay-processing && \
   git pull
 cd "${projectRoot}"
 cd ./ffc-pay-submission && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-file-publisher && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
