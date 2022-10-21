@@ -26,6 +26,9 @@ while :; do
 done
 
 cd "${projectRoot}"
+cd ./ffc-pay-batch-verifier && \
+  docker-compose build
+cd "${projectRoot}"
 cd ./ffc-pay-batch-processor && \
   docker-compose build
 cd "${projectRoot}"
@@ -38,6 +41,9 @@ cd "${projectRoot}"
 cd ./ffc-pay-submission && \
   docker-compose build
 cd "${projectRoot}"
+cd "${projectRoot}"
+cd ./ffc-pay-file-publisher && \
+  docker-compose build
 cd ./ffc-pay-responses && \
   docker-compose build
 cd "${projectRoot}"

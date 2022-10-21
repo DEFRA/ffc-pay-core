@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+echo 'ffc-pay-batch-verifier' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-batch-verifier/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
 echo 'ffc-pay-batch-processor' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-batch-processor/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
@@ -11,6 +14,9 @@ echo 'ffc-pay-processing' &&
 
 echo 'ffc-pay-submission' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-submission/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-file-publisher' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-file-publisher/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
 echo 'ffc-pay-responses' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-responses/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'

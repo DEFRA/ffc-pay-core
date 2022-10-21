@@ -46,10 +46,12 @@ done
 cd "${projectRoot}"
 
 if [ "${payments}" = "true" ]; then
+  ./ffc-pay-batch-verifier/scripts/start -d;
   ./ffc-pay-batch-processor/scripts/start -d;
   ./ffc-pay-enrichment/scripts/start -d;
   ./ffc-pay-processing/scripts/start -d;
   ./ffc-pay-submission/scripts/start -d;
+  ./ffc-pay-file-publisher/scripts/start -d;
   ./ffc-pay-responses/scripts/start -d;
   ./ffc-pay-web/scripts/start -d;
   ./ffc-pay-request-editor/scripts/start -d;

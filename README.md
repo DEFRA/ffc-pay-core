@@ -37,6 +37,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 ```mermaid
 flowchart LR
 ffc-pay-batch-validator(Azure Function - ffc-pay-batch-validator)
+ffc-pay-batch-verifier(Kubernetes - ffc-pay-batch-verifier)
 ffc-pay-batch-processor(Kubernetes - ffc-pay-batch-processor)
 ffc-pay-enrichment(Kubernetes - ffc-pay-enrichment)
 ffc-pay-processing(Kubernetes - ffc-pay-processing)
@@ -45,6 +46,7 @@ ffc-pay-responses(Kubernetes - ffc-pay-responses)
 ffc-pay-request-editor(Kubernetes - ffc-pay-request-editor)
 ffc-pay-web(Kubernetes - ffc-pay-web)
 ffc-pay-file-sender(Azure Function - ffc-pay-file-sender)
+ffc-pay-file-publisher(Kubernetes - ffc-pay-file-publisher)
 ffc-pay-file-consumer(Azure Function - ffc-pay-file-consumer)
 
 storageBatch[Azure Blob Storage - Batch]
@@ -65,6 +67,7 @@ topicLedgerResponse[Azure Service Bus Topic - ffc-pay-manual-ledger-response]
 topicEvent[Azure Service Bus Topic - ffc-pay-event]
 
 storageBatch ==> ffc-pay-batch-validator
+storageBatch ==> ffc-pay-batch-verifier
 storageBatch ==> ffc-pay-batch-processor
 ffc-pay-batch-processor ==> topicRequest
 topicRequest ==> ffc-pay-enrichment
@@ -76,7 +79,9 @@ topicSubmit ==> ffc-pay-submission
 ffc-pay-submission ==> storageDAX
 ffc-pay-submission ==> topicFileSend
 topicFileSend ==> ffc-pay-file-sender
+topicFileSend ==> ffc-pay-file-publisher
 storageDAX ==> ffc-pay-file-sender
+storageDAX ==> ffc-pay-file-publisher
 
 topicFileConsume ==> ffc-pay-file-consumer
 ffc-pay-file-consumer ==> storageDAX
