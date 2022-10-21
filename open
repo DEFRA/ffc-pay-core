@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -e
 projectRoot="$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pwd)"
-payments="false"
+payments="true"
 
 show_help() {
   echo "
