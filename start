@@ -62,15 +62,13 @@ if [ "${statements}" = "true" ]; then
   ./ffc-pay-statement-constructor/scripts/start -d;
   ./ffc-pay-statement-generator/scripts/start -d;
   ./ffc-pay-statement-publisher/scripts/start -d;
+  ./ffc-pay-statement-receiver/scripts/start -d;
 fi
 
 if [ "${functions}" = "true" ]; then
-  ./ffc-pay-batch-validator/scripts/start -d;
-  ./ffc-pay-file-sender/scripts/start -d;
   ./ffc-pay-file-consumer/scripts/start -d;
   ./ffc-pay-event/scripts/start -d;
   ./ffc-pay-event-projection/scripts/start -d;
   ./ffc-pay-alerts/scripts/start -d;
   ./ffc-pay-mi-reporting/scripts/start -d;
-  ./ffc-pay-event-signalr/scripts/start -d;
 fi

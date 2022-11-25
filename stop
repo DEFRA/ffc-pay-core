@@ -65,11 +65,8 @@ cd "${projectRoot}"
 cd ./ffc-pay-statement-publisher && \
   docker-compose down $@
 cd "${projectRoot}"
-cd ./ffc-pay-batch-validator && \
-  sh ./scripts/stop
-cd "${projectRoot}"
-cd ./ffc-pay-file-sender && \
-  sh ./scripts/stop
+cd ./ffc-pay-statement-receiver && \
+  docker-compose down $@
 cd "${projectRoot}"
 cd ./ffc-pay-file-consumer && \
   sh ./scripts/stop
@@ -84,7 +81,4 @@ cd ./ffc-pay-alerts && \
   sh ./scripts/stop
 cd "${projectRoot}"
 cd ./ffc-pay-mi-reporting && \
-  sh ./scripts/stop
-cd "${projectRoot}"
-cd ./ffc-pay-event-signalr && \
   sh ./scripts/stop
