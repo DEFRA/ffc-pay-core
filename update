@@ -62,14 +62,6 @@ cd ./ffc-pay-request-editor && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-batch-validator && \
-  git checkout main && \
-  git pull
-cd "${projectRoot}"
-cd ./ffc-pay-file-sender && \
-  git checkout main && \
-  git pull
-cd "${projectRoot}"
 cd ./ffc-pay-file-consumer && \
   git checkout main && \
   git pull
@@ -90,10 +82,6 @@ cd ./ffc-pay-mi-reporting && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-event-signalr && \
-  git checkout main && \
-  git pull
-cd "${projectRoot}"
 cd ./ffc-pay-statement-data && \
   git checkout main && \
   git pull
@@ -107,5 +95,9 @@ cd ./ffc-pay-statement-generator && \
   git pull
 cd "${projectRoot}"
 cd ./ffc-pay-statement-publisher && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-statement-receiver && \
   git checkout main && \
   git pull
