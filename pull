@@ -53,12 +53,6 @@ cd "${projectRoot}"
 cd ./ffc-pay-request-editor && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-batch-validator && \
-  git pull
-cd "${projectRoot}"
-cd ./ffc-pay-file-sender && \
-  git pull
-cd "${projectRoot}"
 cd ./ffc-pay-file-consumer && \
   git pull
 cd "${projectRoot}"
@@ -87,4 +81,7 @@ cd ./ffc-pay-statement-generator && \
   git pull
 cd "${projectRoot}"
 cd ./ffc-pay-statement-publisher && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-statement-receiver && \
   git pull

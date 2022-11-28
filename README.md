@@ -8,7 +8,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 ## Repositories
 ### Payments
 #### Processing
-- [ffc-pay-batch-validator](https://github.com/defra/ffc-pay-batch-validator)
+- [ffc-pay-batch-verifier](https://github.com/defra/ffc-pay-batch-verifier)
 - [ffc-pay-batch-processor](https://github.com/defra/ffc-pay-batch-processor)
 - [ffc-pay-enrichment](https://github.com/defra/ffc-pay-enrichment)
 - [ffc-pay-processing](https://github.com/defra/ffc-pay-processing)
@@ -16,7 +16,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 - [ffc-pay-responses](https://github.com/defra/ffc-pay-responses)
 - [ffc-pay-request-editor](https://github.com/defra/ffc-pay-request-editor)
 - [ffc-pay-web](https://github.com/defra/ffc-pay-web)
-- [ffc-pay-file-sender](https://github.com/defra/ffc-pay-file-sender)
+- [ffc-pay-file-publisher](https://github.com/defra/ffc-pay-file-publisher)
 - [ffc-pay-file-consumer](https://github.com/defra/ffc-pay-file-consumer)
 
 #### Monitoring
@@ -30,13 +30,13 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 - [ffc-pay-statement-constructor](https://github.com/defra/ffc-pay-statement-constructor)
 - [ffc-pay-statement-generator](https://github.com/defra/ffc-pay-statement-generator)
 - [ffc-pay-statement-publisher](https://github.com/defra/ffc-pay-statement-publisher)
+- [ffc-pay-statement-receiver](https://github.com/defra/ffc-pay-statement-receiver)
 
 ## Sequence
 
 ### Payments
 ```mermaid
 flowchart LR
-ffc-pay-batch-validator(Azure Function - ffc-pay-batch-validator)
 ffc-pay-batch-verifier(Kubernetes - ffc-pay-batch-verifier)
 ffc-pay-batch-processor(Kubernetes - ffc-pay-batch-processor)
 ffc-pay-enrichment(Kubernetes - ffc-pay-enrichment)
@@ -45,7 +45,6 @@ ffc-pay-submission(Kubernetes - ffc-pay-submission)
 ffc-pay-responses(Kubernetes - ffc-pay-responses)
 ffc-pay-request-editor(Kubernetes - ffc-pay-request-editor)
 ffc-pay-web(Kubernetes - ffc-pay-web)
-ffc-pay-file-sender(Azure Function - ffc-pay-file-sender)
 ffc-pay-file-publisher(Kubernetes - ffc-pay-file-publisher)
 ffc-pay-file-consumer(Azure Function - ffc-pay-file-consumer)
 
@@ -66,7 +65,6 @@ topicLedger[Azure Service Bus Topic - ffc-pay-manual-ledger-check]
 topicLedgerResponse[Azure Service Bus Topic - ffc-pay-manual-ledger-response]
 topicEvent[Azure Service Bus Topic - ffc-pay-event]
 
-storageBatch ==> ffc-pay-batch-validator
 storageBatch ==> ffc-pay-batch-verifier
 storageBatch ==> ffc-pay-batch-processor
 ffc-pay-batch-processor ==> topicRequest
@@ -80,7 +78,6 @@ ffc-pay-submission ==> storageDAX
 ffc-pay-submission ==> topicFileSend
 topicFileSend ==> ffc-pay-file-sender
 topicFileSend ==> ffc-pay-file-publisher
-storageDAX ==> ffc-pay-file-sender
 storageDAX ==> ffc-pay-file-publisher
 
 topicFileConsume ==> ffc-pay-file-consumer
@@ -159,6 +156,7 @@ ffc-pay-statement-data(Kubernetes - ffc-pay-statement-data)
 ffc-pay-statement-constructor(Kubernetes - ffc-pay-statement-constructor)
 ffc-pay-statement-generator(Kubernetes - ffc-pay-statement-generator)
 ffc-pay-statement-publisher(Kubernetes - ffc-pay-statement-publisher)
+ffc-pay-statement-receiver(Kubernetes - ffc-pay-statement-receiver)
 
 storageStatements[Azure Blob Storage - Statements]
 
@@ -180,6 +178,7 @@ ffc-pay-statement-generator ==> topicStatementPublish
 ffc-pay-statement-generator ==> storageStatements
 topicStatementPublish ==> ffc-pay-statement-publisher
 storageStatements ==> ffc-pay-statement-publisher
+storageStatements ==> ffc-pay-statement-receiver
 ```
 
 ## Scripts
