@@ -233,11 +233,21 @@ Open all payment services in Visual Studio Code.
 - `-s` - include Statement services
 - `-S` - only statement services
 
-### Latest version
+### Latest versions
 
 List latest GitHub release version for each microservice.
 
 [`./latest-versions`](latest-versions)
+
+### Environment versions
+
+List current environment version for each microservice hosted in Kubernetes.
+
+[`./environment-versions`](environment-versions)
+
+#### Options
+- `-c | --cluster` - Kubernetes cluster context name
+- `-n | --namespace` - Kubernetes namespace
 
 ## Resources
 ### Payments
