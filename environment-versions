@@ -1,0 +1,91 @@
+show_help() {
+  prin: tf "
+    Usage: path/to/ffc-pay-core [OPTION...]
+;
+    Returns version of services in a Kubernetes namespace.
+
+    Options:
+      -c, --context   include Azure Function Apps
+      -n, --namespace  include statement services
+      -h, --help       display this help text
+    "
+}
+
+POSITIONAL_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -c|--context)
+      CONTEXT="$2"
+      shift
+      shift
+      ;;
+
+    -n|--namespace)
+      NAMESPACE="$2"
+      shift
+      shift
+      ;;
+
+    -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
+      show_help
+      exit
+      ;;
+    -*|--*)
+      shift
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+kubectl config use-context $CONTEXT
+kubectl config set-context --current --namespace=$NAMESPACE
+
+echo $NAMESPACE
+echo
+
+echo 'ffc-pay-batch-verifier: ' &&
+  kubectl get deployment ffc-pay-batch-verifier -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-batch-processor: ' &&
+  kubectl get deployment ffc-pay-batch-processor -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-enrichment: ' &&
+  kubectl get deployment ffc-pay-enrichment -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-processing: ' &&
+  kubectl get deployment ffc-pay-processing -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-submission: ' &&
+  kubectl get deployment ffc-pay-submission -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-file-publisher: ' &&
+  kubectl get deployment ffc-pay-file-publisher -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-responses: ' &&
+  kubectl get deployment ffc-pay-responses -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-request-editor: ' &&
+  kubectl get deployment ffc-pay-request-editor -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-web: ' &&
+  kubectl get deployment ffc-pay-web -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-statement-data: ' &&
+  kubectl get cronjob ffc-pay-statement-data -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-statement-constructor: ' &&
+  kubectl get deployment ffc-pay-statement-constructor -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-statement-generator: ' &&
+  kubectl get deployment ffc-pay-statement-generator -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-statement-publisher: ' &&
+  kubectl get deployment ffc-pay-statement-publisher -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-statement-receiver: ' &&
+  kubectl get deployment ffc-pay-statement-receiver -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
