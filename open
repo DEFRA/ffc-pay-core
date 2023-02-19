@@ -49,6 +49,8 @@ if [ "${payments}" = "true" ]; then
   code ./ffc-pay-responses;
   code ./ffc-pay-web;
   code ./ffc-pay-request-editor;
+  code ./ffc-pay-event-hub;
+  code ./ffc-pay-report-generator;
 fi
 
 if [ "${statements}" = "true" ]; then

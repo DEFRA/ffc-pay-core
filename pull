@@ -53,6 +53,12 @@ cd "${projectRoot}"
 cd ./ffc-pay-request-editor && \
   git pull
 cd "${projectRoot}"
+cd ./ffc-pay-event-hub && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-report-generator && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-file-consumer && \
   git pull
 cd "${projectRoot}"
