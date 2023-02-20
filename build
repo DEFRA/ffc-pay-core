@@ -56,6 +56,9 @@ cd "${projectRoot}"
 cd ./ffc-pay-event-hub && \
   docker-compose build
 cd "${projectRoot}"
+cd ./ffc-pay-data-hub && \
+  docker-compose build
+cd "${projectRoot}"
 cd ./ffc-pay-report-generator && \
   docker-compose build
 cd "${projectRoot}"

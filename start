@@ -56,6 +56,7 @@ if [ "${payments}" = "true" ]; then
   ./ffc-pay-web/scripts/start -d;
   ./ffc-pay-request-editor/scripts/start -d;
   ./ffc-pay-event-hub/scripts/start -d;
+  ./ffc-pay-data-hub/scripts/start -d;
   ./ffc-pay-report-generator/scripts/start -d;
 fi
 
