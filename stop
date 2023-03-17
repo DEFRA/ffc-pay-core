@@ -53,6 +53,15 @@ cd "${projectRoot}"
 cd ./ffc-pay-request-editor && \
   docker-compose down $@
 cd "${projectRoot}"
+cd ./ffc-pay-event-hub && \
+  docker-compose down $@
+cd "${projectRoot}"
+cd ./ffc-pay-data-hub && \
+  docker-compose down $@
+cd "${projectRoot}"
+cd ./ffc-pay-report-generator && \
+  docker-compose down $@
+cd "${projectRoot}"
 cd ./ffc-pay-statement-data && \
   docker-compose down $@
 cd "${projectRoot}"
