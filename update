@@ -62,6 +62,18 @@ cd ./ffc-pay-request-editor && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
+cd ./ffc-pay-event-hub && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-data-hub && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-report-generator && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-file-consumer && \
   git checkout main && \
   git pull

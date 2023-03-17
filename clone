@@ -36,6 +36,15 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
   test -d ffc-pay-request-editor\
     && >&2 echo "The 'ffc-pay-request-editor' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-request-editor.git
+  test -d ffc-pay-event-hub\
+    && >&2 echo "The 'ffc-pay-event-hub' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-event-hub.git
+    test -d ffc-pay-data-hub\
+    && >&2 echo "The 'ffc-pay-data-hub' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-data-hub.git
+  test -d ffc-pay-report-generator\
+    && >&2 echo "The 'ffc-pay-report-generator' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-report-generator.git
   test -d ffc-pay-file-consumer\
     && >&2 echo "The 'ffc-pay-file-consumer' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-file-consumer.git
