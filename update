@@ -50,6 +50,10 @@ cd ./ffc-pay-file-publisher && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
+cd ./ffc-pay-file-receiver && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-responses && \
   git checkout main && \
   git pull
