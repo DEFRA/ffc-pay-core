@@ -1,0 +1,49 @@
+#!/usr/bin/bash
+
+totalCpu=0
+totalMemory=0
+totalPods=0
+
+arr=(
+  "ffc-pay-batch-verifier"
+  "ffc-pay-batch-processor"
+  "ffc-pay-enrichment"
+  "ffc-pay-processing"
+  "ffc-pay-submission"
+  "ffc-pay-file-publisher"
+  "ffc-pay-file-receiver"
+  "ffc-pay-responses"
+  "ffc-pay-web"
+  "ffc-pay-request-editor"
+  "ffc-pay-event-hub"
+  "ffc-pay-data-hub"
+  "ffc-pay-report-generator"
+  "ffc-pay-statement-data"
+  "ffc-pay-statement-constructor"
+  "ffc-pay-statement-generator"
+  "ffc-pay-statement-publisher"
+  )
+
+for i in "${arr[@]}"
+do
+  echo "Getting values from $i"
+  valuesFile="https://raw.githubusercontent.com/DEFRA/$i/main/helm/$i/values.yaml"
+  maxReplicas=$(curl --silent $valuesFile | yq -r '.deployment.maxReplicas')
+  # if maxReplicas does not exist get replicas instead
+  if [ "$maxReplicas" = "null" ]; then
+    maxReplicas=$(curl --silent $valuesFile | yq -r '.deployment.replicas')
+  fi
+  # if replicas does not exist set to 1
+  if [ "$maxReplicas" = "null" ]; then
+    maxReplicas=1
+  fi
+  cpu=$(curl --silent $valuesFile | yq -e '.container.limitCpu' - | sed -E 's/[A-Za-z]//g')
+  memory=$(curl --silent $valuesFile | yq -e '.container.limitMemory' - | sed -E 's/[A-Za-z]//g')
+  totalCpu=$(($totalCpu + $cpu * $maxReplicas))
+  totalMemory=$(($totalMemory + $memory * $maxReplicas))
+  totalPods=$(($totalPods + $maxReplicas))
+done
+
+echo "CPU required: $totalCpu"
+echo "Memory required: $totalMemory"
+echo "Pods required: $totalPods"
