@@ -252,6 +252,12 @@ List current environment version for each microservice hosted in Kubernetes.
 - `-c | --cluster` - Kubernetes cluster context name
 - `-n | --namespace` - Kubernetes namespace
 
+### Resource quota
+
+Determine the Kubernetes resource usage for a namespace based on all microservices running at maximum capacity and scaling.
+
+[`./resource-quota`](resource-quota)
+
 ## Resources
 ### Payments
 
