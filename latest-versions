@@ -18,6 +18,9 @@ echo 'ffc-pay-submission' &&
 echo 'ffc-pay-file-publisher' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-file-publisher/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
+echo 'ffc-pay-file-receiver' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-file-receiver/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
 echo 'ffc-pay-responses' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-responses/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 

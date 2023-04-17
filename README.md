@@ -17,6 +17,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 - [ffc-pay-request-editor](https://github.com/defra/ffc-pay-request-editor)
 - [ffc-pay-web](https://github.com/defra/ffc-pay-web)
 - [ffc-pay-file-publisher](https://github.com/defra/ffc-pay-file-publisher)
+- [ffc-pay-file-receiver](https://github.com/defra/ffc-pay-file-receiver)
 - [ffc-pay-file-consumer](https://github.com/defra/ffc-pay-file-consumer)
 
 #### Monitoring
@@ -46,6 +47,7 @@ ffc-pay-responses(Kubernetes - ffc-pay-responses)
 ffc-pay-request-editor(Kubernetes - ffc-pay-request-editor)
 ffc-pay-web(Kubernetes - ffc-pay-web)
 ffc-pay-file-publisher(Kubernetes - ffc-pay-file-publisher)
+ffc-pay-file-receiver(Kubernetes - ffc-pay-file-receiver)
 ffc-pay-file-consumer(Azure Function - ffc-pay-file-consumer)
 
 storageBatch[Azure Blob Storage - Batch]
@@ -81,6 +83,7 @@ topicFileSend ==> ffc-pay-file-publisher
 storageDAX ==> ffc-pay-file-publisher
 
 topicFileConsume ==> ffc-pay-file-consumer
+topicFileConsume ==> ffc-pay-file-receiver
 ffc-pay-file-consumer ==> storageDAX
 storageDAX ==> ffc-pay-responses
 ffc-pay-responses ==> topicAck
