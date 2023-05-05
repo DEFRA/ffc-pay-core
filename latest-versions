@@ -39,6 +39,9 @@ echo 'ffc-pay-data-hub' &&
 echo 'ffc-pay-report-generator' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-report-generator/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
+echo 'ffc-pay-alerting' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-alerting/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
 echo 'ffc-pay-file-consumer' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-file-consumer/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
