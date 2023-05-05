@@ -18,6 +18,7 @@ arr=(
   "ffc-pay-event-hub"
   "ffc-pay-data-hub"
   "ffc-pay-report-generator"
+  "ffc-pay-alerting"
   "ffc-pay-statement-data"
   "ffc-pay-statement-constructor"
   "ffc-pay-statement-generator"

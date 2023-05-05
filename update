@@ -78,6 +78,10 @@ cd ./ffc-pay-report-generator && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
+cd ./ffc-pay-alerting && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-file-consumer && \
   git checkout main && \
   git pull

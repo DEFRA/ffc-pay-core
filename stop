@@ -65,6 +65,9 @@ cd "${projectRoot}"
 cd ./ffc-pay-report-generator && \
   docker-compose down $@
 cd "${projectRoot}"
+cd ./ffc-pay-alerting && \
+  docker-compose down $@
+cd "${projectRoot}"
 cd ./ffc-pay-statement-data && \
   docker-compose down $@
 cd "${projectRoot}"
