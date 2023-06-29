@@ -18,13 +18,12 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 - [ffc-pay-web](https://github.com/defra/ffc-pay-web)
 - [ffc-pay-file-publisher](https://github.com/defra/ffc-pay-file-publisher)
 - [ffc-pay-file-receiver](https://github.com/defra/ffc-pay-file-receiver)
-- [ffc-pay-file-consumer](https://github.com/defra/ffc-pay-file-consumer)
 
 #### Monitoring
-- [ffc-pay-event](https://github.com/defra/ffc-pay-event)
-- [ffc-pay-event-projection](https://github.com/defra/ffc-pay-event-projection)
-- [ffc-pay-alerts](https://github.com/defra/ffc-pay-alerts)
-- [ffc-pay-mi-reporting](https://github.com/defra/ffc-pay-mi-reporting)
+- [ffc-pay-event-hub](https://github.com/defra/ffc-pay-event-hub)
+- [ffc-pay-data-hub](https://github.com/defra/ffc-pay-data-hub)
+- [ffc-pay-alerting](https://github.com/defra/ffc-pay-alerting)
+- [ffc-pay-report-generator](https://github.com/defra/ffc-pay-report-generator)
 
 ### Statements
 - [ffc-pay-statement-data](https://github.com/defra/ffc-pay-statement-data)
@@ -48,7 +47,6 @@ ffc-pay-request-editor(Kubernetes - ffc-pay-request-editor)
 ffc-pay-web(Kubernetes - ffc-pay-web)
 ffc-pay-file-publisher(Kubernetes - ffc-pay-file-publisher)
 ffc-pay-file-receiver(Kubernetes - ffc-pay-file-receiver)
-ffc-pay-file-consumer(Azure Function - ffc-pay-file-consumer)
 
 storageBatch[Azure Blob Storage - Batch]
 storageDAX[Azure Blob Storage - DAX]
@@ -82,7 +80,6 @@ topicFileSend ==> ffc-pay-file-sender
 topicFileSend ==> ffc-pay-file-publisher
 storageDAX ==> ffc-pay-file-publisher
 
-topicFileConsume ==> ffc-pay-file-consumer
 topicFileConsume ==> ffc-pay-file-receiver
 ffc-pay-file-consumer ==> storageDAX
 storageDAX ==> ffc-pay-responses
@@ -116,39 +113,39 @@ ffc-pay-responses(Kubernetes - ffc-pay-responses)
 ffc-pay-request-editor(Kubernetes - ffc-pay-request-editor)
 ffc-pay-web(Kubernetes - ffc-pay-web)
 
-ffc-pay-event(Azure Function - ffc-pay-event)
-ffc-pay-event-projection(Azure Function - ffc-pay-event-projection)
-ffc-pay-alerts(Azure Function - ffc-pay-alerts)
-ffc-pay-mi-reporting(Azure Function - ffc-pay-mi-reporting)
+ffc-pay-event-hub(Kubernetes - ffc-pay-event-hub)
+ffc-pay-data-hub(Kubernetes - ffc-pay-data-hub)
+ffc-pay-alerting(Kubernetes - ffc-pay-alerting)
+ffc-pay-report-generator(Kubernetes - ffc-pay-report-generator)
 
-storageTable[Azure Table Storage - Event Projection]
-storageProjection[Azure Blob Storage - Event Projection]
+storageTablePayments[Azure Table Storage - Payments]
+storageTableBatches[Azure Table Storage - Batches]
+storageTableHolds[Azure Table Storage - Holds]
+storageTableWarnings[Azure Table Storage - Warnings]
 storageReport[Azure Blob Storage - Reports]
 
-topicEvent[Azure Service Bus Topic - ffc-pay-event]
-topicEventProjection[Azure Service Bus Topic - ffc-pay-event-projection]
-topicAlerts[Azure Service Bus Topic - ffc-pay-alerts]
+topicEvents[Azure Service Bus Topic - ffc-pay-events]
+topicAlert[Azure Service Bus Topic - ffc-pay-alert]
 
-ffc-pay-batch-processor --> topicEvent
-ffc-pay-enrichment --> topicEvent
-ffc-pay-processing --> topicEvent
-ffc-pay-submission --> topicEvent
-ffc-pay-responses --> topicEvent
-ffc-pay-request-editor --> topicEvent
-topicEvent --> ffc-pay-event
-ffc-pay-event --> topicAlerts
-ffc-pay-event --> topicEventProjection
-ffc-pay-event --> storageTable
-topicAlerts --> ffc-pay-alerts
-topicEventProjection --> ffc-pay-event-projection
-storageTable --> ffc-pay-event-projection
-ffc-pay-event-projection --> storageProjection
+ffc-pay-batch-processor --> topicEvents
+ffc-pay-enrichment --> topicEvents
+ffc-pay-processing --> topicEvents
+ffc-pay-submission --> topicEvents
+ffc-pay-responses --> topicEvents
+ffc-pay-request-editor --> topicEvents
+topicEvents --> ffc-pay-event-hub
+ffc-pay-event-hub --> topicAlert
+ffc-pay-event-hub --> storageTablePayments
+ffc-pay-event-hub --> storageTableBatches
+ffc-pay-event-hub --> storageTableHolds
+ffc-pay-event-hub --> storageTableWarnings
+topicAlert --> ffc-pay-alerting
 
-storageTable --> ffc-pay-mi-reporting
-ffc-pay-mi-reporting --> storageReports
+storageTablePayments --> ffc-pay-report-generator
+ffc-pay-report-generator --> storageReports
 
 ffc-pay-web --> storageReport
-ffc-pay-web --> storageProjection
+ffc-pay-web --> ffc-pay-data-hub
 ```
 
 ### Statements

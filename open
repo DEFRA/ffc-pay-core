@@ -9,7 +9,6 @@ show_help() {
     Open payment services in VS Code.
 
     Options:
-      -f, --functions   include Azure Function Apps
       -s, --statements  include statement services
       -h, --help       display this help text
     "
@@ -17,9 +16,6 @@ show_help() {
 
 while :; do
   case $1 in
-    -f|--functions)
-      functions="true"
-      ;;
     -s|--statements)
       statements="true"
       ;;
@@ -62,12 +58,4 @@ if [ "${statements}" = "true" ]; then
   code ./ffc-pay-statement-generator;
   code ./ffc-pay-statement-publisher;
   code ./ffc-pay-statement-receiver;
-fi
-
-if [ "${functions}" = "true" ]; then
-  code ./ffc-pay-file-consumer;
-  code ./ffc-pay-event;
-  code ./ffc-pay-event-projection;
-  code ./ffc-pay-alerts;
-  code ./ffc-pay-mi-reporting;
 fi

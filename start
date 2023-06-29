@@ -14,7 +14,6 @@ show_help() {
     Run payment services.
 
     Options:
-      -f, --functions   include Azure Function Apps
       -s, --statements  include statement services
       -h, --help       display this help text
     "
@@ -22,9 +21,6 @@ show_help() {
 
 while :; do
   case $1 in
-     -f|--functions)
-      functions="true"
-      ;;
     -s|--statements)
       statements="true"
       ;;
@@ -68,12 +64,4 @@ if [ "${statements}" = "true" ]; then
   ./ffc-pay-statement-generator/scripts/start -d;
   ./ffc-pay-statement-publisher/scripts/start -d;
   ./ffc-pay-statement-receiver/scripts/start -d;
-fi
-
-if [ "${functions}" = "true" ]; then
-  ./ffc-pay-file-consumer/scripts/start -d;
-  ./ffc-pay-event/scripts/start -d;
-  ./ffc-pay-event-projection/scripts/start -d;
-  ./ffc-pay-alerts/scripts/start -d;
-  ./ffc-pay-mi-reporting/scripts/start -d;
 fi

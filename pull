@@ -68,21 +68,6 @@ cd "${projectRoot}"
 cd ./ffc-pay-alerting && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-file-consumer && \
-  git pull
-cd "${projectRoot}"
-cd ./ffc-pay-event && \
-  git pull
-cd "${projectRoot}"
-cd ./ffc-pay-event-projection && \
-  git pull
-cd "${projectRoot}"
-cd ./ffc-pay-alerts && \
-  git pull
-cd "${projectRoot}"
-cd ./ffc-pay-mi-reporting && \
-  git pull
-cd "${projectRoot}"
 cd ./ffc-pay-statement-data && \
   git pull
 cd "${projectRoot}"
