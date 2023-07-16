@@ -1,5 +1,5 @@
-# FFC Pay Core
-Local development support for orchestrating all FFC payment and statement microservices.
+# Payment Hub Core
+Local development support for orchestrating all Payment Hub microservices.
 
 ## Prerequisites
 
@@ -205,6 +205,8 @@ Build/rebuild Docker container for all microservices.
 
 Run all payment services.
 
+Runs `Seed` script if `ffc-pay-scripts` repository is cloned.
+
 [`./start`](start)
 
 #### Optional arguments
@@ -221,6 +223,12 @@ Run all payment services.
 #### Optional arguments
 
 Any valid `docker-compose down` argument.
+
+### Seed
+
+Seed customer mapping data from private repository to `ffc-pay-enrichment` if `ffc-pay-scripts` repository is cloned.
+
+[`./seed`](seed)
 
 ### Open
 
