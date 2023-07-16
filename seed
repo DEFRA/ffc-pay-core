@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+set -e
+projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pwd)
+
+show_help() {
+  echo "
+    Usage: path/to/ffc-pay-core [OPTION...]
+    Seed data to database.
+
+    Options:
+      -h, --help       display this help text
+    "
+}
+
+while :; do
+  case $1 in 
+    -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
+      show_help
+      exit
+      ;;
+    *)
+      break
+  esac
+
+  shift
+done
+
+cd "${projectRoot}"
+
+  export PGPASSWORD="ppp"
+
+  printf "\nChecking for seed data in ffc-pay-scripts repo\n"
+
+  test -d ffc-pay-scripts \
+    && echo "seeding customer data.." && cat ffc-pay-scripts/customer-mapping.sql | docker exec -i ffc-pay-enrichment-ffc-pay-enrichment-postgres-1 psql -U postgres -d ffc_pay_enrichment
