@@ -62,6 +62,9 @@ echo
 echo 'ffc-pay-submission: ' &&
   kubectl get deployment ffc-pay-submission -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
+echo 'ffc-pay-tracking: ' &&
+  kubectl get deployment ffc-pay-tracking -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
 echo 'ffc-pay-file-publisher: ' &&
   kubectl get deployment ffc-pay-file-publisher -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo

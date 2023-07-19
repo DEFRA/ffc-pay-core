@@ -13,6 +13,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 - [ffc-pay-enrichment](https://github.com/defra/ffc-pay-enrichment)
 - [ffc-pay-processing](https://github.com/defra/ffc-pay-processing)
 - [ffc-pay-submission](https://github.com/defra/ffc-pay-submission)
+- [ffc-pay-tracking](https://github.com/defra/ffc-pay-tracking)
 - [ffc-pay-responses](https://github.com/defra/ffc-pay-responses)
 - [ffc-pay-request-editor](https://github.com/defra/ffc-pay-request-editor)
 - [ffc-pay-web](https://github.com/defra/ffc-pay-web)
