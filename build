@@ -41,6 +41,9 @@ cd "${projectRoot}"
 cd ./ffc-pay-submission && \
   docker-compose build
 cd "${projectRoot}"
+cd ./ffc-pay-tracking && \
+  docker-compose build
+cd "${projectRoot}"
 cd ./ffc-pay-file-publisher && \
   docker-compose build
 cd "${projectRoot}"
