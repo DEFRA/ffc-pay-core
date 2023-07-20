@@ -47,6 +47,7 @@ if [ "${payments}" = "true" ]; then
   ./ffc-pay-enrichment/scripts/start -d;
   ./ffc-pay-processing/scripts/start -d;
   ./ffc-pay-submission/scripts/start -d;
+  ./ffc-pay-tracking/scripts/start -d;
   ./ffc-pay-file-publisher/scripts/start -d;
   ./ffc-pay-file-receiver/scripts/start -d;
   ./ffc-pay-responses/scripts/start -d;
