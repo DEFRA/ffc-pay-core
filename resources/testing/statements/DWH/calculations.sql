@@ -1,3 +1,6 @@
+TRUNCATE TABLE public.organisations RESTART IDENTITY CASCADE;
+TRUNCATE TABLE public.calculations RESTART IDENTITY CASCADE;
+
 -- Delete existing data if clean environment is required
 -- For local development, can also run down docker-compose down -v from ffc-pay-statement-data service to acheive the same
 DELETE FROM public.organisations;
@@ -7,69 +10,60 @@ DELETE FROM public.calculations;
 -- Insert organisations, important to note for non production environments, the email address must one setup in our GOV.UK Notify account
 INSERT INTO public.organisations (sbi, "addressLine1", "addressLine2", "addressLine3", city, county, postcode, "emailAddress", frn, name, updated)
 VALUES
-  (105000001, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000001, 'Mr A Farmer', NOW()),
-  (105000002, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000002, 'Mr A Farmer', NOW()),
-  (105000003, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000003, 'Mr A Farmer', NOW()),
-  (105000004, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000004, 'Mr A Farmer', NOW()),
-  (105000005, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000005, 'Mr A Farmer', NOW()),
-  (105000006, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000006, 'Mr A Farmer', NOW()),
-  (105000007, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000007, 'Mr A Farmer', NOW()),
-  (105000008, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000008, 'Mr A Farmer', NOW()),
-  (105000009, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000009, 'Mr A Farmer', NOW()),
-  (105000010, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000010, 'Mr A Farmer', NOW()),
-  (105000011, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000011, 'Mr A Farmer', NOW()),
-  (105000012, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000012, 'Mr A Farmer', NOW()),
-  (105000013, 'A Farm', 'A Place', 'A Land', 'A City', 'A County', 'NE1 2FA', 'john.watson2@rpa.gov.uk', 1000000013, 'Mr A Farmer', NOW());
+(110100001,'A farm','A field','A place','A town','A county','FA1 2PY','john.watson2@rpa.gov.uk',1000000001,'Mr Unsettled Top Up',NOW()),
+(110100002,'A farm','A field','A place','A town','A county','FA1 2PY','john.watson2@rpa.gov.uk',1000000002,'Mr Settled Top Up',NOW()),
+(110100003,'A farm','A field','A place','A town','A county','FA1 2PY','john.watson2@rpa.gov.uk',1000000003,'Mr Settled Reduction',NOW()),
+(110100004,'A farm','A field','A place','A town','A county','FA1 2PY','john.watson2@rpa.gov.uk',1000000004,'Mr Unsettled Reduction',NOW()),
+(110100005,'A farm','A field','A place','A town','A county','FA1 2PY','john.watson2@rpa.gov.uk',1000000005,'Mr Recovery',NOW()),
+(110100006,'A farm','A field','A place','A town','A county','FA1 2PY','john.watson2@rpa.gov.uk',1000000006,'Mr Zero Value Split',NOW());
+
 
 -- Insert calculations with calculationId as PK.  All schemes can be hard coded to SFI for now.
 INSERT INTO public.calculations ("calculationId" ,sbi ,frn ,"calculationDate" ,"invoiceNumber" ,scheme ,updated)
 VALUES
-(1000001, 105000001, 1000000001, NOW(), 'SFI0000001', 'SFI', NOW()),
-(1000002, 105000002, 1000000002, NOW(), 'SFI0000002', 'SFI', NOW()),
-(1000003, 105000003, 1000000003, NOW(), 'SFI0000003', 'SFI', NOW()),
-(1000004, 105000004, 1000000004, NOW(), 'SFI0000004', 'SFI', NOW()),
-(1000005, 105000005, 1000000005, NOW(), 'SFI0000005', 'SFI', NOW()),
-(1000006, 105000006, 1000000006, NOW(), 'SFI0000006', 'SFI', NOW()),
-(1000007, 105000007, 1000000007, NOW(), 'SFI0000007', 'SFI', NOW()),
-(1000008, 105000008, 1000000008, NOW(), 'SFI0000008', 'SFI', NOW()),
-(1000009, 105000009, 1000000009, NOW(), 'SFI0000009', 'SFI', NOW()),
-(1000010, 105000010, 1000000010, NOW(), 'SFI0000010', 'SFI', NOW()),
-(1000011, 105000011, 1000000011, NOW(), 'SFI0000011', 'SFI', NOW()),
-(1000012, 105000012, 1000000012, NOW(), 'SFI0000012', 'SFI', NOW()),
-(1000013, 105000013, 1000000013, NOW(), 'SFI0000013', 'SFI', NOW());
+(10001,110100001,1000000001,NOW(),'SFI00000001','80101',NOW()),
+(10002,110100002,1000000002,NOW(),'SFI00000002','80101',NOW()),
+(10003,110100003,1000000003,NOW(),'SFI00000003','80101',NOW()),
+(10004,110100004,1000000004,NOW(),'SFI00000004','80101',NOW()),
+(10005,110100005,1000000005,NOW(),'SFI00000005','80101',NOW()),
+(10006,110100001,1000000001,NOW(),'SFI00000006','80101',NOW()),
+
+(10007,110100001,1000000001,NOW(),'SFI00000007','80101',NOW()),
+(10008,110100002,1000000002,NOW(),'SFI00000008','80101',NOW()),
+(10009,110100003,1000000003,NOW(),'SFI00000009','80101',NOW()),
+(10010,110100004,1000000004,NOW(),'SFI00000010','80101',NOW()),
+(10011,110100005,1000000005,NOW(),'SFI00000011','80101',NOW()),
+(10012,110100006,1000000006,NOW(),'SFI00000012','80102',NOW()),
+
+(10013,110100001,1000000001,NOW(),'SFI00000013','80101',NOW()),
+(10014,110100002,1000000002,NOW(),'SFI00000014','80101',NOW()),
+(10015,110100003,1000000003,NOW(),'SFI00000015','80101',NOW()),
+(10016,110100004,1000000004,NOW(),'SFI00000016','80101',NOW()),
+(10017,110100005,1000000005,NOW(),'SFI00000017','80101',NOW()),
+(10018,110100006,1000000006,NOW(),'SFI00000018','80102',NOW());
 
 -- Insert funding with calculationId as FK to calculations table.  One calculation will have 1 or more funding records.
 -- There is a PK fundingId field in this table, but it is set to auto increment, so no need to populate it.
 -- areaClaimed is set to precision 4dp and rate is 6dp, though current SFI rates are only 2dp, Postgres will automatically add full precision values
 INSERT INTO public.fundings ("fundingCode", "calculationId", "areaClaimed", rate)
 VALUES
-  ('80101', 1000001, 1000, 22),
-  ('80102', 1000002, 1000, 40),
-  ('80111', 1000003, 1000, 28),
-  ('80112', 1000004, 1000, 58),
-  ('80101', 1000005, 1000, 22),
-  ('80102', 1000005, 1000, 40),
-  ('80111', 1000006, 1000, 28),
-  ('80112', 1000006, 1000, 58),
-  ('80101', 1000007, 1000, 22),
-  ('80102', 1000007, 1000, 40),
-  ('80111', 1000007, 1000, 28),
-  ('80112', 1000007, 1000, 58),
-  ('80121', 1000008, 1000, 10.30),
-  ('80190', 1000008, 250, 0),
-  ('80101', 1000009, 1000, 22),
-  ('80121', 1000009, 1000, 10.30),
-  ('80190', 1000009, 250, 0),
-  ('80195', 1000010, 1000, 6.15),
-  ('80101', 1000011, 1000, 22),
-  ('80195', 1000011, 1000, 6.15),
-  ('80121', 1000012, 1000, 10.30),
-  ('80190', 1000012, 250, 0),
-  ('80195', 1000012, 1000, 6.15),
-  ('80101', 1000013, 1000, 22),
-  ('80102', 1000013, 1000, 40),
-  ('80111', 1000013, 1000, 28),
-  ('80112', 1000013, 1000, 58),
-  ('80121', 1000013, 1000, 10.30),
-  ('80190', 1000013, 250, 0),
-  ('80195', 1000013, 1000, 6.15)
+('80101',10001,45.4545,22),
+('80101',10002,45.4545,22),
+('80101',10003,45.4545,22),
+('80101',10004,45.4545,22),
+('80101',10005,45.4545,22),
+('80101',10006,45.4545,22),
+
+('80101',10007,68.1818,22),
+('80101',10008,68.1818,22),
+('80101',10009,22.7272,22),
+('80101',10010,22.7272,22),
+('80101',10011,22.7272,22),
+('80102',10012,35.7142,28),
+
+('80101',10013,136.3636,22),
+('80101',10014,136.3636,22),
+('80101',10015,136.3636,22),
+('80101',10016,136.3636,22),
+('80101',10017,136.3636,22),
+('80102',10018,107.1428,28);
