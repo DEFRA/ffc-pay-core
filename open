@@ -45,6 +45,7 @@ if [ "${payments}" = "true" ]; then
   code ./ffc-pay-file-publisher;
   code ./ffc-pay-file-receiver;
   code ./ffc-pay-responses;
+  code ./ffc-pay-tracking;
   code ./ffc-pay-web;
   code ./ffc-pay-request-editor;
   code ./ffc-pay-event-hub;

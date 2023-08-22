@@ -62,9 +62,6 @@ echo
 echo 'ffc-pay-submission: ' &&
   kubectl get deployment ffc-pay-submission -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
-echo 'ffc-pay-tracking: ' &&
-  kubectl get deployment ffc-pay-tracking -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
-echo
 echo 'ffc-pay-file-publisher: ' &&
   kubectl get deployment ffc-pay-file-publisher -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
@@ -74,11 +71,14 @@ echo
 echo 'ffc-pay-responses: ' &&
   kubectl get deployment ffc-pay-responses -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
-echo 'ffc-pay-request-editor: ' &&
-  kubectl get deployment ffc-pay-request-editor -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo 'ffc-pay-tracking: ' &&
+  kubectl get deployment ffc-pay-tracking -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
 echo 'ffc-pay-web: ' &&
   kubectl get deployment ffc-pay-web -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
+echo 'ffc-pay-request-editor: ' &&
+  kubectl get deployment ffc-pay-request-editor -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
 echo 'ffc-pay-event-hub: ' &&
   kubectl get deployment ffc-pay-event-hub -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';

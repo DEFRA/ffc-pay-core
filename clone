@@ -24,9 +24,6 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
   test -d ffc-pay-submission\
     && >&2 echo "The 'ffc-pay-submission' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-submission.git
-  test -d ffc-pay-tracking\
-    && >&2 echo "The 'ffc-pay-tracking' repository already exists. Skipping." \
-    || git clone https://github.com/DEFRA/ffc-pay-tracking.git
   test -d ffc-pay-file-publisher\
     && >&2 echo "The 'ffc-pay-file-publisher' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-file-publisher.git
@@ -36,6 +33,9 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
   test -d ffc-pay-responses\
     && >&2 echo "The 'ffc-pay-responses' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-responses.git
+  test -d ffc-pay-tracking\
+    && >&2 echo "The 'ffc-pay-tracking' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-tracking.git
   test -d ffc-pay-web\
     && >&2 echo "The 'ffc-pay-web' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-web.git

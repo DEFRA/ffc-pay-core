@@ -46,10 +46,6 @@ cd ./ffc-pay-submission && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-tracking && \
-  git checkout main && \
-  git pull
-cd "${projectRoot}"
 cd ./ffc-pay-file-publisher && \
   git checkout main && \
   git pull
@@ -59,6 +55,10 @@ cd ./ffc-pay-file-receiver && \
   git pull
 cd "${projectRoot}"
 cd ./ffc-pay-responses && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pay-tracking && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
