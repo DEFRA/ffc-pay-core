@@ -92,6 +92,9 @@ echo
 echo 'ffc-pay-alerting: ' &&
   kubectl get deployment ffc-pay-alerting -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
+echo 'ffc-pay-gateway: ' &&
+  kubectl get deployment ffc-pay-gateway -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
 echo 'ffc-pay-statement-data: ' &&
   kubectl get cronjob ffc-pay-statement-data -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo

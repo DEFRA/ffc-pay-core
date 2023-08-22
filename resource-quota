@@ -20,6 +20,7 @@ arr=(
   "ffc-pay-data-hub"
   "ffc-pay-report-generator"
   "ffc-pay-alerting"
+  "ffc-pay-gateway"
   "ffc-pay-statement-data"
   "ffc-pay-statement-constructor"
   "ffc-pay-statement-generator"
