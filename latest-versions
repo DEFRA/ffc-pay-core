@@ -15,8 +15,6 @@ echo 'ffc-pay-processing' &&
 echo 'ffc-pay-submission' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-submission/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
-echo 'ffc-pay-tracking' &&
-  curl --silent "https://api.github.com/repos/defra/ffc-pay-tracking/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
 echo 'ffc-pay-file-publisher' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-file-publisher/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
@@ -26,6 +24,9 @@ echo 'ffc-pay-file-receiver' &&
 
 echo 'ffc-pay-responses' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-responses/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-pay-tracking' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-tracking/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
 echo 'ffc-pay-web' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-web/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
