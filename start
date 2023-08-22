@@ -57,6 +57,7 @@ if [ "${payments}" = "true" ]; then
   ./ffc-pay-data-hub/scripts/start -d;
   ./ffc-pay-report-generator/scripts/start -d;
   ./ffc-pay-alerting/scripts/start -d;
+  ./ffc-pay-gateway/scripts/start -d;
 fi
 
 if [ "${statements}" = "true" ]; then

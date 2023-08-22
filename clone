@@ -45,7 +45,7 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
   test -d ffc-pay-event-hub\
     && >&2 echo "The 'ffc-pay-event-hub' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-event-hub.git
-    test -d ffc-pay-data-hub\
+  test -d ffc-pay-data-hub\
     && >&2 echo "The 'ffc-pay-data-hub' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-data-hub.git
   test -d ffc-pay-report-generator\
@@ -53,7 +53,10 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
     || git clone https://github.com/DEFRA/ffc-pay-report-generator.git
   test -d ffc-pay-alerting\
     && >&2 echo "The 'ffc-pay-alerting' repository already exists. Skipping." \
-    || git clone https://github.com/DEFRA/ffc-pay-alerting.git  
+    || git clone https://github.com/DEFRA/ffc-pay-alerting.git
+  test -d ffc-pay-gateway\
+    && >&2 echo "The 'ffc-pay-gateway' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-pay-gateway.git
   test -d ffc-pay-statement-data\
     && >&2 echo "The 'ffc-pay-statement-data' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-statement-data.git
