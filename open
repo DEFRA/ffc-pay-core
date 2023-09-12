@@ -53,6 +53,7 @@ if [ "${payments}" = "true" ]; then
   code ./ffc-pay-report-generator;
   code ./ffc-pay-alerting;
   code ./ffc-pay-gateway;
+  code ./ffc-pay-injection;
 fi
 
 if [ "${statements}" = "true" ]; then
