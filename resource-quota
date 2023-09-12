@@ -21,6 +21,7 @@ arr=(
   "ffc-pay-report-generator"
   "ffc-pay-alerting"
   "ffc-pay-gateway"
+  "ffc-pay-injection"
   "ffc-pay-statement-data"
   "ffc-pay-statement-constructor"
   "ffc-pay-statement-generator"

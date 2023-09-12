@@ -8,6 +8,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 ## Repositories
 ### Payments
 #### Processing
+- [ffc-pay-gateway](https://github.com/defra/ffc-pay-gateway)
 - [ffc-pay-batch-verifier](https://github.com/defra/ffc-pay-batch-verifier)
 - [ffc-pay-batch-processor](https://github.com/defra/ffc-pay-batch-processor)
 - [ffc-pay-enrichment](https://github.com/defra/ffc-pay-enrichment)
@@ -19,6 +20,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 - [ffc-pay-web](https://github.com/defra/ffc-pay-web)
 - [ffc-pay-file-publisher](https://github.com/defra/ffc-pay-file-publisher)
 - [ffc-pay-file-receiver](https://github.com/defra/ffc-pay-file-receiver)
+- [ffc-pay-injection](https://github.com/defra/ffc-pay-injection)
 
 #### Monitoring
 - [ffc-pay-event-hub](https://github.com/defra/ffc-pay-event-hub)
@@ -38,6 +40,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 ### Payments
 ```mermaid
 flowchart LR
+ffc-pay-gateway(Kubernetes - ffc-pay-gateway)
 ffc-pay-batch-verifier(Kubernetes - ffc-pay-batch-verifier)
 ffc-pay-batch-processor(Kubernetes - ffc-pay-batch-processor)
 ffc-pay-enrichment(Kubernetes - ffc-pay-enrichment)
@@ -48,8 +51,10 @@ ffc-pay-request-editor(Kubernetes - ffc-pay-request-editor)
 ffc-pay-web(Kubernetes - ffc-pay-web)
 ffc-pay-file-publisher(Kubernetes - ffc-pay-file-publisher)
 ffc-pay-file-receiver(Kubernetes - ffc-pay-file-receiver)
+ffc-pay-injection(Kubernetes - ffc-pay-injection)
 
 storageBatch[Azure Blob Storage - Batch]
+storageManual[Azure Blob Storage - Manual]
 storageDAX[Azure Blob Storage - DAX]
 
 topicRequest[Azure Service Bus Topic - ffc-pay-request]
@@ -66,6 +71,7 @@ topicLedger[Azure Service Bus Topic - ffc-pay-manual-ledger-check]
 topicLedgerResponse[Azure Service Bus Topic - ffc-pay-manual-ledger-response]
 topicEvent[Azure Service Bus Topic - ffc-pay-event]
 
+ffc-pay-gateway ==> storageBatch
 storageBatch ==> ffc-pay-batch-verifier
 storageBatch ==> ffc-pay-batch-processor
 ffc-pay-batch-processor ==> topicRequest
@@ -80,6 +86,9 @@ ffc-pay-submission ==> topicFileSend
 topicFileSend ==> ffc-pay-file-sender
 topicFileSend ==> ffc-pay-file-publisher
 storageDAX ==> ffc-pay-file-publisher
+storageDAX ==> ffc-pay-gateway
+storageManual ==> ffc-pay-injection
+ffc-pay-injection ==> topicRequest
 
 topicFileConsume ==> ffc-pay-file-receiver
 ffc-pay-file-consumer ==> storageDAX

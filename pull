@@ -74,6 +74,9 @@ cd "${projectRoot}"
 cd ./ffc-pay-gateway && \
   git pull
 cd "${projectRoot}"
+cd ./ffc-pay-injection && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-statement-data && \
   git pull
 cd "${projectRoot}"
