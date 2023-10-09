@@ -80,6 +80,9 @@ cd "${projectRoot}"
 cd ./ffc-pay-xb && \
   git pull
 cd "${projectRoot}"
+cd ./ffc-pay-dps && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-statement-data && \
   git pull
 cd "${projectRoot}"
