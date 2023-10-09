@@ -51,6 +51,9 @@ echo 'ffc-pay-gateway' &&
 echo 'ffc-pay-injection' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-injection/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
+echo 'ffc-pay-xb' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-pay-xb/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
 echo 'ffc-pay-statement-data' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-statement-data/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
