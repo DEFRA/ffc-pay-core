@@ -94,6 +94,10 @@ cd ./ffc-pay-injection && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
+cd ./ffc-pay-xb && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-mi-reporting && \
   git checkout main && \
   git pull
