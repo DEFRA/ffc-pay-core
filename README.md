@@ -22,6 +22,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 - [ffc-pay-file-receiver](https://github.com/defra/ffc-pay-file-receiver)
 - [ffc-pay-injection](https://github.com/defra/ffc-pay-injection)
 - [ffc-pay-xb](https://github.com/defra/ffc-pay-xb)
+- [ffc-pay-dps](https://github.com/defra/ffc-pay-dps)
 
 #### Monitoring
 - [ffc-pay-event-hub](https://github.com/defra/ffc-pay-event-hub)

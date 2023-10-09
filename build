@@ -77,6 +77,9 @@ cd "${projectRoot}"
 cd ./ffc-pay-xb && \
   docker-compose build
 cd "${projectRoot}"
+cd ./ffc-pay-dps && \
+  docker-compose build
+cd "${projectRoot}"
 cd ./ffc-pay-statement-data && \
   docker-compose build
 cd "${projectRoot}"
