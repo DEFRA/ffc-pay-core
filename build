@@ -80,6 +80,12 @@ cd "${projectRoot}"
 cd ./ffc-pay-dps && \
   docker-compose build
 cd "${projectRoot}"
+cd ./ffc-pay-alerting && \
+  docker-compose build
+cd "${projectRoot}"
+cd ./ffc-pay-demographics && \
+  docker-compose build
+cd "${projectRoot}"
 cd ./ffc-pay-statement-data && \
   docker-compose build
 cd "${projectRoot}"
@@ -93,7 +99,4 @@ cd ./ffc-pay-statement-publisher && \
   docker-compose build
 cd "${projectRoot}"
 cd ./ffc-pay-statement-receiver && \
-  docker-compose build
-cd "${projectRoot}"
-cd ./ffc-pay-alerting && \
   docker-compose build

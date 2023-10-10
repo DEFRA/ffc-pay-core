@@ -102,6 +102,10 @@ cd ./ffc-pay-dps && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
+cd ./ffc-pay-demographics && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-pay-mi-reporting && \
   git checkout main && \
   git pull

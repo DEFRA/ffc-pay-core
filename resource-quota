@@ -24,6 +24,7 @@ arr=(
   "ffc-pay-injection"
   "ffc-pay-xb"
   "ffc-pay-dps"
+  "ffc-pay-demographics"
   "ffc-pay-statement-data"
   "ffc-pay-statement-constructor"
   "ffc-pay-statement-generator"
