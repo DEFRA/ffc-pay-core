@@ -62,6 +62,7 @@ if [ "${payments}" = "true" ]; then
   ./ffc-pay-xb/scripts/start -d;
   ./ffc-pay-dps/scripts/start -d;
   ./ffc-pay-demographics/scripts/start -d;
+  ./ffc-pay-fdmr/scripts/start -d;
 fi
 
 if [ "${statements}" = "true" ]; then

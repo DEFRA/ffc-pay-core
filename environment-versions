@@ -104,6 +104,9 @@ echo
 echo 'ffc-pay-dps: ' &&
   kubectl get deployment ffc-pay-dps -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
+echo 'ffc-pay-fdmr: ' &&
+  kubectl get deployment ffc-pay-fdmr -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
 echo 'ffc-pay-demographics: ' &&
   kubectl get deployment ffc-pay-demographics -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
