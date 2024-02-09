@@ -12,7 +12,7 @@ Confirm installation and get the version number: psql --version
 You should see the execution entries of scripts being logged in your WSL window, there is a success/fail message for each service/script.
 
 Note : execution of scripts is linear, so if one fails, the script will exit giving indicative error on which service has failed and no other sql scripts will be executed.
-Note: at this moment script has 7 services, that script is pushing data to : 
+Note: at this moment, automate-SFI22.sh script has 7 services, that script is pushing data to : 
 Ffc-pay-submission
 Ffc-pay-statement-generator
 Ffc-pay-statement-data
