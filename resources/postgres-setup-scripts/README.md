@@ -8,7 +8,9 @@ Confirm installation and get the version number: psql --version
 
 2.Download the script package from repo into your WSL
 
-3.Ensure all services are up and running and navigate to the folder postgres-setup-scripts and issue command : ./automate-SFI22.sh
+3.Navigate to the directory where automationion script is saved, for example with SFI22 : postgres-setup-scripts/SFI-22-automated-sql-data-script, and issue command : chmod +x "automated-script-filename" inserting the filename between "", With SFI22 example : chmod +x automate-SFI22
+
+4.Ensure all services are up and running and navigate to the folder where your "automate" script is, for example for SFI22 it is :postgres-setup-scripts/SFI-22-automated-sql-data-script and issue command : ./automate-SFI22.sh
 You should see the execution entries of scripts being logged in your WSL window, there is a success/fail message for each service/script.
 
 Note : execution of scripts is linear, so if one fails, the script will exit giving indicative error on which service has failed and no other sql scripts will be executed.
