@@ -26,4 +26,5 @@ Below you can find the anatomy of script expression, so you can add new entries,
 
 
 
-![Auto-sql-script-execution](https://github.com/DEFRA/ffc-pay-core/assets/98330195/24a4ab40-c068-4785-a29f-1408f7235038)
+![Auto-sql-script-execution-scheme](https://github.com/DEFRA/ffc-pay-core/assets/98330195/0bc13125-d3b4-4134-ba61-d807ac531512)
+
