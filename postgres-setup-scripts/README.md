@@ -25,4 +25,5 @@ ffc-pay-batch-processor
 Below you can find the anatomy of script expression, so you can add new entries, edit existing ones in case there is a change to database setup or delete them if you are not using them. Current version only supports the above services for Documents team, so please ensure this is tailored to your own services using below schema to edit properties of the script expressions.
 
 
-![Auto-sql-script-execution](https://github.com/DEFRA/ffc-pay-core/assets/98330195/6ecc6108-c9f8-4668-8849-1b74f81a9d65)
+
+![Auto-sql-script-execution](https://github.com/DEFRA/ffc-pay-core/assets/98330195/24a4ab40-c068-4785-a29f-1408f7235038)
