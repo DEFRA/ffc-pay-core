@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Execute the ffc-pay-statement-data sql script!
+# Execute the ffc-pay-statement-data sql scrip
 PGPASSWORD=ppp psql -h host.docker.internal -p 5452 -U postgres -d ffc_pay_statement_data -f $(pwd)/sql_start_scripts/ffc-pay-statement-data.sql 
 
 # Check the exit status of the ffc-pay-statement-data sql script
