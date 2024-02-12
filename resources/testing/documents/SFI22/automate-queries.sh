@@ -1,7 +1,5 @@
 #!/bin/bash
 
-
-
 # Execute the ffc-pay-statement-data sql scrip
 PGPASSWORD=ppp psql -h host.docker.internal -p 5452 -U postgres -d ffc_pay_statement_data -f $(pwd)/data/SFI22-ffc-pay-statement-data.sql 
 
