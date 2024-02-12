@@ -39,18 +39,38 @@ function select_subdir() {
 }
 # Function to check if the automation-script.sh file exists and execute it if found
 function execute_script() {
-  # Check if the automation-script.sh file exists
+  # Check if the automate-queries.sh file exists
   if [ -f automate-queries.sh ]; then
-    # Execute the automation-script.sh file with a 20-second timeout and the -k option to kill the process after the timeout
-    timeout -k 20 20 ./automate-queries.sh
+    # Store the current directory
+    original_directory=$(pwd)
+
+    # Change to the parent directory
+    cd ../
+
+    # Execute the databases-reset-scripts.sh file with a 20-second timeout and the -k option to kill the process after the timeout
+    timeout -k 20 20 ./databases-reset-scripts.sh
+
+    # Check the exit status of the previous command
     if [ $? -eq 124 ]; then
-      echo "Timeout: Are you sure your services are running?"
+      echo "Timeout: databases-reset-scripts.sh - Are you sure your services are running?"
+    fi
+
+    # Return to the original directory
+    cd "$original_directory"
+
+    # Execute the automate-queries.sh file with a 20-second timeout and the -k option to kill the process after the timeout
+    timeout -k 20 20 ./automate-queries.sh
+
+    # Check the exit status of the second command
+    if [ $? -eq 124 ]; then
+      echo "Timeout: automate-queries.sh - Are you sure your services are running?"
     fi
   else
     # Display an error message
     echo "The automate-queries.sh file does not exist in this directory."
   fi
 }
+
 # Start the script
 cd resources
 # Loop until the automation-script.sh file is found or the user quits
