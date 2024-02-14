@@ -15,7 +15,7 @@ function select_subdir() {
   read -p "Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): " choice
 
   # Check if the user's choice is valid
-  if [[ $choice =~ ^[1-9]$ || $choice =~ [bq] ]]; then
+ if [[ $choice =~ ^[1-9][0-9]*$ || $choice =~ [bq] ]]; then
     # Check if the user chose to go back, up, or quit
     if [[ $choice == "${#subdirs_array[@]}" ]]; then
       # Go back to the start
