@@ -1,12 +1,16 @@
 #!/bin/bash
+# Clear the terminal
+clear
+
+home_directory=$(pwd)
 # Function to display the list of subdirectories and get the user's choice
 function select_subdir() {
   # Get all subdirectories in the current directory, excluding the one containing the automation-script.sh file
-  subdirs=$(find . -maxdepth 1 -type d )
+  subdirs=$(find . -maxdepth 5 -type d ! -path '*/data*' ! -path './documents' ! -path './payments' ! -path './test-cases' | sort)
   # Create an array of subdirectory names
   subdirs_array=($subdirs)
   # Display the list of subdirectories to the user
-  echo "Available subdirectories:"
+  echo "Select the directory that you wish to perform a reset for:"
   for ((i = 0; i < ${#subdirs_array[@]}; i++)); do
     echo "$((i + 1)). ${subdirs_array[i]}"
   done
@@ -19,7 +23,7 @@ function select_subdir() {
     # Check if the user chose to go back, up, or quit
     if [[ $choice == "${#subdirs_array[@]}" ]]; then
       # Go back to the start
-      cd ../..
+     echo " You selected - ${subdirs_array[choice - 1]}"
     elif [[ $choice == "b" ]]; then
       # Go back to the previous subdirectory
       cd ..
@@ -30,7 +34,7 @@ function select_subdir() {
       # Get the selected subdirectory
       selected_subdir=${subdirs_array[choice - 1]}
       # Change to the selected subdirectory
-      cd $selected_subdir
+      cd "$selected_subdir"
     fi
   else
     echo "Invalid choice"
@@ -45,7 +49,7 @@ function execute_script() {
     original_directory=$(pwd)
 
     # Change to the parent directory
-    cd ../
+    cd "../"
 
     # Execute the databases-reset-scripts.sh file with a 20-second timeout and the -k option to kill the process after the timeout
     timeout -k 20 20 ./databases-reset-scripts.sh
@@ -72,7 +76,7 @@ function execute_script() {
 }
 
 # Start the script
-cd resources
+cd "$original_directory"
 # Loop until the automation-script.sh file is found or the user quits
 while true; do
   # Select the subdirectory

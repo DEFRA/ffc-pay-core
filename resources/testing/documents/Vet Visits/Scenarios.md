@@ -1,1 +1,0 @@
-1. Sheep, beef, dairy and pigs
