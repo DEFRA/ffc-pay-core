@@ -1,0 +1,142 @@
+{
+   "businessName":"Mr A Farmer",
+   "sbi":123456789,
+   "frn":1234567890,
+   "email": "john.watson2@rpa.gov.uk",
+   "address":{
+      "line1":"A Farm",
+      "line2":"",
+      "line3":"Near a field",
+      "line4":"Newcastle Upon Tyne",
+      "line5":"Tyne & Wear",
+      "postcode":"NE1 1AA"
+   },
+   "scheme":{
+      "name":"Sustainable Farming Incentive",
+      "shortName":"SFI",
+      "year":"2022",
+      "frequency":"Quarterly",
+      "agreementNumber": "SFI1234567"
+   },
+   "payments":[
+      {
+         "invoiceNumber":"S0000001C000001V001",
+         "reference":"PY1234567",
+         "dueDate":"1 July 2022",
+         "settled":"1 July 2022",
+         "calculated":"16 June 2022",
+         "value":"317.15"
+      }
+   ],
+   "funding":[
+      {
+         "name":"Arable and horticultural soils",
+         "level":"Introductory",
+         "area":"5.00",
+         "rate":"22.00",
+         "annualValue":"110.00",
+         "quarterlyValue":"27.50",
+         "quarterlyReduction":"0.00",
+         "quarterlyPayment":"27.50",
+         "reductions":[          
+         ]
+      },
+      {
+         "name":"Arable and horticultural soils",
+         "level":"Intermediate",
+         "area":"10.00",
+         "rate":"40.00",
+         "annualValue":"400.00",
+         "quarterlyValue":"100.00",
+         "quarterlyReduction":"75.00",
+         "quarterlyPayment":"25.00",
+         "reductions":[
+            {
+               "reason":"Late claim submission",
+               "value":"25.00"
+            },
+            {
+               "reason":"Over declaration reduction",
+               "value":"50.00"
+            }
+         ]
+      },
+      {
+         "name":"Improved grassland soils",
+         "level":"Introductory",
+         "area":"15.00",
+         "rate":"28.00",
+         "annualValue":"420.00",
+         "quarterlyValue":"105.00",
+         "quarterlyReduction":"50.00",
+         "quarterlyPayment":"92.50",
+         "reductions":[
+            {
+               "reason":"Over declaration reduction",
+               "value":"50.00"
+            }
+         ]
+      },
+      {
+         "name":"Improved grassland soils",
+         "level":"Intermediate",
+         "area":"11.20",
+         "rate":"58.00",
+         "annualValue":"649.60",
+         "quarterlyValue":"162.40",
+         "quarterlyReduction":"50.00",
+         "quarterlyPayment":"112.40",
+         "reductions":[
+            {
+               "reason":"Over declaration reduction",
+               "value":"50.00"
+            }
+         ]
+      },
+      {
+         "name":"Moorland",
+         "level":"Introductory",
+         "area":"12.00",
+         "rate":"32.38",
+         "annualValue":"388.60",
+         "quarterlyValue":"97.15",
+         "quarterlyReduction":"0.00",
+         "quarterlyPayment":"97.15",
+         "reductions":[
+            
+         ]
+      },
+      {
+         "name":"Moorland",
+         "level":"Additional",
+         "area":"",
+         "rate":"",
+         "annualValue":"265.00",
+         "quarterlyValue":"66.25",
+         "quarterlyReduction":"0.00",
+         "quarterlyPayment":"66.25",
+         "reductions":[]
+      },
+      {
+         "name":"Common land",
+         "level":"Additional",
+         "area":"21.56",
+         "rate":"6.50",
+         "annualValue":"140.14",
+         "quarterlyValue":"35.04",
+         "quarterlyReduction":"0.00",
+         "quarterlyPayment":"35.04",
+         "reductions":[]
+      },
+      {
+         "name":"Total",
+         "level":"",
+         "area":"74.76",
+         "rate":"",
+         "annualValue":"2373.34",
+         "quarterlyValue":"593.34",
+         "quarterlyReduction":"43.75",
+         "quarterlyPayment":"549.59"
+      }
+   ]
+}
