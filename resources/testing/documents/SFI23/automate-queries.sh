@@ -21,6 +21,3 @@ else
     echo "Error: ffc-pay-statement-constructor sql script failed."
     exit 1
 fi
-
-
-
