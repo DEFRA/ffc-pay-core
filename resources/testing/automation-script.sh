@@ -6,7 +6,7 @@ home_directory=$(pwd)
 # Function to display the list of subdirectories and get the user's choice
 function select_subdir() {
   # Get all subdirectories in the current directory, excluding the one containing the automation-script.sh file
-  subdirs=$(find . -maxdepth 5 -type d ! -path '*/data*' ! -path './documents' ! -path './payments' ! -path './test-cases' | sort)
+  subdirs=$(find . -maxdepth 5 -type d ! -path '*/data*' ! -path './documents' ! -path './payments' | sort)
   # Create an array of subdirectory names
   subdirs_array=($subdirs)
   # Display the list of subdirectories to the user
