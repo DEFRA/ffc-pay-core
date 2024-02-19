@@ -47,7 +47,7 @@ This automation script will run an initial setup script that will ask:
 
      `Do you want to update your email address? (y/n):`
 
-     If the answer is y, it will prompt you with
+If the answer is y, it will prompt you with
 
      `Enter your testing email address:`
 
