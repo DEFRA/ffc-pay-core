@@ -1,0 +1,398 @@
+Script started on 2024-02-19 15:47:09+00:00 [TERM="xterm-256color" TTY="/dev/pts/5" COLUMNS="120" LINES="30"]
+[?2004h]0;bunglehaze@LAPTOP-U4MUGEVK: ~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[01;32mbunglehaze@LAPTOP-U4MUGEVK[00m:[01;34m~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[00m$ git branch[2Ppush[K[K[K[K[K[K[K[K./automation-script.sh 
+[?2004l[H[2J[3JEnter your testing email address: leigh.godson@eviden.com
+Email address is valid.
+Script './documents/SFI23/data/SFI23-ffc-pay-statement-data.sql' has been modified in-place.
+Script './documents/SFI22/data/SFI22-ffc-pay-statement-data.sql' has been modified in-place.
+Select the directory that you wish to perform a reset for:
+1. .
+2. ./documents/SFI22
+3. ./documents/SFI23
+4. ./documents/test-cases
+5. ./documents/test-cases/file-validation
+6. ./payments/ffc-pay-batch-processor
+7. ./payments/ffc-pay-processing
+8. ./payments/ffc-pay-request-editor
+9. ./payments/ffc-pay-submission
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): q
+[?2004h]0;bunglehaze@LAPTOP-U4MUGEVK: ~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[01;32mbunglehaze@LAPTOP-U4MUGEVK[00m:[01;34m~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[00m$ ./automation-script.sh 
+[?2004l[H[2J[3JEnter your testing email address: leigh.godson@eviden.com^[[D^[[D^[[D^[[D^[[D^[[D^[[D^[[D^[[D^[[D^[[D^[[D                                                 m
+Email address is valid.
+Script './documents/SFI23/data/SFI23-ffc-pay-statement-data.sql' has been modified in-place.
+Script './documents/SFI22/data/SFI22-ffc-pay-statement-data.sql' has been modified in-place.
+[H[2J[3JSelect the directory that you wish to perform a reset for:
+1. .
+2. ./documents/SFI22
+3. ./documents/SFI23
+4. ./documents/test-cases
+5. ./documents/test-cases/file-validation
+6. ./payments/ffc-pay-batch-processor
+7. ./payments/ffc-pay-processing
+8. ./payments/ffc-pay-request-editor
+9. ./payments/ffc-pay-submission
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): 2
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "paymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "queue"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+TRUNCATE TABLE
+UPDATE 12
+ffc-pay-submission sql script executed successfully.
+TRUNCATE TABLE
+ffc-pay-statement-generator sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:3: NOTICE:  truncate cascades to table "schedules"
+TRUNCATE TABLE
+ffc-pay-statement-constructor sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "debtData"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "qualityChecks"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "manualLedgerPaymentRequest"
+TRUNCATE TABLE
+TRUNCATE TABLE
+TRUNCATE TABLE
+ffc-pay-request-editor sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "schedule"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "completedPaymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "completedInvoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "outbox"
+TRUNCATE TABLE
+TRUNCATE TABLE
+ffc-pay-processing sql script executed successfully.
+UPDATE 10
+TRUNCATE TABLE
+ffc-pay-batch-processor sql script executed successfully.
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/SFI22/data/SFI22-ffc-pay-statement-data.sql:2: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+DELETE 0
+DELETE 0
+DELETE 0
+INSERT 0 6
+INSERT 0 18
+INSERT 0 18
+ffc-pay-statement-data sql script executed successfully.
+./automation-script.sh: line 8: ./initial-setup.sh: No such file or directory
+[H[2J[3JSelect the directory that you wish to perform a reset for:
+1. .
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): b
+The automate-queries.sh file does not exist in this directory.
+./automation-script.sh: line 8: ./initial-setup.sh: No such file or directory
+[H[2J[3JSelect the directory that you wish to perform a reset for:
+1. .
+2. ./SFI22
+3. ./SFI23
+4. ./test-cases
+5. ./test-cases/file-validation
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): 3
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "paymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "queue"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+TRUNCATE TABLE
+UPDATE 12
+ffc-pay-submission sql script executed successfully.
+TRUNCATE TABLE
+ffc-pay-statement-generator sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:3: NOTICE:  truncate cascades to table "schedules"
+TRUNCATE TABLE
+ffc-pay-statement-constructor sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "debtData"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "qualityChecks"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "manualLedgerPaymentRequest"
+TRUNCATE TABLE
+TRUNCATE TABLE
+TRUNCATE TABLE
+ffc-pay-request-editor sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "schedule"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "completedPaymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "completedInvoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "outbox"
+TRUNCATE TABLE
+TRUNCATE TABLE
+ffc-pay-processing sql script executed successfully.
+UPDATE 10
+TRUNCATE TABLE
+ffc-pay-batch-processor sql script executed successfully.
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/SFI23/data/SFI23-ffc-pay-statement-data.sql:2: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+DELETE 0
+DELETE 0
+DELETE 0
+INSERT 0 6
+ffc-pay-statement-data sql script executed successfully.
+INSERT 0 1
+ffc-pay-statement-constructor sql script executed successfully.
+./automation-script.sh: line 8: ./initial-setup.sh: No such file or directory
+[H[2J[3JSelect the directory that you wish to perform a reset for:
+1. .
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): q
+[?2004h]0;bunglehaze@LAPTOP-U4MUGEVK: ~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[01;32mbunglehaze@LAPTOP-U4MUGEVK[00m:[01;34m~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[00m$ ./automation-script.sh 
+[?2004l[H[2J[3JEnter your testing email address: leigh.godson.external@eviden.com
+Email address is valid.
+Script './documents/SFI23/data/SFI23-ffc-pay-statement-data.sql' has been modified in-place.
+Script './documents/SFI22/data/SFI22-ffc-pay-statement-data.sql' has been modified in-place.
+[H[2J[3JSelect the directory that you wish to perform a reset for:
+1. .
+2. ./documents/SFI22
+3. ./documents/SFI23
+4. ./documents/test-cases
+5. ./documents/test-cases/file-validation
+6. ./payments/ffc-pay-batch-processor
+7. ./payments/ffc-pay-processing
+8. ./payments/ffc-pay-request-editor
+9. ./payments/ffc-pay-submission
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): 2
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "paymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "queue"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+TRUNCATE TABLE
+UPDATE 12
+ffc-pay-submission sql script executed successfully.
+TRUNCATE TABLE
+ffc-pay-statement-generator sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:3: NOTICE:  truncate cascades to table "schedules"
+TRUNCATE TABLE
+ffc-pay-statement-constructor sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "debtData"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "qualityChecks"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "manualLedgerPaymentRequest"
+TRUNCATE TABLE
+TRUNCATE TABLE
+TRUNCATE TABLE
+ffc-pay-request-editor sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "schedule"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "completedPaymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "completedInvoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "outbox"
+TRUNCATE TABLE
+TRUNCATE TABLE
+ffc-pay-processing sql script executed successfully.
+UPDATE 10
+TRUNCATE TABLE
+ffc-pay-batch-processor sql script executed successfully.
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/SFI22/data/SFI22-ffc-pay-statement-data.sql:2: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+DELETE 0
+DELETE 0
+DELETE 0
+INSERT 0 6
+INSERT 0 18
+INSERT 0 18
+ffc-pay-statement-data sql script executed successfully.
+./automation-script.sh: line 13: ./initial-setup.sh: No such file or directory
+[H[2J[3JSelect the directory that you wish to perform a reset for:
+1. .
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): b
+The automate-queries.sh file does not exist in this directory.
+./automation-script.sh: line 13: ./initial-setup.sh: No such file or directory
+[H[2J[3JSelect the directory that you wish to perform a reset for:
+1. .
+2. ./SFI22
+3. ./SFI23
+4. ./test-cases
+5. ./test-cases/file-validation
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): q
+[?2004h]0;bunglehaze@LAPTOP-U4MUGEVK: ~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[01;32mbunglehaze@LAPTOP-U4MUGEVK[00m:[01;34m~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[00m$ ./automation-script.sh 
+[?2004l[H[2J[3JEnter your testing email address: leigh.godson.external@evie den.com
+Email address is valid.
+Script './documents/SFI23/data/SFI23-ffc-pay-statement-data.sql' has been modified in-place.
+Script './documents/SFI22/data/SFI22-ffc-pay-statement-data.sql' has been modified in-place.
+[H[2J[3JSelect the directory that you wish to perform a reset for:
+1. .
+2. ./documents/SFI22
+3. ./documents/SFI23
+4. ./documents/test-cases
+5. ./documents/test-cases/file-validation
+6. ./payments/ffc-pay-batch-processor
+7. ./payments/ffc-pay-processing
+8. ./payments/ffc-pay-request-editor
+9. ./payments/ffc-pay-submission
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): 2
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "paymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "queue"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+TRUNCATE TABLE
+UPDATE 12
+ffc-pay-submission sql script executed successfully.
+TRUNCATE TABLE
+ffc-pay-statement-generator sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:3: NOTICE:  truncate cascades to table "schedules"
+TRUNCATE TABLE
+ffc-pay-statement-constructor sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "debtData"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "qualityChecks"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "manualLedgerPaymentRequest"
+TRUNCATE TABLE
+TRUNCATE TABLE
+TRUNCATE TABLE
+ffc-pay-request-editor sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "schedule"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "completedPaymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "completedInvoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "outbox"
+TRUNCATE TABLE
+TRUNCATE TABLE
+ffc-pay-processing sql script executed successfully.
+UPDATE 10
+TRUNCATE TABLE
+ffc-pay-batch-processor sql script executed successfully.
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/SFI22/data/SFI22-ffc-pay-statement-data.sql:2: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+DELETE 0
+DELETE 0
+DELETE 0
+INSERT 0 6
+INSERT 0 18
+INSERT 0 18
+ffc-pay-statement-data sql script executed successfully.
+Select the directory that you wish to perform a reset for:
+1. .
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): b
+The automate-queries.sh file does not exist in this directory.
+Select the directory that you wish to perform a reset for:
+1. .
+2. ./SFI22
+3. ./SFI23
+4. ./test-cases
+5. ./test-cases/file-validation
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): q
+[?2004h]0;bunglehaze@LAPTOP-U4MUGEVK: ~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[01;32mbunglehaze@LAPTOP-U4MUGEVK[00m:[01;34m~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[00m$ ./automation-script.sh 
+[?2004l[H[2J[3JEnter your testing email address: leigh.godson.external@eviden.com
+Email address is valid.
+Script './documents/SFI23/data/SFI23-ffc-pay-statement-data.sql' has been modified in-place.
+Script './documents/SFI22/data/SFI22-ffc-pay-statement-data.sql' has been modified in-place.
+[H[2J[3JSelect the directory that you wish to perform a reset for:
+1. .
+2. ./documents/SFI22
+3. ./documents/SFI23
+4. ./documents/test-cases
+5. ./documents/test-cases/file-validation
+6. ./payments/ffc-pay-batch-processor
+7. ./payments/ffc-pay-processing
+8. ./payments/ffc-pay-request-editor
+9. ./payments/ffc-pay-submission
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): 2
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "paymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "queue"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+TRUNCATE TABLE
+UPDATE 12
+ffc-pay-submission sql script executed successfully.
+TRUNCATE TABLE
+ffc-pay-statement-generator sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:3: NOTICE:  truncate cascades to table "schedules"
+TRUNCATE TABLE
+ffc-pay-statement-constructor sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "debtData"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "qualityChecks"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-request-editor.sql:1: NOTICE:  truncate cascades to table "manualLedgerPaymentRequest"
+TRUNCATE TABLE
+TRUNCATE TABLE
+TRUNCATE TABLE
+ffc-pay-request-editor sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "schedule"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "completedPaymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "completedInvoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-processing.sql:1: NOTICE:  truncate cascades to table "outbox"
+TRUNCATE TABLE
+TRUNCATE TABLE
+ffc-pay-processing sql script executed successfully.
+UPDATE 10
+TRUNCATE TABLE
+ffc-pay-batch-processor sql script executed successfully.
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/SFI22/data/SFI22-ffc-pay-statement-data.sql:2: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+DELETE 0
+DELETE 0
+DELETE 0
+INSERT 0 6
+INSERT 0 18
+INSERT 0 18
+ffc-pay-statement-data sql script executed successfully.
+Select the directory that you wish to perform a reset for:
+1. .
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): b
+The automate-queries.sh file does not exist in this directory.
+Select the directory that you wish to perform a reset for:
+1. .
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): b
+The automate-queries.sh file does not exist in this directory.
+Select the directory that you wish to perform a reset for:
+1. .
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): q
+[?2004h]0;bunglehaze@LAPTOP-U4MUGEVK: ~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[01;32mbunglehaze@LAPTOP-U4MUGEVK[00m:[01;34m~/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation[00m$ ./automation-script.sh 
+[?2004l[H[2J[3JEnter your testing email address: leigh.godson.extrn  ernal@eviden.com
+Email address is valid.
+Script './documents/SFI23/data/SFI23-ffc-pay-statement-data.sql' has been modified in-place.
+Script './documents/SFI22/data/SFI22-ffc-pay-statement-data.sql' has been modified in-place.
+[H[2J[3JSelect the directory that you wish to perform a reset for:
+1. .
+2. ./documents/SFI22
+3. ./documents/SFI23
+4. ./documents/test-cases
+5. ./documents/test-cases/file-validation
+6. ./payments/ffc-pay-batch-processor
+7. ./payments/ffc-pay-processing
+8. ./payments/ffc-pay-request-editor
+9. ./payments/ffc-pay-submission
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): 3
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "paymentRequests"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "queue"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-submission.sql:1: NOTICE:  truncate cascades to table "invoiceLines"
+TRUNCATE TABLE
+UPDATE 12
+ffc-pay-submission sql script executed successfully.
+TRUNCATE TABLE
+ffc-pay-statement-generator sql script executed successfully.
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:1: NOTICE:  truncate cascades to table "fundings"
+TRUNCATE TABLE
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "calculations"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "invoiceLines"
+psql:/home/bunglehaze/defra/ffc-pay-core/ffc-pay-core/resources/setup-files-automation/documents/databases-reset/ffc-pay-statement-constructor.sql:2: NOTICE:  truncate cascades to table "fundings"
