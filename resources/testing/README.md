@@ -11,10 +11,15 @@ In all instances, the PGAdmin component can be a totally clean instance as the s
 
 ## Installation of PostgreSQL in your WSL
 1.To install PostgreSQL on WSL (ie. Ubuntu):
-Open your WSL terminal (ie. Ubuntu).
-Update your Ubuntu packages: sudo apt update
-Once the packages have updated, install PostgreSQL (and the -contrib package which has some helpful utilities) with: sudo apt install postgresql postgresql-contrib
-Confirm installation and get the version number: psql --version
+* Open your WSL terminal (ie. Ubuntu).
+    
+* Update your Ubuntu packages: sudo apt update
+    
+* Once the packages have updated, install PostgreSQL (and the -contrib package which has some helpful utilities) with: 
+     `sudo apt install postgresql postgresql-contrib`
+
+* Confirm installation and get the version number: 
+     `psql --version`
 
 2.Download the script package from repo into your WSL
 
@@ -26,8 +31,8 @@ If you are not using the same microservices as Documents and Payments, please up
 
 If the repo contains all the required files you need, to start:
 
-cd into the /resources/testing directory
-run the command : ./automation-script.sh
+run `cd /resources/testing directory`
+run the command : `./automation-script.sh`
 
 You will be shown an output in your terminal similar to below:
 
@@ -37,7 +42,7 @@ Select the directory that you wish to perform a reset for:
 3. ./documents/SFI23
 4. ./documents/test-cases
 5. ./documents/test-cases/file-validation
-Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit): q
+Enter the number of the subdirectory you want to use (or 'b' to go back, or 'q' to quit):
 
 To run the automation, select the required scheme or test case, if you have gone into a directory and need to go back up a level you may select b to go back, or quit the tool by pressing q
 
@@ -47,12 +52,14 @@ The script will run, otherwise it will drill into the next directory.
 When the automate-queries script runs it will do the following:
 
 ## Execute the ffc-pay-statement-data sql script
-PGPASSWORD=ppp psql -h host.docker.internal -p 5452 -U postgres -d ffc_pay_statement_data -f $(pwd)/data/SFI22-ffc-pay-statement-data.sql 
+`PGPASSWORD=ppp psql -h host.docker.internal -p 5452 -U postgres -d ffc_pay_statement_data -f $(pwd)/data/SFI22-ffc-pay-statement-data.sql`
 
-Using the connection data found in the readme for each of each repo. The script enters the local environment password and the -U flag sets the username. 
--h sets the hostname, in this instance as host.docker.internal - for locally installed version of pgAdmin this will likely be localhost. 
-The -d flag sets the database name
--f looks at the present working directory, then the /data/ directory where the sql query files are stored and runs that query.
+Using the connection data found in the readme for each of each repo. The script enters the key connection parameters for the local environment:
+* `PGPASSWORD=` - provides a password for database connection(in the example case its "ppp")
+* `-U` - flag sets the username (in the example case its "postgres") 
+* `-h` flag sets the hostname, (in the example its "host.docker.internal" - for locally installed version of pgAdmin this will likely be localhost.) 
+* `-d` flag sets the database name (in this example its "ffc_pay_statement_data")
+* `-f $(pwd)` flag looks at the present working directory, then the /data/ directory where the sql query files are stored and runs that query.
 
 The script then continues to the next script in the list until it completes or fails.
 
@@ -63,8 +70,14 @@ Currently the execution of scripts is linear, so if one fails, the script will e
 ## Permissions issues 
 As this tool relies on bash scripts, the .sh files need to have executable permission to operate. 
 While this should be set automatically, should you have issues it is worth checking they are in place by doing the following:
-3.Navigate to the directory where the script is saved, for example with SFI22 : cd /resources/testing/documents/SFI22, and issue command : chmod +x automate-query.sh 
-For the automation-script this would be: cd /resources/testing and issue the command : chmod +x automation-script.sh
+
+* Navigate to the directory where the script is saved, for example with SFI22 : 
+    `cd /resources/testing/documents/SFI22`, then
+         issue command : `chmod +x automate-query.sh` 
+
+* For the automation-script this would be: 
+    `cd /resources/testing` ,then 
+         issue command : `chmod +x automation-script.sh`
 
 ## Anatomy of the script execution
 
