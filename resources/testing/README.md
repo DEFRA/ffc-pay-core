@@ -16,9 +16,11 @@ In all instances, the PGAdmin component can be a totally clean instance as the s
 * Update your Ubuntu packages: sudo apt update
     
 * Once the packages have updated, install PostgreSQL (and the -contrib package which has some helpful utilities) with: 
+
      `sudo apt install postgresql postgresql-contrib`
 
 * Confirm installation and get the version number: 
+
      `psql --version`
 
 2.Download the script package from repo into your WSL
@@ -72,12 +74,14 @@ As this tool relies on bash scripts, the .sh files need to have executable permi
 While this should be set automatically, should you have issues it is worth checking they are in place by doing the following:
 
 * Navigate to the directory where the script is saved, for example with SFI22 : 
-    `cd /resources/testing/documents/SFI22`, then
-         issue command : `chmod +x automate-query.sh` 
+    `cd /resources/testing/documents/SFI22`,
+     then issue command : 
+     `chmod +x automate-query.sh` 
 
 * For the automation-script this would be: 
-    `cd /resources/testing` ,then 
-         issue command : `chmod +x automation-script.sh`
+    `cd /resources/testing` ,
+    then issue command :
+     `chmod +x automation-script.sh`
 
 ## Anatomy of the script execution
 
