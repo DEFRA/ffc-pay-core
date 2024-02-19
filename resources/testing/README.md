@@ -13,7 +13,9 @@ In all instances, the PGAdmin component can be a totally clean instance as the s
 1.To install PostgreSQL on WSL (ie. Ubuntu):
 * Open your WSL terminal (ie. Ubuntu).
     
-* Update your Ubuntu packages: sudo apt update
+* Update your Ubuntu packages:
+
+  `sudo apt update`
     
 * Once the packages have updated, install PostgreSQL (and the -contrib package which has some helpful utilities) with: 
 
