@@ -45,10 +45,16 @@ To run the script,execute the command :
 
 This automation script will run an initial setup script that will ask:
 
+     `Do you want to update your email address? (y/n):`
+
+     If the answer is y, it will prompt you with
+
      `Enter your testing email address:`
 
 Please enter your valid email address used for testing Notify.
 The setup script will then overwrite the sql files for each scheme that is supplied with dummy data and will now allow your tests to go to Notify under your entered email for easy location.
+
+If you answered n, the script will continue without editing your sql scripts
 
 After 5 seconds the script will continue to the scheme selection where you will be shown an output in your terminal similar to below:
 
