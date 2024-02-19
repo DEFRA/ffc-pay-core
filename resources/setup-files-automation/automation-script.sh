@@ -5,6 +5,16 @@ clear
 # Set the home directory
 home_directory=$(pwd)
 
+# Function to check if the user wants to enter a new email address into their sql files
+function update_email_prompt() {
+  read -p "Do you want to update your email address? (y/n): " response
+  if [ "$response" = "y" ]; then
+    setup_script
+  else
+    echo "Email address will not be updated."
+  fi
+}
+
 # Function to launch the initial-setup script to replace the users email address with a valid one
 function setup_script() {
   # Go home
@@ -86,7 +96,7 @@ function execute_script() {
 }
 
   # Initial setup to set the valid users email
-  setup_script
+  update_email_prompt
   # show that it did a thing, then pause for the user to verify
   sleep 5
   #clear the console again prior to continuing
