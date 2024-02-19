@@ -33,8 +33,13 @@ If you are not using the same microservices as Documents and Payments, please up
 
 If the repo contains all the required files you need, to start:
 
-run `cd /resources/testing directory`
-run the command : `./automation-script.sh`
+to navigate to directory with the script run:
+
+   `cd /resources/testing `
+
+to run the script,execute the command : 
+
+   `./automation-script.sh`
 
 You will be shown an output in your terminal similar to below:
 
