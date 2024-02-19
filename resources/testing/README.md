@@ -33,11 +33,11 @@ If you are not using the same microservices as Documents and Payments, please up
 
 If the repo contains all the required files you need, to start:
 
-to navigate to directory with the script run:
+To navigate to directory with the script run:
 
    `cd /resources/testing `
 
-to run the script,execute the command : 
+To run the script,execute the command : 
 
    `./automation-script.sh`
 
@@ -78,14 +78,14 @@ Currently the execution of scripts is linear, so if one fails, the script will e
 As this tool relies on bash scripts, the .sh files need to have executable permission to operate. 
 While this should be set automatically, should you have issues it is worth checking they are in place by doing the following:
 
-* Navigate to the directory where the script is saved, for example with SFI22 : 
+* To give persmissions to individual data script, navigate to the directory where the script is saved, for example with SFI22 , by executing : 
     `cd /resources/testing/documents/SFI22`,
-     then issue command : 
+    * then issue command to change permissions : 
      `chmod +x automate-query.sh` 
 
-* For the automation-script this would be: 
+* To give persmissions to main automation script, navigate to the directory where the script is saved by executing : 
     `cd /resources/testing` ,
-    then issue command :
+    * then issue command to change permissions : 
      `chmod +x automation-script.sh`
 
 ## Anatomy of the script execution
