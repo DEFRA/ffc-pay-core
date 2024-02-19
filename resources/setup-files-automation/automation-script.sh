@@ -2,7 +2,27 @@
 # Clear the terminal
 clear
 
+# Set the home directory
 home_directory=$(pwd)
+
+# Function to check if the user wants to enter a new email address into their sql files
+function update_email_prompt() {
+  read -p "Do you want to update your email address? (y/n): " response
+  if [ "$response" = "y" ]; then
+    setup_script
+  else
+    echo "Email address will not be updated."
+  fi
+}
+
+# Function to launch the initial-setup script to replace the users email address with a valid one
+function setup_script() {
+  # Go home
+  cd $(pwd)
+  # Execute the setup script file
+./initial-setup.sh
+}
+
 # Function to display the list of subdirectories and get the user's choice
 function select_subdir() {
   # Get all subdirectories in the current directory, excluding the one containing the automation-script.sh file
@@ -75,6 +95,14 @@ function execute_script() {
   fi
 }
 
+  # Initial setup to set the valid users email
+  update_email_prompt
+  # show that it did a thing, then pause for the user to verify
+  sleep 5
+  #clear the console again prior to continuing
+  clear
+  # Select the subdirectory
+
 # Start the script
 cd "$original_directory"
 # Loop until the automation-script.sh file is found or the user quits
@@ -83,4 +111,6 @@ while true; do
   select_subdir
   # Check if the automation-script.sh file exists and execute it if found
   execute_script
+  # Go home again
+  cd "$home_directory"
 done
