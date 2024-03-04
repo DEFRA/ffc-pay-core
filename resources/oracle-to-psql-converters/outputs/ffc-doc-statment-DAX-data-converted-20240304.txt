@@ -1,0 +1,28 @@
+INSERT INTO DAX (calculationId, paymentPeriod, paymentReference, totalQuerterlyPayment, transDate)
+VALUES
+ (123759086,'1st November 2023 to 31st January 2024','PY2066436',-3495,to_date('06-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759086,'1st February 2024 to 30th April 2024','PY2066469',-3495,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759086,'1st May 2024 to 31st July 2024','IN0056916',-3495,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759086,'1st August 2024 to 31st October 2024','PY2066482',-3494.98,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759089,'1st February 2024 to 30th April 2024','PY2066473',-9416.29,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759089,'1st May 2024 to 31st July 2024','PY2066480',-9416.29,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759089,'1st August 2024 to 31st October 2024','PY2066486',-9416.29,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759088,'1st April 2024 to 30th June 2024','PY2066471',-6059.82,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759088,'1st July 2024 to 30th September 2024','PY2066478',-6059.82,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759088,'1st October 2024 to 31st December 2024','PY2066484',-6059.82,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759085,'1st February 2024 to 30th April 2024','PY2066472',-18879.33,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759085,'1st May 2024 to 31st July 2024','PY2066479',-18879.33,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759085,'1st August 2024 to 31st October 2024','PY2066485',-18879.33,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759087,'1st December 2023 to 29th February 2024','PY2066437',-1939.69,to_date('06-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759087,'1st March 2024 to 31st May 2024','PY2066470',-1939.69,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759087,'1st June 2024 to 31st August 2024','PY2066476',-1939.69,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759087,'1st September 2024 to 30th November 2024','PY2066483',-1939.67,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS'))
+ON CONFLICT (paymentReference)
+DO
+UPDATE SET
+  calculationId = EXCLUDED.calculationId,
+  paymentPeriod = EXCLUDED.paymentPeriod,
+  paymentReference = EXCLUDED.paymentReference,
+  totalQuerterlyPayment = EXCLUDED.totalQuerterlyPayment,
+  transDate = EXCLUDED.transDate,
+  updated = EXCLUDED.updated;
