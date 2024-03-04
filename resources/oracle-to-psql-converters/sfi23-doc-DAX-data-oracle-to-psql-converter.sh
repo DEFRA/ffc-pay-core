@@ -22,22 +22,21 @@ select file_name in $files; do
         output_file="$(pwd)/outputs/ffc-doc-statment-DAX-data-converted-$(date +%Y%m%d).txt"
 
         # Add the INSERT statement at the top of the file
-        echo "INSERT INTO DAX (calculationId, paymentPeriod, paymentReference, totalQuerterlyPayment, transDate)" > "$output_file"
+        echo "INSERT INTO \"dax\" (\"calculationId\", \"paymentPeriod\", \"paymentReference\", \"totalQuarterlyPayment\", \"transDate\")" > "$output_file"
         echo "VALUES" >> "$output_file"
 
         # Append the converted data to the file
         echo "$converted_data" | sed '$s/,$//' >> "$output_file"
 
         # Add the ON CONFLICT statement at the end of the file
-        echo "ON CONFLICT (paymentReference)" >> "$output_file"
+        echo "ON CONFLICT (\"paymentReference\")" >> "$output_file"
         echo "DO" >> "$output_file"
         echo "UPDATE SET" >> "$output_file"
-        echo "  calculationId = EXCLUDED.calculationId," >> "$output_file"
-        echo "  paymentPeriod = EXCLUDED.paymentPeriod," >> "$output_file"
-        echo "  paymentReference = EXCLUDED.paymentReference," >> "$output_file"
-        echo "  totalQuerterlyPayment = EXCLUDED.totalQuerterlyPayment," >> "$output_file"
-        echo "  transDate = EXCLUDED.transDate," >> "$output_file"
-        echo "  updated = EXCLUDED.updated;" >> "$output_file"
+        echo "  \"calculationId\" = EXCLUDED.\"calculationId\"," >> "$output_file"
+        echo "  \"paymentPeriod\" = EXCLUDED.\"paymentPeriod\"," >> "$output_file"
+        echo "  \"paymentReference\" = EXCLUDED.\"paymentReference\"," >> "$output_file"
+        echo "  \"totalQuarterlyPayment\" = EXCLUDED.\"totalQuarterlyPayment\"," >> "$output_file"
+        echo "  \"transDate\" = EXCLUDED.\"transDate\";" >> "$output_file"
 
         # Print the success message
         echo "Data converted and saved to $output_file"

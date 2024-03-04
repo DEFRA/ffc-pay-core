@@ -1,4 +1,4 @@
-INSERT INTO actions (pkId, calculationId, fundingCode, groupName, actionCode, actionName, rate, landArea, uom, annualValue, quarterlyValue, overDeclarationPenalty, quarterlyPaymentAmount)
+INSERT INTO "actions" ("pkId", "calculationId", "fundingCode", "groupName", "actionCode", "actionName", "rate", "landArea", "uom", "annualValue", "quarterlyValue", "overDeclarationPenalty", "quarterlyPaymentAmount")
 VALUES
  (1,123759085,'80243','Actions for farmland wildlife on arable and horticultural land','AHL3','Grassy field corners or blocks','£590 per ha',0.66,'ha','389.4',97.35,0,97.35),
  (8,123759085,'80214','Actions for integrated pest management','IPM4','No use of insecticide, nematicide or acaricide on arable crops and permanent crops','£45 per ha',573.66,'ha','25814.75',6453.69,0,6453.69),
@@ -40,19 +40,19 @@ VALUES
  (11,123759085,'80231','Actions for soils','SAM1','Assess soil, produce a soil management plan and test soil organic matter','£5.8 per ha and £95 per agreement, per year',607.56,null,'£3523.89 + £95 = £3619',904.72,0,904.72),
  (20,123759087,'80221','Actions for moorland','MOR1','Assess moorland and produce a written record','£10.3 per ha and £265 per agreement, per year',630.46,null,'£6493.74 + £265 = £6759',1689.69,0,1689.69),
  (38,123759089,'80231','Actions for soils','SAM1','Assess soil, produce a soil management plan and test soil organic matter','£5.8 per ha and £95 per agreement, per year',134.25,null,'£778.67 + £95 = £874',218.42,0,218.42)
-ON CONFLICT (pkId)
+ON CONFLICT ("pkId")
 DO
 UPDATE SET
-  pkId = EXCLUDED.pkId,
-  calculationId = EXCLUDED.calculationId,
-  fundingCode = EXCLUDED.fundingCode,
-  groupName = EXCLUDED.groupName,
-  actionCode = EXCLUDED.actionCode,
-  actionName = EXCLUDED.actionName,
-  rate = EXCLUDED.rate,
-  landArea = EXCLUDED.landArea,
-  uom = EXCLUDED.uom,
-  annualValue = EXCLUDED.annualValue,
-  quarterlyValue = EXCLUDED.quarterlyValue,
-  overDeclarationPenalty = EXCLUDED.overDeclarationPenalty,
-  quarterlyPaymentAmount = EXCLUDED.quarterlyPaymentAmount;
+  "pkId" = EXCLUDED."pkId",
+  "calculationId" = EXCLUDED."calculationId",
+  "fundingCode" = EXCLUDED."fundingCode",
+  "groupName" = EXCLUDED."groupName",
+  "actionCode" = EXCLUDED."actionCode",
+  "actionName" = EXCLUDED."actionName",
+  "rate" = EXCLUDED."rate",
+  "landArea" = EXCLUDED."landArea",
+  "uom" = EXCLUDED."uom",
+  "annualValue" = EXCLUDED."annualValue",
+  "quarterlyValue" = EXCLUDED."quarterlyValue",
+  "overDeclarationPenalty" = EXCLUDED."overDeclarationPenalty",
+  "quarterlyPaymentAmount" = EXCLUDED."quarterlyPaymentAmount";

@@ -1,41 +1,23 @@
-INSERT INTO totals (sbi, frn, agreementNumber, claimId, schemeType, calculationId, calculationDate, invoiceNumber, agreementStart, agreementEnd, totalActionPayments, totalAdditionalPayments, updated)
+INSERT INTO "totals" ("sbi", "frn", "agreementNumber", "claimId", "schemeType", "calculationId", "calculationDate", "invoiceNumber", "agreementStart", "agreementEnd", "totalActionPayments", "totalAdditionalPayments", "updated")
 VALUES
- (107680351,1102383147,1655165,1670137,'SFI Actions (SFIMT)',123759085,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS')
-'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS')
-79014.39,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
- (107260707,1100458611,1652313,1666496,'SFI Actions (SFIMT)',123759086,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS')
-'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS')
-13453.49,526.49,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
- (106268747,1101007842,1662236,1680438,'SFI Actions (SFIMT)',123759087,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS')
-'SFIA0103196',to_date('01-DEC-23 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('30-NOV-26 12:00:00','DD-MON-YY HH:MI:SS')
-6758.74,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
- (106613073,1102358109,1653770,1680949,'SFI Actions (SFIMT)',123759088,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS')
-'SFIA0103196',to_date('01-JAN-24 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('31-DEC-26 12:00:00','DD-MON-YY HH:MI:SS')
-23574.41,664.85,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
- (200211430,1104376954,1653462,1667086,'SFI Actions (SFIMT)',123759089,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS')
-'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS')
-35483.37,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
- (107069599,1100252193,1701478,1701467,'SFI Actions (SFIMT)',123759410,to_date('09-FEB-24 12:18:12','DD-MON-YY HH:MI:SS')
-'SFIA0103201',to_date('01-MAR-24 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('28-FEB-27 12:00:00','DD-MON-YY HH:MI:SS')
-6137.75,335.85,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS'))
-ON CONFLICT (sbi)
+ (107680351,1102383147,1655165,1670137,'SFI Actions (SFIMT)',123759085,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS'),79014.39,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (107260707,1100458611,1652313,1666496,'SFI Actions (SFIMT)',123759086,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS'),13453.49,526.49,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (106268747,1101007842,1662236,1680438,'SFI Actions (SFIMT)',123759087,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103196',to_date('01-DEC-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('30-NOV-26 12:00:00','DD-MON-YY HH:MI:SS'),6758.74,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (106613073,1102358109,1653770,1680949,'SFI Actions (SFIMT)',123759088,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103196',to_date('01-JAN-24 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-DEC-26 12:00:00','DD-MON-YY HH:MI:SS'),23574.41,664.85,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (200211430,1104376954,1653462,1667086,'SFI Actions (SFIMT)',123759089,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS'),35483.37,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (107069599,1100252193,1701478,1701467,'SFI Actions (SFIMT)',123759410,to_date('09-FEB-24 12:18:12','DD-MON-YY HH:MI:SS'),'SFIA0103201',to_date('01-MAR-24 12:00:00','DD-MON-YY HH:MI:SS'),to_date('28-FEB-27 12:00:00','DD-MON-YY HH:MI:SS'),6137.75,335.85,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS'))
+ON CONFLICT ("calculationId")
 DO
 UPDATE SET
-  frn = EXCLUDED.frn,
-  agreementNumber = EXCLUDED.agreementNumber,
-  claimId = EXCLUDED.claimId,
-  schemeType = EXCLUDED.schemeType,
-  calculationId = EXCLUDED.calculationId,
-  calculationDate = EXCLUDED.calculationDate,
-  invoiceNumber = EXCLUDED.invoiceNumber,
-  agreementStart = EXCLUDED.agreementStart,
-  agreementEnd = EXCLUDED.agreementEnd,
-  totalActionPayments = EXCLUDED.totalActionPayments,
-  totalAdditionalPayments = EXCLUDED.totalAdditionalPayments,
-  updated = EXCLUDED.updated;
+  "frn" = EXCLUDED."frn",
+  "agreementNumber" = EXCLUDED."agreementNumber",
+  "claimId" = EXCLUDED."claimId",
+  "schemeType" = EXCLUDED."schemeType",
+  "calculationId" = EXCLUDED."calculationId",
+  "calculationDate" = EXCLUDED."calculationDate",
+  "invoiceNumber" = EXCLUDED."invoiceNumber",
+  "agreementStart" = EXCLUDED."agreementStart",
+  "agreementEnd" = EXCLUDED."agreementEnd",
+  "totalActionPayments" = EXCLUDED."totalActionPayments",
+  "totalAdditionalPayments" = EXCLUDED."totalAdditionalPayments",
+  "updated" = EXCLUDED."updated";

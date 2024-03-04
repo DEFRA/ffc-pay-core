@@ -22,29 +22,29 @@ select file_name in $files; do
         output_file="$(pwd)/outputs/ffc-doc-statment-actions-data-converted-$(date +%Y%m%d).txt"
 
         # Add the INSERT statement at the top of the file
-        echo "INSERT INTO actions (pkId, calculationId, fundingCode, groupName, actionCode, actionName, rate, landArea, uom, annualValue, quarterlyValue, overDeclarationPenalty, quarterlyPaymentAmount)" > "$output_file"
+        echo "INSERT INTO \"actions\" (\"pkId\", \"calculationId\", \"fundingCode\", \"groupName\", \"actionCode\", \"actionName\", \"rate\", \"landArea\", \"uom\", \"annualValue\", \"quarterlyValue\", \"overDeclarationPenalty\", \"quarterlyPaymentAmount\")" > "$output_file"
         echo "VALUES" >> "$output_file"
 
         # Append the converted data to the file
         echo "$converted_data" | perl -0777 -pe 's/,(?=[^,]*$)//' >> "$output_file"
 
         # Add the ON CONFLICT statement at the end of the file
-        echo "ON CONFLICT (pkId)" >> "$output_file"
+        echo "ON CONFLICT (\"pkId\")" >> "$output_file"
         echo "DO" >> "$output_file"
         echo "UPDATE SET" >> "$output_file"
-        echo "  pkId = EXCLUDED.pkId," >> "$output_file"
-        echo "  calculationId = EXCLUDED.calculationId," >> "$output_file"
-        echo "  fundingCode = EXCLUDED.fundingCode," >> "$output_file"
-        echo "  groupName = EXCLUDED.groupName," >> "$output_file"
-        echo "  actionCode = EXCLUDED.actionCode," >> "$output_file"
-        echo "  actionName = EXCLUDED.actionName," >> "$output_file"
-        echo "  rate = EXCLUDED.rate," >> "$output_file"
-        echo "  landArea = EXCLUDED.landArea," >> "$output_file"
-        echo "  uom = EXCLUDED.uom," >> "$output_file"
-        echo "  annualValue = EXCLUDED.annualValue," >> "$output_file"
-        echo "  quarterlyValue = EXCLUDED.quarterlyValue," >> "$output_file"
-        echo "  overDeclarationPenalty = EXCLUDED.overDeclarationPenalty," >> "$output_file"
-        echo "  quarterlyPaymentAmount = EXCLUDED.quarterlyPaymentAmount;" >> "$output_file"
+        echo "  \"pkId\" = EXCLUDED.\"pkId\"," >> "$output_file"
+        echo "  \"calculationId\" = EXCLUDED.\"calculationId\"," >> "$output_file"
+        echo "  \"fundingCode\" = EXCLUDED.\"fundingCode\"," >> "$output_file"
+        echo "  \"groupName\" = EXCLUDED.\"groupName\"," >> "$output_file"
+        echo "  \"actionCode\" = EXCLUDED.\"actionCode\"," >> "$output_file"
+        echo "  \"actionName\" = EXCLUDED.\"actionName\"," >> "$output_file"
+        echo "  \"rate\" = EXCLUDED.\"rate\"," >> "$output_file"
+        echo "  \"landArea\" = EXCLUDED.\"landArea\"," >> "$output_file"
+        echo "  \"uom\" = EXCLUDED.\"uom\"," >> "$output_file"
+        echo "  \"annualValue\" = EXCLUDED.\"annualValue\"," >> "$output_file"
+        echo "  \"quarterlyValue\" = EXCLUDED.\"quarterlyValue\"," >> "$output_file"
+        echo "  \"overDeclarationPenalty\" = EXCLUDED.\"overDeclarationPenalty\"," >> "$output_file"
+        echo "  \"quarterlyPaymentAmount\" = EXCLUDED.\"quarterlyPaymentAmount\";" >> "$output_file"
 
         # Print the success message
         echo "Data converted and saved to $output_file"

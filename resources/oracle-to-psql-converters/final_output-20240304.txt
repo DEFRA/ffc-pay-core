@@ -1,4 +1,4 @@
-INSERT INTO DAX (calculationId, paymentPeriod, paymentReference, totalQuerterlyPayment, transDate)
+INSERT INTO "dax" ("calculationId", "paymentPeriod", "paymentReference", "totalQuarterlyPayment", "transDate")
 VALUES
  (123759086,'1st November 2023 to 31st January 2024','PY2066436',-3495,to_date('06-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
  (123759086,'1st February 2024 to 30th April 2024','PY2066469',-3495,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
@@ -17,16 +17,15 @@ VALUES
  (123759087,'1st March 2024 to 31st May 2024','PY2066470',-1939.69,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
  (123759087,'1st June 2024 to 31st August 2024','PY2066476',-1939.69,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
  (123759087,'1st September 2024 to 30th November 2024','PY2066483',-1939.67,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS'))
-ON CONFLICT (paymentReference)
+ON CONFLICT ("paymentReference")
 DO
 UPDATE SET
-  calculationId = EXCLUDED.calculationId,
-  paymentPeriod = EXCLUDED.paymentPeriod,
-  paymentReference = EXCLUDED.paymentReference,
-  totalQuerterlyPayment = EXCLUDED.totalQuerterlyPayment,
-  transDate = EXCLUDED.transDate,
-  updated = EXCLUDED.updated;
-INSERT INTO organisations (sbi,addressLine1, addressLine2, addressLine3, city, county, postcode, emailAddress, frn, name, updated)
+  "calculationId" = EXCLUDED."calculationId",
+  "paymentPeriod" = EXCLUDED."paymentPeriod",
+  "paymentReference" = EXCLUDED."paymentReference",
+  "totalQuarterlyPayment" = EXCLUDED."totalQuarterlyPayment",
+  "transDate" = EXCLUDED."transDate";
+INSERT INTO "organisations" ("sbi","addressLine1", "addressLine2", "addressLine3", "city", "county", "postcode", "emailAddress", "frn", "name", "updated")
 VALUES
  (106613073,'OUSEBANK FARM','CHURCH END','CAWOOD','SELBY',null,'YO8 3SN','trev1sykes@yahoo.co.uk',1102358109,'SYKES BROTHERS',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
  (106268747,'SWALLOW COTTAGE',null,'HAMSTERLEY','BISHOP AUCKLAND',null,'DL13 3QF','dag@graysllp.co.uk',1101007842,'Uswayford Farm Limited',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
@@ -34,61 +33,43 @@ VALUES
  (200211430,'LONGLANDS',null,'COWAN BRIDGE','CARNFORTH',null,'LA6 2HY','abcoates14@gmail.com',1104376954,'J B & A H Coates',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
  (107260707,'DAMBRIDGE FARM','MARCHINGTON WOODLANDS','MARCHINGTON','UTTOXETER',null,'ST14 8PB','enquiries@woodlandviews.co.uk',1100458611,'BRIDGE FARM PARTNERSHIP',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
  (107680351,'MANOR FARM','OLLERTON ROAD','KELHAM','NEWARK',null,'NG23 5QS','johnmiller7046@outlook.com',1102383147,'JAMES MILLER (KELHAM) LTD',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS'))
-ON CONFLICT (sbi)
+ON CONFLICT ("sbi")
 DO
 UPDATE SET
-  addressLine1 = EXCLUDED.addressLine1,
-  addressLine2 = EXCLUDED.addressLine2,
-  addressLine3 = EXCLUDED.addressLine3,
-  city = EXCLUDED.city,
-  county = EXCLUDED.county,
-  postcode = EXCLUDED.postcode,
-  emailAddress = EXCLUDED.emailAddress,
-  frn = EXCLUDED.frn,
-  name = EXCLUDED.name,
-  updated = EXCLUDED.updated;
-INSERT INTO totals (sbi, frn, agreementNumber, claimId, schemeType, calculationId, calculationDate, invoiceNumber, agreementStart, agreementEnd, totalActionPayments, totalAdditionalPayments, updated)
+  "addressLine1" = EXCLUDED."addressLine1",
+  "addressLine2" = EXCLUDED."addressLine2",
+  "addressLine3" = EXCLUDED."addressLine3",
+  "city" = EXCLUDED."city",
+  "county" = EXCLUDED."county",
+  "postcode" = EXCLUDED."postcode",
+  "emailAddress" = EXCLUDED."emailAddress",
+  "frn" = EXCLUDED."frn",
+  "name" = EXCLUDED."name",
+  "updated" = EXCLUDED."updated";
+INSERT INTO "totals" ("sbi", "frn", "agreementNumber", "claimId", "schemeType", "calculationId", "calculationDate", "invoiceNumber", "agreementStart", "agreementEnd", "totalActionPayments", "totalAdditionalPayments", "updated")
 VALUES
- (107680351,1102383147,1655165,1670137,'SFI Actions (SFIMT)',123759085,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS')
-'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS')
-79014.39,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
- (107260707,1100458611,1652313,1666496,'SFI Actions (SFIMT)',123759086,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS')
-'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS')
-13453.49,526.49,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
- (106268747,1101007842,1662236,1680438,'SFI Actions (SFIMT)',123759087,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS')
-'SFIA0103196',to_date('01-DEC-23 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('30-NOV-26 12:00:00','DD-MON-YY HH:MI:SS')
-6758.74,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
- (106613073,1102358109,1653770,1680949,'SFI Actions (SFIMT)',123759088,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS')
-'SFIA0103196',to_date('01-JAN-24 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('31-DEC-26 12:00:00','DD-MON-YY HH:MI:SS')
-23574.41,664.85,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
- (200211430,1104376954,1653462,1667086,'SFI Actions (SFIMT)',123759089,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS')
-'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS')
-35483.37,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
- (107069599,1100252193,1701478,1701467,'SFI Actions (SFIMT)',123759410,to_date('09-FEB-24 12:18:12','DD-MON-YY HH:MI:SS')
-'SFIA0103201',to_date('01-MAR-24 12:00:00','DD-MON-YY HH:MI:SS')
-to_date('28-FEB-27 12:00:00','DD-MON-YY HH:MI:SS')
-6137.75,335.85,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS'))
-ON CONFLICT (sbi)
+ (107680351,1102383147,1655165,1670137,'SFI Actions (SFIMT)',123759085,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS'),79014.39,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (107260707,1100458611,1652313,1666496,'SFI Actions (SFIMT)',123759086,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS'),13453.49,526.49,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (106268747,1101007842,1662236,1680438,'SFI Actions (SFIMT)',123759087,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103196',to_date('01-DEC-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('30-NOV-26 12:00:00','DD-MON-YY HH:MI:SS'),6758.74,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (106613073,1102358109,1653770,1680949,'SFI Actions (SFIMT)',123759088,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103196',to_date('01-JAN-24 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-DEC-26 12:00:00','DD-MON-YY HH:MI:SS'),23574.41,664.85,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (200211430,1104376954,1653462,1667086,'SFI Actions (SFIMT)',123759089,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS'),35483.37,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (107069599,1100252193,1701478,1701467,'SFI Actions (SFIMT)',123759410,to_date('09-FEB-24 12:18:12','DD-MON-YY HH:MI:SS'),'SFIA0103201',to_date('01-MAR-24 12:00:00','DD-MON-YY HH:MI:SS'),to_date('28-FEB-27 12:00:00','DD-MON-YY HH:MI:SS'),6137.75,335.85,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS'))
+ON CONFLICT ("calculationId")
 DO
 UPDATE SET
-  frn = EXCLUDED.frn,
-  agreementNumber = EXCLUDED.agreementNumber,
-  claimId = EXCLUDED.claimId,
-  schemeType = EXCLUDED.schemeType,
-  calculationId = EXCLUDED.calculationId,
-  calculationDate = EXCLUDED.calculationDate,
-  invoiceNumber = EXCLUDED.invoiceNumber,
-  agreementStart = EXCLUDED.agreementStart,
-  agreementEnd = EXCLUDED.agreementEnd,
-  totalActionPayments = EXCLUDED.totalActionPayments,
-  totalAdditionalPayments = EXCLUDED.totalAdditionalPayments,
-  updated = EXCLUDED.updated;
-INSERT INTO actions (pkId, calculationId, fundingCode, groupName, actionCode, actionName, rate, landArea, uom, annualValue, quarterlyValue, overDeclarationPenalty, quarterlyPaymentAmount)
+  "frn" = EXCLUDED."frn",
+  "agreementNumber" = EXCLUDED."agreementNumber",
+  "claimId" = EXCLUDED."claimId",
+  "schemeType" = EXCLUDED."schemeType",
+  "calculationId" = EXCLUDED."calculationId",
+  "calculationDate" = EXCLUDED."calculationDate",
+  "invoiceNumber" = EXCLUDED."invoiceNumber",
+  "agreementStart" = EXCLUDED."agreementStart",
+  "agreementEnd" = EXCLUDED."agreementEnd",
+  "totalActionPayments" = EXCLUDED."totalActionPayments",
+  "totalAdditionalPayments" = EXCLUDED."totalAdditionalPayments",
+  "updated" = EXCLUDED."updated";
+INSERT INTO "actions" ("pkId", "calculationId", "fundingCode", "groupName", "actionCode", "actionName", "rate", "landArea", "uom", "annualValue", "quarterlyValue", "overDeclarationPenalty", "quarterlyPaymentAmount")
 VALUES
  (1,123759085,'80243','Actions for farmland wildlife on arable and horticultural land','AHL3','Grassy field corners or blocks','£590 per ha',0.66,'ha','389.4',97.35,0,97.35),
  (8,123759085,'80214','Actions for integrated pest management','IPM4','No use of insecticide, nematicide or acaricide on arable crops and permanent crops','£45 per ha',573.66,'ha','25814.75',6453.69,0,6453.69),
@@ -130,19 +111,19 @@ VALUES
  (11,123759085,'80231','Actions for soils','SAM1','Assess soil, produce a soil management plan and test soil organic matter','£5.8 per ha and £95 per agreement, per year',607.56,null,'£3523.89 + £95 = £3619',904.72,0,904.72),
  (20,123759087,'80221','Actions for moorland','MOR1','Assess moorland and produce a written record','£10.3 per ha and £265 per agreement, per year',630.46,null,'£6493.74 + £265 = £6759',1689.69,0,1689.69),
  (38,123759089,'80231','Actions for soils','SAM1','Assess soil, produce a soil management plan and test soil organic matter','£5.8 per ha and £95 per agreement, per year',134.25,null,'£778.67 + £95 = £874',218.42,0,218.42)
-ON CONFLICT (pkId)
+ON CONFLICT ("pkId")
 DO
 UPDATE SET
-  pkId = EXCLUDED.pkId,
-  calculationId = EXCLUDED.calculationId,
-  fundingCode = EXCLUDED.fundingCode,
-  groupName = EXCLUDED.groupName,
-  actionCode = EXCLUDED.actionCode,
-  actionName = EXCLUDED.actionName,
-  rate = EXCLUDED.rate,
-  landArea = EXCLUDED.landArea,
-  uom = EXCLUDED.uom,
-  annualValue = EXCLUDED.annualValue,
-  quarterlyValue = EXCLUDED.quarterlyValue,
-  overDeclarationPenalty = EXCLUDED.overDeclarationPenalty,
-  quarterlyPaymentAmount = EXCLUDED.quarterlyPaymentAmount;
+  "pkId" = EXCLUDED."pkId",
+  "calculationId" = EXCLUDED."calculationId",
+  "fundingCode" = EXCLUDED."fundingCode",
+  "groupName" = EXCLUDED."groupName",
+  "actionCode" = EXCLUDED."actionCode",
+  "actionName" = EXCLUDED."actionName",
+  "rate" = EXCLUDED."rate",
+  "landArea" = EXCLUDED."landArea",
+  "uom" = EXCLUDED."uom",
+  "annualValue" = EXCLUDED."annualValue",
+  "quarterlyValue" = EXCLUDED."quarterlyValue",
+  "overDeclarationPenalty" = EXCLUDED."overDeclarationPenalty",
+  "quarterlyPaymentAmount" = EXCLUDED."quarterlyPaymentAmount";
