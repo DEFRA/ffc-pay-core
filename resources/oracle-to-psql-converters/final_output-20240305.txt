@@ -1,0 +1,129 @@
+INSERT INTO "organisations" ("sbi","addressLine1", "addressLine2", "addressLine3", "city", "county", "postcode", "emailAddress", "frn", "name", "updated")
+VALUES
+ (106613073,'OUSEBANK FARM','CHURCH END','CAWOOD','SELBY',null,'YO8 3SN','trev1sykes@yahoo.co.uk',1102358109,'SYKES BROTHERS',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
+ (106268747,'SWALLOW COTTAGE',null,'HAMSTERLEY','BISHOP AUCKLAND',null,'DL13 3QF','dag@graysllp.co.uk',1101007842,'Uswayford Farm Limited',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
+ (107069599,'SPRINGFIELD FARM','COLD ASHBY ROAD','WEST HADDON','NORTHAMPTON',null,'NN6 7AH','hazelwhit@gmail.com',1100252193,'MRS H M WHITTAKER',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
+ (200211430,'LONGLANDS',null,'COWAN BRIDGE','CARNFORTH',null,'LA6 2HY','abcoates14@gmail.com',1104376954,'J B & A H Coates',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
+ (107260707,'DAMBRIDGE FARM','MARCHINGTON WOODLANDS','MARCHINGTON','UTTOXETER',null,'ST14 8PB','enquiries@woodlandviews.co.uk',1100458611,'BRIDGE FARM PARTNERSHIP',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
+ (107680351,'MANOR FARM','OLLERTON ROAD','KELHAM','NEWARK',null,'NG23 5QS','johnmiller7046@outlook.com',1102383147,'JAMES MILLER (KELHAM) LTD',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS'))
+ON CONFLICT ("sbi")
+DO
+UPDATE SET
+  "addressLine1" = EXCLUDED."addressLine1",
+  "addressLine2" = EXCLUDED."addressLine2",
+  "addressLine3" = EXCLUDED."addressLine3",
+  "city" = EXCLUDED."city",
+  "county" = EXCLUDED."county",
+  "postcode" = EXCLUDED."postcode",
+  "emailAddress" = EXCLUDED."emailAddress",
+  "frn" = EXCLUDED."frn",
+  "name" = EXCLUDED."name",
+  "updated" = EXCLUDED."updated";
+INSERT INTO "totals" ("sbi", "frn", "agreementNumber", "claimId", "schemeType", "calculationId", "calculationDate", "invoiceNumber", "agreementStart", "agreementEnd", "totalActionPayments", "totalAdditionalPayments", "updated")
+VALUES
+ (107680351,1102383147,1655165,1670137,'SFI Actions (SFIMT)',123759085,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS'),79014.39,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (107260707,1100458611,1652313,1666496,'SFI Actions (SFIMT)',123759086,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS'),13453.49,526.49,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (106268747,1101007842,1662236,1680438,'SFI Actions (SFIMT)',123759087,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103196',to_date('01-DEC-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('30-NOV-26 12:00:00','DD-MON-YY HH:MI:SS'),6758.74,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (106613073,1102358109,1653770,1680949,'SFI Actions (SFIMT)',123759088,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103196',to_date('01-JAN-24 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-DEC-26 12:00:00','DD-MON-YY HH:MI:SS'),23574.41,664.85,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (200211430,1104376954,1653462,1667086,'SFI Actions (SFIMT)',123759089,to_date('02-FEB-24 10:55:33','DD-MON-YY HH:MI:SS'),'SFIA0103195',to_date('01-NOV-23 12:00:00','DD-MON-YY HH:MI:SS'),to_date('31-OCT-26 12:00:00','DD-MON-YY HH:MI:SS'),35483.37,1000,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS')),
+ (107069599,1100252193,1701478,1701467,'SFI Actions (SFIMT)',123759410,to_date('09-FEB-24 12:18:12','DD-MON-YY HH:MI:SS'),'SFIA0103201',to_date('01-MAR-24 12:00:00','DD-MON-YY HH:MI:SS'),to_date('28-FEB-27 12:00:00','DD-MON-YY HH:MI:SS'),6137.75,335.85,to_date('29-FEB-24 10:59:01','DD-MON-YY HH:MI:SS'))
+ON CONFLICT ("calculationId")
+DO
+UPDATE SET
+  "frn" = EXCLUDED."frn",
+  "agreementNumber" = EXCLUDED."agreementNumber",
+  "claimId" = EXCLUDED."claimId",
+  "schemeType" = EXCLUDED."schemeType",
+  "calculationId" = EXCLUDED."calculationId",
+  "calculationDate" = EXCLUDED."calculationDate",
+  "invoiceNumber" = EXCLUDED."invoiceNumber",
+  "agreementStart" = EXCLUDED."agreementStart",
+  "agreementEnd" = EXCLUDED."agreementEnd",
+  "totalActionPayments" = EXCLUDED."totalActionPayments",
+  "totalAdditionalPayments" = EXCLUDED."totalAdditionalPayments",
+  "updated" = EXCLUDED."updated";
+INSERT INTO "dax" ("calculationId", "paymentPeriod", "paymentReference", "totalQuarterlyPayment", "transDate")
+VALUES
+ (123759086,'1st November 2023 to 31st January 2024','PY2066436',-3495,to_date('06-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759086,'1st February 2024 to 30th April 2024','PY2066469',-3495,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759086,'1st May 2024 to 31st July 2024','IN0056916',-3495,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759086,'1st August 2024 to 31st October 2024','PY2066482',-3494.98,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759089,'1st February 2024 to 30th April 2024','PY2066473',-9416.29,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759089,'1st May 2024 to 31st July 2024','PY2066480',-9416.29,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759089,'1st August 2024 to 31st October 2024','PY2066486',-9416.29,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759088,'1st April 2024 to 30th June 2024','PY2066471',-6059.82,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759088,'1st July 2024 to 30th September 2024','PY2066478',-6059.82,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759088,'1st October 2024 to 31st December 2024','PY2066484',-6059.82,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759085,'1st February 2024 to 30th April 2024','PY2066472',-18879.33,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759085,'1st May 2024 to 31st July 2024','PY2066479',-18879.33,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759085,'1st August 2024 to 31st October 2024','PY2066485',-18879.33,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759087,'1st December 2023 to 29th February 2024','PY2066437',-1939.69,to_date('06-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759087,'1st March 2024 to 31st May 2024','PY2066470',-1939.69,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759087,'1st June 2024 to 31st August 2024','PY2066476',-1939.69,to_date('12-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
+ (123759087,'1st September 2024 to 30th November 2024','PY2066483',-1939.67,to_date('15-FEB-24 12:00:00','DD-MON-YY HH:MI:SS'))
+ON CONFLICT ("paymentReference")
+DO
+UPDATE SET
+  "calculationId" = EXCLUDED."calculationId",
+  "paymentPeriod" = EXCLUDED."paymentPeriod",
+  "paymentReference" = EXCLUDED."paymentReference",
+  "totalQuarterlyPayment" = EXCLUDED."totalQuarterlyPayment",
+  "transDate" = EXCLUDED."transDate";
+INSERT INTO "actions" ("pkId", "calculationId", "fundingCode", "groupName", "actionCode", "actionName", "rate", "landArea", "uom", "annualValue", "quarterlyValue", "overDeclarationPenalty", "quarterlyPaymentAmount")
+VALUES
+ (1,123759085,'80243','Actions for farmland wildlife on arable and horticultural land','AHL3','Grassy field corners or blocks','£590 per ha',0.66,'ha','389.4',97.35,0,97.35),
+ (8,123759085,'80214','Actions for integrated pest management','IPM4','No use of insecticide, nematicide or acaricide on arable crops and permanent crops','£45 per ha',573.66,'ha','25814.75',6453.69,0,6453.69),
+ (14,123759085,'80234','Actions for soils','SAM3','Establish and maintain Herbal leys','£382 per ha',11.62,'ha','4438.22',1109.56,0,1109.56),
+ (19,123759086,'80280','Additional payment','MPA1','SFI Management Payment','£20 per ha - a maximum of 50ha',26.32,'ha','526.49',131.62,0,131.62),
+ (4,123759085,'80202','Actions for hedgerows','HRW2','Manage hedgerows','£10 per 100m - one side',47944,'m','4794.4',1198.6,0,1198.6),
+ (16,123759086,'80273','Actions for nutient management','NUM3','Legume fallow','£593 per ha',22.27,'ha','13205.81',3301.45,0,3301.45),
+ (23,123759088,'80241','Actions for farmland wildlife on arable and horticultural land','AHL1','Pollen and nectar flower mix','£614 per ha',9.14,'ha','5611.04',1402.76,0,1402.76),
+ (31,123759088,'80280','Additional payment','MPA1','SFI Management Payment','£20 per ha - a maximum of 50ha',33.24,'ha','664.85',166.21,0,166.21),
+ (42,123759410,'80211','Actions for integrated pest management','IPM1','Assess integrated pest management and produce a plan','£1100 per agreement, per year',null,'N/A','1100',275,0,275),
+ (43,123759410,'80261','Actions for low input grassland','LIG1','Manage grassland with very low nutrient inputs (outside SDAs)','£300 per ha',16.79,'ha','5037.75',1259.44,0,1259.44),
+ (44,123759410,'80280','Additional payment','MPA1','SFI Management Payment','£20 per ha - a maximum of 50ha',16.79,'ha','335.85',83.96,0,83.96),
+ (2,123759085,'80244','Actions for buffer strips','AHL4','4m to 12m grass buffer strip on arable and horticultural land','£451 per ha',2.18,'ha','983.18',245.8,0,245.8),
+ (3,123759085,'80201','Actions for hedgerows','HRW1','Assess and record hedgerow condition','£3 per 100m - one side',47944,'m','1438.32',359.58,0,359.58),
+ (13,123759085,'80233','Actions for soils','SAM2','Multi-species winter cover crops','£129 per ha',69.82,'ha','9007.17',2251.79,0,2251.79),
+ (26,123759088,'80244','Actions for buffer strips','AHL4','4m to 12m grass buffer strip on arable and horticultural land','£700 per ha',0.19,'ha','135.52',33.88,0,33.88),
+ (32,123759089,'80201','Actions for hedgerows','HRW1','Assess and record hedgerow condition','£3 per 100m - one side',15800,'m','474',118.5,0,118.5),
+ (40,123759089,'80234','Actions for soils','SAM3','Establish and maintain Herbal leys','£382 per ha',56.25,'ha','21488.63',5372.16,0,5372.16),
+ (15,123759085,'80280','Additional payment','MPA1','SFI Management Payment','£20 per ha - a maximum of 50ha',50,'ha','1000',250,0,250),
+ (22,123759087,'80280','Additional payment','MPA1','SFI Management Payment','£20 per ha - a maximum of 50ha',50,'ha','1000',250,0,250),
+ (29,123759088,'80211','Actions for integrated pest management','IPM1','Assess integrated pest management and produce a plan','£1100 per agreement, per year',null,'N/A','1100',275,0,275),
+ (35,123759089,'80251','Actions for farmland wildlife on improved grassland','IGL1','Take grassland field corners or blocks out of management','£333 per ha',0.57,'ha','190.58',47.65,0,47.65),
+ (36,123759089,'80261','Actions for low input grassland','LIG1','Manage grassland with very low nutrient inputs (outside SDAs)','£151 per ha',63.6,'ha','9603.89',2400.97,0,2400.97),
+ (7,123759085,'80213','Actions for integrated pest management','IPM3','Companion crop on arable and horticultural land','£55 per ha',84.24,'ha','4633.4',1158.35,0,1158.35),
+ (34,123759089,'80203','Actions for hedgerows','HRW3','Maintain existing hedgerow trees, or establish new hedgerow trees','£10 per 100m - both sides',6836,'m','683.6',170.9,0,170.9),
+ (41,123759089,'80280','Additional payment','MPA1','SFI Management Payment','£20 per ha - a maximum of 50ha',50,'ha','1000',250,0,250),
+ (10,123759085,'80273','Actions for nutient management','NUM3','Legume fallow','£593 per ha',34.41,'ha','20404.96',5101.24,0,5101.24),
+ (5,123759085,'80203','Actions for hedgerows','HRW3','Maintain existing hedgerow trees, or establish new hedgerow trees','£10 per 100m - both sides',19137,'m','1913.7',478.43,0,478.43),
+ (6,123759085,'80211','Actions for integrated pest management','IPM1','Assess integrated pest management and produce a plan','£989 per agreement, per year',null,'N/A','989',247.25,0,247.25),
+ (9,123759085,'80271','Actions for nutient management','NUM1','Assess nutrient management and produce a review report','£589 per agreement, per year',null,'N/A','589',147.25,0,147.25),
+ (27,123759088,'80201','Actions for hedgerows','HRW1','Assess and record hedgerow condition','£20 per 100m - one side',5688,'m','1137.6',284.4,0,284.4),
+ (28,123759088,'80202','Actions for hedgerows','HRW2','Manage hedgerows','£10 per 100m - one side',5688,'m','568.8',142.2,0,142.2),
+ (33,123759089,'80202','Actions for hedgerows','HRW2','Manage hedgerows','£10 per 100m - one side',15800,'m','1580',395,0,395),
+ (24,123759088,'80242','Actions for farmland wildlife on arable and horticultural land','AHL2','Winter bird food on arable and horticultural land','£732 per ha',14.2,'ha','10394.4',2598.6,0,2598.6),
+ (25,123759088,'80243','Actions for farmland wildlife on arable and horticultural land','AHL3','Grassy field corners or blocks','£700 per ha',0.22,'ha','156.24',39.06,0,39.06),
+ (30,123759088,'80212','Actions for integrated pest management','IPM2','Flower-rich grass margins, blocks, or in-field strips','£673 per ha',6.64,'ha','4470.81',1117.7,0,1117.7),
+ (37,123759089,'80271','Actions for nutient management','NUM1','Assess nutrient management and produce a review report','£589 per agreement, per year',null,'N/A','589',147.25,0,147.25),
+ (17,123759086,'80231','Actions for soils','SAM1','Assess soil, produce a soil management plan and test soil organic matter','£5.8 per ha and £95 per agreement, per year',26.32,null,'£152.68 + £95 = £248',61.92,0,61.92),
+ (11,123759085,'80231','Actions for soils','SAM1','Assess soil, produce a soil management plan and test soil organic matter','£5.8 per ha and £95 per agreement, per year',607.56,null,'£3523.89 + £95 = £3619',904.72,0,904.72),
+ (20,123759087,'80221','Actions for moorland','MOR1','Assess moorland and produce a written record','£10.3 per ha and £265 per agreement, per year',630.46,null,'£6493.74 + £265 = £6759',1689.69,0,1689.69),
+ (38,123759089,'80231','Actions for soils','SAM1','Assess soil, produce a soil management plan and test soil organic matter','£5.8 per ha and £95 per agreement, per year',134.25,null,'£778.67 + £95 = £874',218.42,0,218.42)
+ON CONFLICT ("pkId")
+DO
+UPDATE SET
+  "pkId" = EXCLUDED."pkId",
+  "calculationId" = EXCLUDED."calculationId",
+  "fundingCode" = EXCLUDED."fundingCode",
+  "groupName" = EXCLUDED."groupName",
+  "actionCode" = EXCLUDED."actionCode",
+  "actionName" = EXCLUDED."actionName",
+  "rate" = EXCLUDED."rate",
+  "landArea" = EXCLUDED."landArea",
+  "uom" = EXCLUDED."uom",
+  "annualValue" = EXCLUDED."annualValue",
+  "quarterlyValue" = EXCLUDED."quarterlyValue",
+  "overDeclarationPenalty" = EXCLUDED."overDeclarationPenalty",
+  "quarterlyPaymentAmount" = EXCLUDED."quarterlyPaymentAmount";

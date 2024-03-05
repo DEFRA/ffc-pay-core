@@ -1,0 +1,21 @@
+INSERT INTO "organisations" ("sbi","addressLine1", "addressLine2", "addressLine3", "city", "county", "postcode", "emailAddress", "frn", "name", "updated")
+VALUES
+ (106613073,'OUSEBANK FARM','CHURCH END','CAWOOD','SELBY',null,'YO8 3SN','trev1sykes@yahoo.co.uk',1102358109,'SYKES BROTHERS',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
+ (106268747,'SWALLOW COTTAGE',null,'HAMSTERLEY','BISHOP AUCKLAND',null,'DL13 3QF','dag@graysllp.co.uk',1101007842,'Uswayford Farm Limited',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
+ (107069599,'SPRINGFIELD FARM','COLD ASHBY ROAD','WEST HADDON','NORTHAMPTON',null,'NN6 7AH','hazelwhit@gmail.com',1100252193,'MRS H M WHITTAKER',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
+ (200211430,'LONGLANDS',null,'COWAN BRIDGE','CARNFORTH',null,'LA6 2HY','abcoates14@gmail.com',1104376954,'J B & A H Coates',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
+ (107260707,'DAMBRIDGE FARM','MARCHINGTON WOODLANDS','MARCHINGTON','UTTOXETER',null,'ST14 8PB','enquiries@woodlandviews.co.uk',1100458611,'BRIDGE FARM PARTNERSHIP',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS')),
+ (107680351,'MANOR FARM','OLLERTON ROAD','KELHAM','NEWARK',null,'NG23 5QS','johnmiller7046@outlook.com',1102383147,'JAMES MILLER (KELHAM) LTD',to_date('14-FEB-24 01:34:17','DD-MON-YY HH:MI:SS'))
+ON CONFLICT ("sbi")
+DO
+UPDATE SET
+  "addressLine1" = EXCLUDED."addressLine1",
+  "addressLine2" = EXCLUDED."addressLine2",
+  "addressLine3" = EXCLUDED."addressLine3",
+  "city" = EXCLUDED."city",
+  "county" = EXCLUDED."county",
+  "postcode" = EXCLUDED."postcode",
+  "emailAddress" = EXCLUDED."emailAddress",
+  "frn" = EXCLUDED."frn",
+  "name" = EXCLUDED."name",
+  "updated" = EXCLUDED."updated";
