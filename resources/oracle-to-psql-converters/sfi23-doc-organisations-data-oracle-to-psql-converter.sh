@@ -26,7 +26,7 @@ select file_name in $files; do
         echo "VALUES" >> "$output_file"
 
         # Append the converted data to the file
-        echo "$converted_data" | sed '$s/,$//' >> "$output_file"
+        echo "$converted_data" | perl -0777 -pe 's/,(?=[^,]*$)//' >> "$output_file"
 
 # Add the ON CONFLICT statement at the end of the file
 echo "ON CONFLICT (\"sbi\")" >> "$output_file"
