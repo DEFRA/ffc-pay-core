@@ -22,7 +22,7 @@ select file_name in $files; do
         output_file="$(pwd)/outputs/ffc-doc-statment-DAX-data-converted-$(date +%Y%m%d).txt"
 
         # Add the INSERT statement at the top of the file
-        echo "INSERT INTO \"dax\" (\"calculationId\", \"paymentPeriod\", \"paymentReference\", \"paymentAmount\", \"transDate\")" > "$output_file"
+        echo "INSERT INTO \"dax\" (\"calculationId\", \"paymentPeriod\", \"paymentReference\", \"paymentAmount\", \"transactionDate\")" > "$output_file"
         echo "VALUES" >> "$output_file"
 
         # Append the converted data to the file
@@ -36,7 +36,7 @@ select file_name in $files; do
         echo "  \"paymentPeriod\" = EXCLUDED.\"paymentPeriod\"," >> "$output_file"
         echo "  \"paymentReference\" = EXCLUDED.\"paymentReference\"," >> "$output_file"
         echo "  \"paymentAmount\" = EXCLUDED.\"paymentAmount\"," >> "$output_file"
-        echo "  \"transDate\" = EXCLUDED.\"transDate\";" >> "$output_file"
+        echo "  \"transactionDate\" = EXCLUDED.\"transactionDate\";" >> "$output_file"
 
         # Print the success message
         echo "Data converted and saved to $output_file"

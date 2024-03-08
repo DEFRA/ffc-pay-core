@@ -28,7 +28,7 @@ select file_name in $files; do
         echo "INSERT INTO \"totals\" (\"sbi\", \"frn\", \"agreementNumber\", \"claimId\", \"schemeType\", \"calculationId\", \"calculationDate\", \"invoiceNumber\", \"agreementStart\", \"agreementEnd\", \"totalActionPayments\", \"totalAdditionalPayments\", \"totalPayments\", \"updated\")" > "$output_file"
         echo "VALUES" >> "$output_file"
 
-        # Append the converted data to the file
+        # Append the converted data to the file, removing the trailing comma from the last line
         echo "$converted_data" | perl -0777 -pe 's/,(?=[^,]*$)//' >> "$output_file"
 
 

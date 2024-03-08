@@ -1,4 +1,4 @@
-INSERT INTO "dax" ("calculationId", "paymentPeriod", "paymentReference", "paymentAmount", "transDate")
+INSERT INTO "dax" ("calculationId", "paymentPeriod", "paymentReference", "paymentAmount", "transactionDate")
 VALUES
  (123759086,'1st November 2023 to 31st January 2024','PY2066436',-3495,to_date('06-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
  (123759086,'1st February 2024 to 30th April 2024','PY2066469',-3495,to_date('09-FEB-24 12:00:00','DD-MON-YY HH:MI:SS')),
@@ -24,4 +24,4 @@ UPDATE SET
   "paymentPeriod" = EXCLUDED."paymentPeriod",
   "paymentReference" = EXCLUDED."paymentReference",
   "paymentAmount" = EXCLUDED."paymentAmount",
-  "transDate" = EXCLUDED."transDate";
+  "transactionDate" = EXCLUDED."transactionDate";
