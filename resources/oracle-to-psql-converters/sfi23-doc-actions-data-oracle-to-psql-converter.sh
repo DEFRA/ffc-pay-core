@@ -22,17 +22,17 @@ select file_name in $files; do
         output_file="$(pwd)/outputs/ffc-doc-statment-actions-data-converted-$(date +%Y%m%d).txt"
 
         # Add the INSERT statement at the top of the file
-        echo "INSERT INTO \"actions\" (\"pkId\", \"calculationId\", \"fundingCode\", \"groupName\", \"actionCode\", \"actionName\", \"rate\", \"landArea\", \"uom\", \"annualValue\", \"quarterlyValue\", \"overDeclarationPenalty\", \"quarterlyPaymentAmount\")" > "$output_file"
+        echo "INSERT INTO \"actions\" (\"actionId\", \"calculationId\", \"fundingCode\", \"groupName\", \"actionCode\", \"actionName\", \"rate\", \"landArea\", \"uom\", \"annualValue\", \"quarterlyValue\", \"overDeclarationPenalty\", \"quarterlyPaymentAmount\")" > "$output_file"
         echo "VALUES" >> "$output_file"
 
         # Append the converted data to the file
         echo "$converted_data" | perl -0777 -pe 's/,(?=[^,]*$)//' >> "$output_file"
 
         # Add the ON CONFLICT statement at the end of the file
-        echo "ON CONFLICT (\"pkId\")" >> "$output_file"
+        echo "ON CONFLICT (\"actionId\")" >> "$output_file"
         echo "DO" >> "$output_file"
         echo "UPDATE SET" >> "$output_file"
-        echo "  \"pkId\" = EXCLUDED.\"pkId\"," >> "$output_file"
+        echo "  \"actionId\" = EXCLUDED.\"actionId\"," >> "$output_file"
         echo "  \"calculationId\" = EXCLUDED.\"calculationId\"," >> "$output_file"
         echo "  \"fundingCode\" = EXCLUDED.\"fundingCode\"," >> "$output_file"
         echo "  \"groupName\" = EXCLUDED.\"groupName\"," >> "$output_file"

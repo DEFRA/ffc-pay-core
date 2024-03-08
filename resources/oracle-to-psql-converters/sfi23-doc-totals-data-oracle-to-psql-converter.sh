@@ -25,7 +25,7 @@ select file_name in $files; do
         output_file="$(pwd)/outputs/ffc-doc-statment-totals-data-converted-$(date +%Y%m%d).txt"
 
         # Add the INSERT statement at the top of the file
-        echo "INSERT INTO \"totals\" (\"sbi\", \"frn\", \"agreementNumber\", \"claimId\", \"schemeType\", \"calculationId\", \"calculationDate\", \"invoiceNumber\", \"agreementStart\", \"agreementEnd\", \"totalActionPayments\", \"totalAdditionalPayments\", \"updated\")" > "$output_file"
+        echo "INSERT INTO \"totals\" (\"sbi\", \"frn\", \"agreementNumber\", \"claimId\", \"schemeType\", \"calculationId\", \"calculationDate\", \"invoiceNumber\", \"agreementStart\", \"agreementEnd\", \"totalActionPayments\", \"totalAdditionalPayments\", \"totalPayments\", \"updated\")" > "$output_file"
         echo "VALUES" >> "$output_file"
 
         # Append the converted data to the file
@@ -48,6 +48,7 @@ echo "  \"agreementStart\" = EXCLUDED.\"agreementStart\"," >> "$output_file"
 echo "  \"agreementEnd\" = EXCLUDED.\"agreementEnd\"," >> "$output_file"
 echo "  \"totalActionPayments\" = EXCLUDED.\"totalActionPayments\"," >> "$output_file"
 echo "  \"totalAdditionalPayments\" = EXCLUDED.\"totalAdditionalPayments\"," >> "$output_file"
+echo "  \"totalPayments\" = EXCLUDED.\"totalPayments\"," >> "$output_file"
 echo "  \"updated\" = EXCLUDED.\"updated\";" >> "$output_file"
 
         # Print the success message
