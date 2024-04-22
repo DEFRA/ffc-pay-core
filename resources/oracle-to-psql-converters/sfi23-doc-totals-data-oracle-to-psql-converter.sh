@@ -6,7 +6,7 @@
 # Function to convert Oracle SQL data to PostgreSQL format
 function convert_data() {
     local file_path=$1
-    local converted_data=$(grep "Insert into EXPORT_TABLE" "$file_path" | awk -F"values" '{print $2}' | sed "s/);/),/g" | sed "s/);/),/g" | sed "s/);/),/g" | sed "s/;/,/g" | sed "s/','DD-MON-YY HH:MI:SS')/','DD-MON-YY HH:MI:SS')/g" | sed 's/),$/)/g' | sed '$s/,$//')
+    local converted_data=$(grep "Insert into EXPORT_TABLE" "$file_path" | awk -F"values" '{print $2}' | sed "s/);/),/g" | sed "s/);/),/g" | sed "s/);/),/g" | sed "s/;/,/g" | sed "s/''DD-MON-YY HH:MI:SS'/','DD-MON-YY HH:MI:SS'/g")
     echo "$converted_data"
 }
 
