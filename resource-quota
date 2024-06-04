@@ -26,10 +26,10 @@ arr=(
   "ffc-pay-dps"
   "ffc-pay-fdmr"
   "ffc-pay-demographics"
-  "ffc-pay-statement-data"
-  "ffc-pay-statement-constructor"
-  "ffc-pay-statement-generator"
-  "ffc-pay-statement-publisher"
+  "ffc-doc-statement-data"
+  "ffc-doc-statement-constructor"
+  "ffc-doc-statement-generator"
+  "ffc-doc-statement-publisher"
   )
 
 for i in "${arr[@]}"

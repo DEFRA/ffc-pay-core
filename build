@@ -89,16 +89,16 @@ cd "${projectRoot}"
 cd ./ffc-pay-demographics && \
   docker-compose build
 cd "${projectRoot}"
-cd ./ffc-pay-statement-data && \
+cd ./ffc-doc-statement-data && \
   docker-compose build
 cd "${projectRoot}"
-cd ./ffc-pay-statement-constructor && \
+cd ./ffc-doc-statement-constructor && \
   docker-compose build
 cd "${projectRoot}"
-cd ./ffc-pay-statement-generator && \
+cd ./ffc-doc-statement-generator && \
   docker-compose build
 cd "${projectRoot}"
-cd ./ffc-pay-statement-publisher && \
+cd ./ffc-doc-statement-publisher && \
   docker-compose build
 cd "${projectRoot}"
 cd ./ffc-pay-statement-receiver && \

@@ -92,13 +92,13 @@ cd "${projectRoot}"
 cd ./ffc-pay-statement-data && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-statement-constructor && \
+cd ./ffc-doc-statement-constructor && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-statement-generator && \
+cd ./ffc-doc-statement-generator && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-statement-publisher && \
+cd ./ffc-doc-statement-publisher && \
   git pull
 cd "${projectRoot}"
 cd ./ffc-pay-statement-receiver && \

@@ -66,10 +66,10 @@ if [ "${payments}" = "true" ]; then
 fi
 
 if [ "${statements}" = "true" ]; then
-  ./ffc-pay-statement-data/scripts/start -d;
-  ./ffc-pay-statement-constructor/scripts/start -d;
-  ./ffc-pay-statement-generator/scripts/start -d;
-  ./ffc-pay-statement-publisher/scripts/start -d;
+  ./ffc-doc-statement-data/scripts/start -d;
+  ./ffc-doc-statement-constructor/scripts/start -d;
+  ./ffc-doc-statement-generator/scripts/start -d;
+  ./ffc-doc-statement-publisher/scripts/start -d;
   ./ffc-pay-statement-receiver/scripts/start -d;
 fi
 
