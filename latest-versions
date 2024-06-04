@@ -63,17 +63,17 @@ echo 'ffc-pay-fdmr' &&
 echo 'ffc-pay-demographics' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-demographics/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
-echo 'ffc-pay-statement-data' &&
-  curl --silent "https://api.github.com/repos/defra/ffc-pay-statement-data/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+echo 'ffc-doc-statement-data' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-doc-statement-data/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
-echo 'ffc-pay-statement-constructor' &&
-  curl --silent "https://api.github.com/repos/defra/ffc-pay-statement-constructor/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+echo 'ffc-doc-statement-constructor' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-doc-statement-constructor/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
-echo 'ffc-pay-statement-generator' &&
-  curl --silent "https://api.github.com/repos/defra/ffc-pay-statement-generator/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+echo 'ffc-doc-statement-generator' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-doc-statement-generator/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
-echo 'ffc-pay-statement-publisher' &&
-  curl --silent "https://api.github.com/repos/defra/ffc-pay-statement-publisher/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+echo 'ffc-doc-statement-publisher' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-doc-statement-publisher/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
 echo 'ffc-pay-statement-receiver' &&
   curl --silent "https://api.github.com/repos/defra/ffc-pay-statement-receiver/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'

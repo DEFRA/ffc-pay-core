@@ -61,9 +61,9 @@ if [ "${payments}" = "true" ]; then
 fi
 
 if [ "${statements}" = "true" ]; then
-  code ./ffc-pay-statement-data;
-  code ./ffc-pay-statement-constructor;
-  code ./ffc-pay-statement-generator;
-  code ./ffc-pay-statement-publisher;
+  code ./ffc-doc-statement-data;
+  code ./ffc-doc-statement-constructor;
+  code ./ffc-doc-statement-generator;
+  code ./ffc-doc-statement-publisher;
   code ./ffc-pay-statement-receiver;
 fi
