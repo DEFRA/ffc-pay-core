@@ -186,21 +186,21 @@ storageStatements[Azure Blob Storage - Statements]
 topicProcessing[Azure Service Bus Topic - ffc-pay-processing]
 topicSubmit[Azure Service Bus Topic - ffc-pay-submit]
 topicReturn[Azure Service Bus Topic - ffc-pay-return]
-topicStatementData[Azure Service Bus Topic - ffc-pay-statement-data]
+topicStatementData[Azure Service Bus Topic - ffc-doc-statement-data]
 topicStatements[Azure Service Bus Topic - ffc-pay-statements]
-topicStatementPublish[Azure Service Bus Topic - ffc-pay-statement-publish]
+topicStatementPublish[Azure Service Bus Topic - ffc-doc-statement-publish]
 
-ffc-pay-statement-data ==> topicStatementData
-topicStatementData ==> ffc-pay-statement-constructor
-topicProcessing ==> ffc-pay-statement-constructor
-topicSubmit ==> ffc-pay-statement-constructor
-topicReturn ==> ffc-pay-statement-constructor
-ffc-pay-statement-constructor ==> topicStatements
-topicStatements ==> ffc-pay-statement-generator
-ffc-pay-statement-generator ==> topicStatementPublish
-ffc-pay-statement-generator ==> storageStatements
-topicStatementPublish ==> ffc-pay-statement-publisher
-storageStatements ==> ffc-pay-statement-publisher
+ffc-doc-statement-data ==> topicStatementData
+topicStatementData ==> ffc-doc--statement-constructor
+topicProcessing ==> ffc-doc-statement-constructor
+topicSubmit ==> ffc-doc-statement-constructor
+topicReturn ==> ffc-doc-statement-constructor
+ffc-doc-statement-constructor ==> topicStatements
+topicStatements ==> ffc-doc-statement-generator
+ffc-doc-statement-generator ==> topicStatementPublish
+ffc-doc-statement-generator ==> storageStatements
+topicStatementPublish ==> ffc-doc-statement-publisher
+storageStatements ==> ffc-doc-statement-publisher
 storageStatements ==> ffc-pay-statement-receiver
 ```
 

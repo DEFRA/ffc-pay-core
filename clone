@@ -72,16 +72,16 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
   test -d ffc-pay-demographics\
     && >&2 echo "The 'ffc-pay-demographics' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-demographics.git
-  test -d ffc-pay-statement-data\
+  test -d ffc-doc-statement-data\
     && >&2 echo "The 'ffc-doc-statement-data' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-doc-statement-data.git
-  test -d ffc-pay-statement-constructor\
+  test -d ffc-doc-statement-constructor\
     && >&2 echo "The 'ffc-doc-statement-constructor' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-doc-statement-constructor.git
-  test -d ffc-pay-statement-generator\
+  test -d ffc-doc-statement-generator\
     && >&2 echo "The 'ffc-doc-statement-generator' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-doc-statement-generator.git
-  test -d ffc-pay-statement-publisher\
+  test -d ffc-doc-statement-publisher\
     && >&2 echo "The 'ffc-doc-statement-publisher' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-doc-statement-publisher.git
   test -d ffc-pay-statement-receiver\

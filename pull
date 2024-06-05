@@ -89,7 +89,7 @@ cd "${projectRoot}"
 cd ./ffc-pay-demographics && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-statement-data && \
+cd ./ffc-doc-statement-data && \
   git pull
 cd "${projectRoot}"
 cd ./ffc-doc-statement-constructor && \
