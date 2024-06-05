@@ -72,18 +72,18 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
   test -d ffc-pay-demographics\
     && >&2 echo "The 'ffc-pay-demographics' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-demographics.git
-  test -d ffc-pay-statement-data\
-    && >&2 echo "The 'ffc-pay-statement-data' repository already exists. Skipping." \
-    || git clone https://github.com/DEFRA/ffc-pay-statement-data.git
-  test -d ffc-pay-statement-constructor\
-    && >&2 echo "The 'ffc-pay-statement-constructor' repository already exists. Skipping." \
-    || git clone https://github.com/DEFRA/ffc-pay-statement-constructor.git
-  test -d ffc-pay-statement-generator\
-    && >&2 echo "The 'ffc-pay-statement-generator' repository already exists. Skipping." \
-    || git clone https://github.com/DEFRA/ffc-pay-statement-generator.git
-  test -d ffc-pay-statement-publisher\
-    && >&2 echo "The 'ffc-pay-statement-publisher' repository already exists. Skipping." \
-    || git clone https://github.com/DEFRA/ffc-pay-statement-publisher.git
+  test -d ffc-doc-statement-data\
+    && >&2 echo "The 'ffc-doc-statement-data' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-doc-statement-data.git
+  test -d ffc-doc-statement-constructor\
+    && >&2 echo "The 'ffc-doc-statement-constructor' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-doc-statement-constructor.git
+  test -d ffc-doc-statement-generator\
+    && >&2 echo "The 'ffc-doc-statement-generator' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-doc-statement-generator.git
+  test -d ffc-doc-statement-publisher\
+    && >&2 echo "The 'ffc-doc-statement-publisher' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-doc-statement-publisher.git
   test -d ffc-pay-statement-receiver\
     && >&2 echo "The 'ffc-pay-statement-receiver' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-statement-receiver.git
