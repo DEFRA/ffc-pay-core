@@ -1,4 +1,5 @@
 # Payment Hub Core
+
 Local development support for orchestrating all Payment Hub microservices.
 
 ## Prerequisites
@@ -6,8 +7,11 @@ Local development support for orchestrating all Payment Hub microservices.
 Ensure you have satisfied the prerequisites of all individual repositories.
 
 ## Repositories
+
 ### Payments
+
 #### Processing
+
 - [ffc-pay-gateway](https://github.com/defra/ffc-pay-gateway)
 - [ffc-pay-batch-verifier](https://github.com/defra/ffc-pay-batch-verifier)
 - [ffc-pay-batch-processor](https://github.com/defra/ffc-pay-batch-processor)
@@ -27,21 +31,24 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 - [ffc-pay-fdmr](https://github.com/defra/ffc-pay-fdmr)
 
 #### Monitoring
+
 - [ffc-pay-event-hub](https://github.com/defra/ffc-pay-event-hub)
 - [ffc-pay-data-hub](https://github.com/defra/ffc-pay-data-hub)
 - [ffc-pay-alerting](https://github.com/defra/ffc-pay-alerting)
 - [ffc-pay-report-generator](https://github.com/defra/ffc-pay-report-generator)
 
 ### Statements
-- [ffc-pay-statement-data](https://github.com/defra/ffc-pay-statement-data)
-- [ffc-pay-statement-constructor](https://github.com/defra/ffc-pay-statement-constructor)
-- [ffc-pay-statement-generator](https://github.com/defra/ffc-pay-statement-generator)
-- [ffc-pay-statement-publisher](https://github.com/defra/ffc-pay-statement-publisher)
+
+- [ffc-doc-statement-data](https://github.com/defra/ffc-doc-statement-data)
+- [ffc-doc-statement-constructor](https://github.com/defra/ffc-doc-statement-constructor)
+- [ffc-doc-statement-generator](https://github.com/defra/ffc-doc-statement-generator)
+- [ffc-doc-statement-publisher](https://github.com/defra/ffc-doc-statement-publisher)
 - [ffc-pay-statement-receiver](https://github.com/defra/ffc-pay-statement-receiver)
 
 ## Sequence
 
 ### Payments
+
 ```mermaid
 flowchart LR
 ffc-pay-gateway(Kubernetes - ffc-pay-gateway)
@@ -117,6 +124,7 @@ ffc-pay-web --> storageProjection
 ```
 
 ### Monitoring
+
 ```mermaid
 flowchart LR
 ffc-pay-batch-processor(Kubernetes - ffc-pay-batch-processor)
@@ -163,13 +171,14 @@ ffc-pay-web --> ffc-pay-data-hub
 ```
 
 ### Statements
+
 ```mermaid
 flowchart LR
 
-ffc-pay-statement-data(Kubernetes - ffc-pay-statement-data)
-ffc-pay-statement-constructor(Kubernetes - ffc-pay-statement-constructor)
-ffc-pay-statement-generator(Kubernetes - ffc-pay-statement-generator)
-ffc-pay-statement-publisher(Kubernetes - ffc-pay-statement-publisher)
+ffc-doc-statement-data(Kubernetes - ffc-doc-statement-data)
+ffc-doc-statement-constructor(Kubernetes - ffc-doc-statement-constructor)
+ffc-doc-statement-generator(Kubernetes - ffc-doc-statement-generator)
+ffc-doc-statement-publisher(Kubernetes - ffc-doc-statement-publisher)
 ffc-pay-statement-receiver(Kubernetes - ffc-pay-statement-receiver)
 
 storageStatements[Azure Blob Storage - Statements]
@@ -177,21 +186,21 @@ storageStatements[Azure Blob Storage - Statements]
 topicProcessing[Azure Service Bus Topic - ffc-pay-processing]
 topicSubmit[Azure Service Bus Topic - ffc-pay-submit]
 topicReturn[Azure Service Bus Topic - ffc-pay-return]
-topicStatementData[Azure Service Bus Topic - ffc-pay-statement-data]
+topicStatementData[Azure Service Bus Topic - ffc-doc-statement-data]
 topicStatements[Azure Service Bus Topic - ffc-pay-statements]
-topicStatementPublish[Azure Service Bus Topic - ffc-pay-statement-publish]
+topicStatementPublish[Azure Service Bus Topic - ffc-doc-statement-publish]
 
-ffc-pay-statement-data ==> topicStatementData
-topicStatementData ==> ffc-pay-statement-constructor
-topicProcessing ==> ffc-pay-statement-constructor
-topicSubmit ==> ffc-pay-statement-constructor
-topicReturn ==> ffc-pay-statement-constructor
-ffc-pay-statement-constructor ==> topicStatements
-topicStatements ==> ffc-pay-statement-generator
-ffc-pay-statement-generator ==> topicStatementPublish
-ffc-pay-statement-generator ==> storageStatements
-topicStatementPublish ==> ffc-pay-statement-publisher
-storageStatements ==> ffc-pay-statement-publisher
+ffc-doc-statement-data ==> topicStatementData
+topicStatementData ==> ffc-doc--statement-constructor
+topicProcessing ==> ffc-doc-statement-constructor
+topicSubmit ==> ffc-doc-statement-constructor
+topicReturn ==> ffc-doc-statement-constructor
+ffc-doc-statement-constructor ==> topicStatements
+topicStatements ==> ffc-doc-statement-generator
+ffc-doc-statement-generator ==> topicStatementPublish
+ffc-doc-statement-generator ==> storageStatements
+topicStatementPublish ==> ffc-doc-statement-publisher
+storageStatements ==> ffc-doc-statement-publisher
 storageStatements ==> ffc-pay-statement-receiver
 ```
 
@@ -199,7 +208,7 @@ storageStatements ==> ffc-pay-statement-receiver
 
 ### Clone
 
-Clone all repositories from GitHub.  Repositories will cloned in the parent directory of this repository.
+Clone all repositories from GitHub. Repositories will cloned in the parent directory of this repository.
 
 [`./clone`](clone)
 
@@ -224,6 +233,7 @@ Runs `Seed` script if `ffc-pay-scripts` repository is cloned.
 [`./start`](start)
 
 #### Optional arguments
+
 - `-f` - include Azure Functions
 - `-s` - include Statement services
 - `-S` - only statement services
@@ -251,6 +261,7 @@ Open all payment services in Visual Studio Code.
 [`./open`](open)
 
 #### Optional arguments
+
 - `-f` - include Azure Functions
 - `-s` - include Statement services
 - `-S` - only statement services
@@ -268,6 +279,7 @@ List current environment version for each microservice hosted in Kubernetes.
 [`./environment-versions`](environment-versions)
 
 #### Options
+
 - `-c | --cluster` - Kubernetes cluster context name
 - `-n | --namespace` - Kubernetes namespace
 
@@ -278,6 +290,7 @@ Determine the Kubernetes resource usage for a namespace based on all microservic
 [`./resource-quota`](resource-quota)
 
 ## Resources
+
 ### Payments
 
 A set of test datasets and scripts to support testing of payments.
