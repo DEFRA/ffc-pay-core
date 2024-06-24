@@ -17,7 +17,7 @@ select file_name in $files; do
         # Create a new .txt file with the specified name format
         output_file="$(pwd)/outputs/ffc-doc-statement-delinkedCalculation-data-converted-$(date +%Y%m%d).txt"
         # Add the INSERT statement at the top of the file
-        echo "INSERT INTO \"delinkedCalculation\" (\"applicationId\", \"calculationId\", \"sbi\", \"frn\", \"piBpsBand1\", \"piBpsBand2\", \"piBpsBand3\", \"piBpsBand4\", \"piBpsBandPrc1\", \"piBpsBandPrc2\", \"piBpsBandPrc3\", \"piBpsBandPrc4\", \"progRedBand1\", \"progRedBand2\", \"progRedBand3\", \"progRedBand4\", \"totProRedAmo\", \"curRefAmount\", \"curTotRefAmo\", \"neTotAmount\", \"paymentAmountCalculated\")" > "$output_file"
+        echo "INSERT INTO \"delinkedCalculation\" (\"applicationId\", \"calculationId\", \"sbi\", \"frn\", \"piBpsBand1\", \"piBpsBand2\", \"piBpsBand3\", \"piBpsBand4\", \"piBpsBandPrc1\", \"piBpsBandPrc2\", \"piBpsBandPrc3\", \"piBpsBandPrc4\", \"progRedBand1\", \"progRedBand2\", \"progRedBand3\", \"progRedBand4\", \"totProRedAmo\", \"curRefAmount\", \"neTotAmount\", \"paymentAmountCalculated\")" > "$output_file"
         echo "VALUES" >> "$output_file"
         # Append the converted data to the file
         echo "$converted_data" | perl -0777 -pe 's/,(?=[^,]*$)//' >> "$output_file"
@@ -42,7 +42,6 @@ select file_name in $files; do
         echo "  \"progRedBand4\" = EXCLUDED.\"progRedBand4\"," >> "$output_file"
         echo "  \"totProRedAmo\" = EXCLUDED.\"totProRedAmo\"," >> "$output_file"
         echo "  \"curRefAmount\" = EXCLUDED.\"curRefAmount\"," >> "$output_file"
-        echo "  \"curTotRefAmo\" = EXCLUDED.\"curTotRefAmo\"," >> "$output_file"
         echo "  \"neTotAmount\" = EXCLUDED.\"neTotAmount\"," >> "$output_file"
         echo "  \"paymentAmountCalculated\" = EXCLUDED.\"paymentAmountCalculated\";" >> "$output_file"
         # Print the success message

@@ -1,10 +1,67 @@
 #!/bin/bash
 
-# Function to convert Oracle SQL data to PostgreSQL format
+# Define default column mappings
+declare -A default_column_mapping=(
+    ["CALCULATIONID"]="calculationId"
+    ["PAYMENTPERIOD"]="paymentPeriod"
+    ["PAYMENTREFERENCE"]="paymentReference"
+    ["PAIDAMOUNT"]="paymentAmount"
+    ["TRANSDATE"]="transactionDate"
+)
+
+# Define SFI23 specific mappings
+declare -A sfi23_column_mapping=(
+    ["CALCULATIONID"]="sfiCalculationId"
+    ["PAYMENTPERIOD"]="sfiPaymentPeriod"
+    ["PAYMENTREFERENCE"]="sfiPaymentReference"
+    ["PAIDAMOUNT"]="sfiPaymentAmount"
+    ["TRANSDATE"]="sfiTransactionDate"
+)
+
+# Define delinked specific mappings
+declare -A delinked_column_mapping=(
+    ["CALCULATIONID"]="delinkedCalculationId"
+    ["PAYMENTPERIOD"]="delinkedPaymentPeriod"
+    ["PAYMENTREFERENCE"]="delinkedPaymentReference"
+    ["TRANSDATE"]="delinkedTransactionDate"
+    ["PAIDAMOUNT"]="delinkedPaymentAmount"
+)
+
+# Check if an argument is passed for mapping selection
+if [ $# -eq 0 ]; then
+    echo "No mapping type specified. Defaulting to 'Default'."
+    column_mapping=("${default_column_mapping[@]}")
+else
+    case $1 in
+        Default ) column_mapping=("${default_column_mapping[@]}");;
+        SFI23 ) column_mapping=("${sfi23_column_mapping[@]}");;
+        Delinked ) column_mapping=("${delinked_column_mapping[@]}");;
+        * ) echo "Invalid mapping type specified. Defaulting to 'Default'."
+            column_mapping=("${default_column_mapping[@]}");;
+    esac
+fi
+
+# Function to convert Oracle SQL data to PostgreSQL format using selected mapping
 function convert_data() {
     local file_path=$1
+    # Extract the first insert statement to get column names
+    local column_line=$(grep "Insert into EXPORT_TABLE" "$file_path" | head -1 | awk -F"(" '{print $2}' | awk -F")" '{print $1}')
+    
+    # Manually specify the order of columns
+    local ordered_columns=("CALCULATIONID" "PAYMENTPERIOD" "PAYMENTREFERENCE" "PAIDAMOUNT" "TRANSDATE")
+    
+    # Transform column names based on mapping and specified order
+    local transformed_columns=""
+    for col in "${ordered_columns[@]}"; do
+        if [[ $column_line == *"$col"* ]]; then
+            transformed_columns+="${column_mapping[$col]}, "
+        fi
+    done
+    transformed_columns=${transformed_columns%, }
+    
+    # Extract and convert data
     local converted_data=$(grep "Insert into EXPORT_TABLE" "$file_path" | awk -F"values" '{print $2}' | sed "s/),(/)\n(/g" | sed "s/),/)\n/g" | sed "s/),/)\n/g" | sed "s/;/,/g" | sed '$s/;//')
-    echo "$converted_data"
+    echo "$transformed_columns|$converted_data"
 }
 
 # Get the list of files in the current directory
