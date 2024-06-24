@@ -1,3 +1,5 @@
 uat/
 resources/oracle-to-psql-converters/outputs/*
 resources/oracle-to-psql-converters/data-files/*
+!resources/oracle-to-psql-converters/outputs/.gitkeep
+!resources/oracle-to-psql-converters/data-files/.gitkeep
