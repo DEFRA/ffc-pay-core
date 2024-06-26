@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Define default column mappings
-declare -A default_column_mapping=(
+# Define column mappings for sfi-23 and delinked configurations
+declare -A sfi23_columns=(
     ["CALCULATIONID"]="calculationId"
     ["PAYMENTPERIOD"]="paymentPeriod"
     ["PAYMENTREFERENCE"]="paymentReference"
@@ -9,92 +9,79 @@ declare -A default_column_mapping=(
     ["TRANSDATE"]="transactionDate"
 )
 
-# Define SFI23 specific mappings
-declare -A sfi23_column_mapping=(
-    ["CALCULATIONID"]="sfiCalculationId"
-    ["PAYMENTPERIOD"]="sfiPaymentPeriod"
-    ["PAYMENTREFERENCE"]="sfiPaymentReference"
-    ["PAIDAMOUNT"]="sfiPaymentAmount"
-    ["TRANSDATE"]="sfiTransactionDate"
+# Updated column mappings to include all necessary columns and match the PostgreSQL 'dax' table structure
+declare -A delinked_columns=(
+    ["PAYMENTREFERENCE"]="paymentReference"
+    ["CALCULATIONID"]="calculationId"
+    ["PAYMENTPERIOD"]="paymentPeriod"
+    ["PAIDAMOUNT"]="paymentAmount"
+    ["TRANSDATE"]="transactionDate"
 )
 
-# Define delinked specific mappings
-declare -A delinked_column_mapping=(
-    ["CALCULATIONID"]="delinkedCalculationId"
-    ["PAYMENTPERIOD"]="delinkedPaymentPeriod"
-    ["PAYMENTREFERENCE"]="delinkedPaymentReference"
-    ["TRANSDATE"]="delinkedTransactionDate"
-    ["PAIDAMOUNT"]="delinkedPaymentAmount"
-)
-
-# Check if an argument is passed for mapping selection
-if [ $# -eq 0 ]; then
-    echo "No mapping type specified. Defaulting to 'Default'."
-    column_mapping=("${default_column_mapping[@]}")
-else
-    case $1 in
-        Default ) column_mapping=("${default_column_mapping[@]}");;
-        SFI23 ) column_mapping=("${sfi23_column_mapping[@]}");;
-        Delinked ) column_mapping=("${delinked_column_mapping[@]}");;
-        * ) echo "Invalid mapping type specified. Defaulting to 'Default'."
-            column_mapping=("${default_column_mapping[@]}");;
-    esac
-fi
-
-# Function to convert Oracle SQL data to PostgreSQL format using selected mapping
+# Function to convert Oracle SQL data to PostgreSQL format
 function convert_data() {
     local file_path=$1
-    # Extract the first insert statement to get column names
-    local column_line=$(grep "Insert into EXPORT_TABLE" "$file_path" | head -1 | awk -F"(" '{print $2}' | awk -F")" '{print $1}')
-    
-    # Manually specify the order of columns
-    local ordered_columns=("CALCULATIONID" "PAYMENTPERIOD" "PAYMENTREFERENCE" "PAIDAMOUNT" "TRANSDATE")
-    
-    # Transform column names based on mapping and specified order
-    local transformed_columns=""
-    for col in "${ordered_columns[@]}"; do
-        if [[ $column_line == *"$col"* ]]; then
-            transformed_columns+="${column_mapping[$col]}, "
-        fi
-    done
-    transformed_columns=${transformed_columns%, }
-    
-    # Extract and convert data
-    local converted_data=$(grep "Insert into EXPORT_TABLE" "$file_path" | awk -F"values" '{print $2}' | sed "s/),(/)\n(/g" | sed "s/),/)\n/g" | sed "s/),/)\n/g" | sed "s/;/,/g" | sed '$s/;//')
-    echo "$transformed_columns|$converted_data"
+    # Adjusted to correctly format the VALUES clause, ensuring correct handling of numeric and date values
+    local converted_data=$(grep "Insert into EXPORT_TABLE" "$file_path" | awk -F"values" '{print $2}' | sed "s/),(/),\n(/g" | sed "s/;/,/g" | sed '$s/,$//')
+    echo "$converted_data"
 }
+
+# Function to generate INSERT and ON CONFLICT statements based on column mapping
+function generate_statements() {
+    local insert_columns_str=""
+    local conflict_columns_str=""
+    local first=true
+    for column in "${!column_mapping[@]}"; do
+        if [ "$first" = true ]; then
+            first=false
+        else
+            insert_columns_str+=", "
+            conflict_columns_str+=", "
+        fi
+        insert_columns_str+="\"${column_mapping[$column]}\""
+        conflict_columns_str+="\"${column_mapping[$column]}\" = EXCLUDED.\"${column_mapping[$column]}\""
+    done
+    local insert_statement="INSERT INTO \"dax\" (${insert_columns_str})"
+    local conflict_statement="ON CONFLICT (\"paymentReference\") DO UPDATE SET ${conflict_columns_str}"
+    echo "$insert_statement"
+    echo "$conflict_statement"
+}
+
+# Main script
+echo "Choose the configuration (sfi-23/delinked):"
+read config_choice
+
+declare -n column_mapping # Declare nameref here
+
+case $config_choice in
+    "sfi-23")
+        column_mapping=sfi23_columns
+        ;;
+    "delinked")
+        column_mapping=delinked_columns
+        ;;
+    *)
+        echo "Invalid choice. Defaulting to sfi-23."
+        column_mapping=sfi23_columns
+        ;;
+esac
 
 # Get the list of files in the current directory
 files=$(ls data-files)
-
-# Prompt the user to choose a file from the list
 echo "Choose a file from the list:"
 IFS=$'\n' # Set the input field separator to newline
 select file_name in $files; do
     if [ -n "$file_name" ]; then
         # Convert the data
-        converted_data=$(convert_data "data-files/$file_name")
-
+        converted_data=$(convert_data "data-files/$file_name" column_mapping)
         # Create a new .txt file with the specified name format
-        output_file="$(pwd)/outputs/ffc-doc-statment-DAX-data-converted-$(date +%Y%m%d).txt"
-
-        # Add the INSERT statement at the top of the file
-        echo "INSERT INTO \"dax\" (\"calculationId\", \"paymentPeriod\", \"paymentReference\", \"paymentAmount\", \"transactionDate\")" > "$output_file"
+        output_file="$(pwd)/outputs/ffc-doc-statement-${config_choice}-DAX-converted-$(date +%Y%m%d).txt"
+        # Generate and add the INSERT and ON CONFLICT statements at the top and bottom of the file, respectively
+        read insert_statement conflict_statement <<< $(generate_statements column_mapping)
+        echo "$insert_statement" > "$output_file"
         echo "VALUES" >> "$output_file"
-
-        # Append the converted data to the file
         echo "$converted_data" | perl -0777 -pe 's/,(?=[^,]*$)//' >> "$output_file"
-
-        # Add the ON CONFLICT statement at the end of the file
-        echo "ON CONFLICT (\"paymentReference\")" >> "$output_file"
-        echo "DO" >> "$output_file"
-        echo "UPDATE SET" >> "$output_file"
-        echo "  \"calculationId\" = EXCLUDED.\"calculationId\"," >> "$output_file"
-        echo "  \"paymentPeriod\" = EXCLUDED.\"paymentPeriod\"," >> "$output_file"
-        echo "  \"paymentReference\" = EXCLUDED.\"paymentReference\"," >> "$output_file"
-        echo "  \"paymentAmount\" = EXCLUDED.\"paymentAmount\"," >> "$output_file"
-        echo "  \"transactionDate\" = EXCLUDED.\"transactionDate\";" >> "$output_file"
-
+        echo "$conflict_statement;" >> "$output_file"
         # Print the success message
         echo "Data converted and saved to $output_file"
         break
