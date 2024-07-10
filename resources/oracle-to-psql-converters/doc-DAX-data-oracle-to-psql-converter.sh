@@ -1,11 +1,18 @@
 #!/bin/bash
 # Define column mappings for sfi-23 and delinked configurations
 sfi23_columns=("calculationId" "paymentPeriod" "paymentReference" "paymentAmount" "transactionDate")
-delinked_columns=("calculationId" "paymentPeriod" "paymentReference" "transactionDate" "paymentAmount")
+delinked_columns=("calculationId" "paymentPeriod" "paymentReference" "paymentAmount" "transactionDate")
 # Function to convert Oracle SQL data to PostgreSQL format
 function convert_data() {
     local file_path=$1
-    local converted_data=$(grep "Insert into EXPORT_TABLE" "$file_path" | awk -F"values" '{print $2}' | sed "s/),(/),\n(/g" | sed "s/;/,/g" | sed '$s/,$//')
+    # Convert Oracle to_date to PostgreSQL compatible format
+    # Assuming Oracle format is 'DD-MON-YY' which is common, adjust if necessary
+    local converted_data=$(grep "Insert into EXPORT_TABLE" "$file_path" \
+        | awk -F"values" '{print $2}' \
+        | sed "s/),(/),\n(/g" \
+        | sed "s/;/,/g" \
+        | sed '$s/,$//' \
+        | sed "s/to_date('\([^']*\)','DD-MON-YY')/TO_DATE('\1', 'DD-MON-YY')/g") # Adjust the format as necessary
     echo "$converted_data"
 }
 # Function to generate INSERT and ON CONFLICT statements based on column mapping

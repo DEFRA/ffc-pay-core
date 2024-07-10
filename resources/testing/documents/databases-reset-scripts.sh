@@ -12,24 +12,24 @@ else
 fi
 
 # Execute the ffc-pay-statement-generator sql script
-PGPASSWORD=ppp psql -h host.docker.internal -p 5451 -U postgres -d ffc_pay_statement_generator -f $(pwd)/databases-reset/ffc-pay-statement-generator.sql 
+PGPASSWORD=ppp psql -h host.docker.internal -p 5488 -U postgres -d ffc_doc_statement_generator -f $(pwd)/databases-reset/ffc-pay-statement-generator.sql 
 
 # Check the exit status of ffc-pay-statement-generator sql script
 if [ $? -eq 0 ]; then
-    echo "ffc-pay-statement-generator sql script executed successfully."
+    echo "ffc-doc-statement-generator sql script executed successfully."
 else
-    echo "Error: ffc-pay-statement-generator sql script failed."
+    echo "Error: ffc-doc-statement-generator sql script failed."
     exit 1
 fi
 
 # Execute the ffc-pay-statement-constructor sql script
-PGPASSWORD=ppp psql -h host.docker.internal -p 5450 -U postgres -d ffc_pay_statement_constructor -f $(pwd)/databases-reset/ffc-pay-statement-constructor.sql 
+PGPASSWORD=ppp psql -h host.docker.internal -p 5486 -U postgres -d ffc_doc_statement_constructor -f $(pwd)/databases-reset/ffc-pay-statement-constructor.sql 
 
 # Check the exit status of ffc-pay-statement-constructor sql script
 if [ $? -eq 0 ]; then
-    echo "ffc-pay-statement-constructor sql script executed successfully."
+    echo "ffc-doc-statement-constructor sql script executed successfully."
 else
-    echo "Error: ffc-pay-statement-constructor sql script failed."
+    echo "Error: ffc-doc-statement-constructor sql script failed."
     exit 1
 fi
 
