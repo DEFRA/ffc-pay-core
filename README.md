@@ -246,7 +246,7 @@ Run all payment services.
 
 #### Optional arguments
 
-Any valid `docker-compose down` argument.
+Any valid `docker compose down` argument.
 
 ### Seed
 
