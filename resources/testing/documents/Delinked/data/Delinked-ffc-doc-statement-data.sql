@@ -1,7 +1,7 @@
 TRUNCATE TABLE public.organisations RESTART IDENTITY CASCADE;
 TRUNCATE TABLE public.delinkedCalculation RESTART IDENTITY CASCADE;
 -- Delete existing data if clean environment is required
--- For local development, can also run down docker-compose down -v from ffc-pay-statement-data service to acheive the same
+-- For local development, can also run down docker compose down -v from ffc-pay-statement-data service to acheive the same
 DELETE FROM public.organisations;
 DELETE FROM public.calculations;
 -- Insert organisations, important to note for non production environments, the email address must one setup in our GOV.UK Notify account

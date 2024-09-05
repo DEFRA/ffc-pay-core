@@ -27,79 +27,79 @@ done
 
 cd "${projectRoot}"
 cd ./ffc-pay-batch-verifier && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-batch-processor && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-enrichment && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-processing && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-submission && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-file-publisher && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-file-receiver && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-responses && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-tracking && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-web && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-request-editor && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-event-hub && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-data-hub && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-report-generator && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-gateway && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-injection && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-xb && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-dps && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-fdmr && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-alerting && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-demographics && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-doc-statement-data && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-doc-statement-constructor && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-doc-statement-generator && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-doc-statement-publisher && \
-  docker-compose build
+  docker compose build
 cd "${projectRoot}"
 cd ./ffc-pay-statement-receiver && \
-  docker-compose build
+  docker compose build
