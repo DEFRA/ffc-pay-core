@@ -101,5 +101,5 @@ cd "${projectRoot}"
 cd ./ffc-doc-statement-publisher && \
   docker compose build
 cd "${projectRoot}"
-cd ./ffc-pay-statement-receiver && \
+cd ./ffc-doc-statement-receiver && \
   docker compose build

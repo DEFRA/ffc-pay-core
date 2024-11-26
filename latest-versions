@@ -75,5 +75,5 @@ echo 'ffc-doc-statement-generator' &&
 echo 'ffc-doc-statement-publisher' &&
   curl --silent "https://api.github.com/repos/defra/ffc-doc-statement-publisher/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
-echo 'ffc-pay-statement-receiver' &&
-  curl --silent "https://api.github.com/repos/defra/ffc-pay-statement-receiver/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+echo 'ffc-doc-statement-receiver' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-doc-statement-receiver/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'

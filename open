@@ -65,5 +65,5 @@ if [ "${statements}" = "true" ]; then
   code ./ffc-doc-statement-constructor;
   code ./ffc-doc-statement-generator;
   code ./ffc-doc-statement-publisher;
-  code ./ffc-pay-statement-receiver;
+  code ./ffc-doc-statement-receiver;
 fi
