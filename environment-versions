@@ -122,6 +122,6 @@ echo
 echo 'ffc-doc-statement-publisher: ' &&
   kubectl get deployment ffc-doc-statement-publisher -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
-echo 'ffc-pay-statement-receiver: ' &&
-  kubectl get deployment ffc-pay-statement-receiver -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo 'ffc-doc-statement-receiver: ' &&
+  kubectl get deployment ffc-doc-statement-receiver -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo

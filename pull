@@ -101,5 +101,5 @@ cd "${projectRoot}"
 cd ./ffc-doc-statement-publisher && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-statement-receiver && \
+cd ./ffc-doc-statement-receiver && \
   git pull
