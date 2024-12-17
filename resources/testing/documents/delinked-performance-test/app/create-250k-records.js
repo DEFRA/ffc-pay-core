@@ -1,5 +1,16 @@
 const { Sequelize, DataTypes } = require('sequelize')
 
+const args = process.argv.slice(2)
+console.log('Command line arguments:', args)
+
+const recordCount = parseInt(args[0]) || 250000
+console.log('Parsed record count:', recordCount)
+
+if (isNaN(recordCount) || recordCount <= 0) {
+  console.error('Please provide a valid positive number')
+  process.exit(1)
+}
+
 const dbConfig = {
   database: 'ffc_doc_statement_data',
   dialect: 'postgres',
@@ -25,7 +36,6 @@ const dbConfig = {
 
 const sequelize = new Sequelize(dbConfig)
 
-// Initialize models
 const Organisation = sequelize.define('organisation', {
   sbi: { type: DataTypes.INTEGER, primaryKey: true },
   addressLine1: DataTypes.STRING,
@@ -88,12 +98,12 @@ const D365 = sequelize.define('d365', {
 
 async function generateData () {
   const batchSize = 10000
-  const totalRecords = 250000
+  console.log(`Starting data generation for ${recordCount} records`)
 
   try {
-    for (let offset = 0; offset < totalRecords; offset += batchSize) {
-      const limit = Math.min(batchSize, totalRecords - offset)
-      console.log(`Processing batch ${offset + 1} to ${offset + limit}`)
+    for (let offset = 0; offset < recordCount; offset += batchSize) {
+      const limit = Math.min(batchSize, recordCount - offset)
+      console.log(`Processing batch: ${offset} to ${offset + limit}`)
 
       const organisations = []
       const delinkedCalculations = []
