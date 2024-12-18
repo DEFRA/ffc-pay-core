@@ -16,7 +16,7 @@ This package contains two different approaches for generating test data for perf
 ```sh
 npm install
 
-## Usage
+# Usage
 1. Direct Database Insertion (create-dummy-records.js)
 
 This script uses Sequelize to directly insert records into the database.
@@ -56,18 +56,19 @@ Payment references in format "PY0000001"
 Standard payment amounts and band values
 Current timestamps for dates
 
-Example Usage
-Generate 100,000 records directly to database:
+Example Usage - enter this into your command line from the directory containing the scripts, in this case it is within the /app dir.
 
-node create-dummy-records.js 100000
+> Generate 100,000 records directly to database:
+>
+> **node create-dummy-records.js 100000**
 
-Generate SQL file with 50,000 records:
+> Generate SQL file with 50,000 records:
+>
+> **node create-dummy-file.js 50000**
 
-node create-dummy-file.js 50000
-
-Generate separate SQL files with 10,000 records:
-
-node create-dummy-file.js 10000 true
+> Generate separate SQL files with 10,000 records:
+>
+> **node create-dummy-file.js 10000 true**
 
 Performance Considerations
 The direct database insertion uses batches of 10,000 records
