@@ -11,6 +11,30 @@ if (isNaN(recordCount) || recordCount <= 0) {
   process.exit(1)
 }
 
+const getTimestamps = (type) => {
+  const now = new Date()
+  const base = {
+    updated: now
+  }
+
+  switch (type) {
+    case 'organisation':
+      return base
+    case 'delinkedCalculation':
+      return {
+        ...base,
+        datePublished: new Date(now.getTime() - 60000)
+      }
+    case 'd365':
+      return {
+        ...base,
+        datePublished: new Date(now.getTime() - 60000)
+      }
+    default:
+      return base
+  }
+}
+
 const dbConfig = {
   database: 'ffc_doc_statement_data',
   dialect: 'postgres',
@@ -130,7 +154,7 @@ async function generateData () {
           emailAddress,
           frn,
           name,
-          updated: new Date()
+          ...getTimestamps('organisation')
         })
 
         delinkedCalculations.push({
@@ -155,7 +179,7 @@ async function generateData () {
           totalDelinkedPayment: '75000',
           paymentAmountCalculated: '37500',
           datePublished: new Date(),
-          updated: new Date()
+          ...getTimestamps('delinkedCalculation')
         })
 
         d365Entries.push({
