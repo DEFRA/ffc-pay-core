@@ -28,10 +28,12 @@ function generateSqlStatements (totalRecords = 250000, separateFiles = false) {
       const name = `Performance farm${i}`
       const emailAddress = 'documents.performance.test@gmail.com'
       const applicationId = 1234567 + i
-      const currentDate = new Date().toISOString()
+      const now = new Date()
+      const currentDate = now.toISOString()
+      const updatedDate = new Date(now.getTime() + 60000).toISOString()
 
       organisationsSql += `(${sbi}, 'Street', 'Area', 'District', 'City', 'County', 'AA1 1BB', '${emailAddress}', ${frn}, '${name}', '${currentDate}')`
-      delinkedCalcSql += `(${applicationId}, ${calculationId}, ${sbi}, '${frn}', '30000', '50000', '150000', '99999999.99', '50', '55', '65', '70', '15000', '11000', '65000', '35000', '126000', '2000000', '75000', '37500', '${currentDate}', '${currentDate}')`
+      delinkedCalcSql += `(${applicationId}, ${calculationId}, ${sbi}, '${frn}', '30000', '50000', '150000', '99999999.99', '50', '55', '65', '70', '15000', '11000', '65000', '35000', '126000', '2000000', '75000', '37500', '${currentDate}', '${updatedDate}')`
       d365Sql += `(${calculationId}, '2024', '${paymentReference}', 37500, '${currentDate}')`
 
       if (i < totalRecords) {
