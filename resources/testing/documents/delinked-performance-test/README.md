@@ -13,7 +13,7 @@ This package contains two different approaches for generating test data for perf
 
 ## Installation
 
-```sh
+````sh
 npm install
 
 # Usage
@@ -56,28 +56,31 @@ Payment references in format "PY0000001"
 Standard payment amounts and band values
 Current timestamps for dates
 
-Example Usage - enter this into your command line from the directory containing the scripts, in this case it is within the /app dir.
+## Example Usage - enter this into your command line from the directory containing the scripts, in this case it is within the /app dir.
 
-> Generate 100,000 records directly to database:
->
-> **node create-dummy-records.js 100000**
+**Generate 100,000 records directly to database:**
+```bash
+node create-dummy-records.js 100000
 
-> Generate SQL file with 50,000 records:
->
-> **node create-dummy-file.js 50000**
+**Generate SQL file with 50,000 records:**
+```bash
+node create-dummy-file.js 50000
 
-> Generate separate SQL files with 10,000 records:
->
-> **node create-dummy-file.js 10000 true**
+**Generate separate SQL files with 10,000 records:**
+```bash
+node create-dummy-file.js 10000 true
 
-Performance Considerations
+# Performance Considerations
+
 The direct database insertion uses batches of 10,000 records
 The SQL file generator also uses 10,000 record batches for memory efficiency
 For very large datasets, the SQL file approach may be preferable as it allows manual execution control
-Error Handling
+
+## Error Handling
+
 Both scripts include error handling and progress logging. Check the console output for:
 
 Progress updates per batch
 Error messages with details
 Completion confirmation and timing information
-```
+````
