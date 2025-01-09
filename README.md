@@ -43,7 +43,7 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 - [ffc-doc-statement-constructor](https://github.com/defra/ffc-doc-statement-constructor)
 - [ffc-doc-statement-generator](https://github.com/defra/ffc-doc-statement-generator)
 - [ffc-doc-statement-publisher](https://github.com/defra/ffc-doc-statement-publisher)
-- [ffc-pay-statement-receiver](https://github.com/defra/ffc-pay-statement-receiver)
+- [ffc-doc-statement-receiver](https://github.com/defra/ffc-doc-statement-receiver)
 
 ## Sequence
 
@@ -179,7 +179,7 @@ ffc-doc-statement-data(Kubernetes - ffc-doc-statement-data)
 ffc-doc-statement-constructor(Kubernetes - ffc-doc-statement-constructor)
 ffc-doc-statement-generator(Kubernetes - ffc-doc-statement-generator)
 ffc-doc-statement-publisher(Kubernetes - ffc-doc-statement-publisher)
-ffc-pay-statement-receiver(Kubernetes - ffc-pay-statement-receiver)
+ffc-doc-statement-receiver(Kubernetes - ffc-doc-statement-receiver)
 
 storageStatements[Azure Blob Storage - Statements]
 
@@ -201,7 +201,7 @@ ffc-doc-statement-generator ==> topicStatementPublish
 ffc-doc-statement-generator ==> storageStatements
 topicStatementPublish ==> ffc-doc-statement-publisher
 storageStatements ==> ffc-doc-statement-publisher
-storageStatements ==> ffc-pay-statement-receiver
+storageStatements ==> ffc-doc-statement-receiver
 ```
 
 ## Scripts

@@ -70,7 +70,7 @@ if [ "${statements}" = "true" ]; then
   ./ffc-doc-statement-constructor/scripts/start -d;
   ./ffc-doc-statement-generator/scripts/start -d;
   ./ffc-doc-statement-publisher/scripts/start -d;
-  ./ffc-pay-statement-receiver/scripts/start -d;
+  ./ffc-doc-statement-receiver/scripts/start -d;
 fi
 
 ffc-pay-core/seed
