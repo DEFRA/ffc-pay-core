@@ -54,7 +54,11 @@ const dbConfig = {
     max: 5
   },
   dialectOptions: {
-    connectTimeout: 60000
+    connectTimeout: 60000,
+    ssl: {
+      require: true,
+      rejectUnauthorised: false
+    }
   }
 }
 
