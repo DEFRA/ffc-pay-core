@@ -1,38 +1,32 @@
-const { Client } = require('pg')
+const DatabaseConnection = require('./config/database-connection')
 const { selectSource, passwordPrompt, confirmPrompt } = require('./select-database')
 const dbMapping = require('./config/db-mapping')
 
-async function getTableChecksums(client) {
+async function getTableStructure(connection) {
     const query = `
         SELECT 
             table_name,
             COUNT(*) as row_count,
-            MD5(STRING_AGG(CAST(data AS text), ',' ORDER BY id)) as table_hash
+            MD5(STRING_AGG(column_details, ',' ORDER BY ordinal_position)) as schema_hash
         FROM (
-            SELECT *,
-                   ROW_TO_JSON(t.*)::text as data
-            FROM information_schema.tables 
-            CROSS JOIN LATERAL (
-                SELECT *
-                FROM %I
-            ) t
+            SELECT 
+                table_name,
+                ordinal_position,
+                CONCAT(column_name, ':', data_type, ':', is_nullable) as column_details
+            FROM information_schema.columns
             WHERE table_schema = 'public'
-        ) subquery
+        ) cols
         GROUP BY table_name;
     `
     
-    try {
-        const result = await client.query(query)
-        return result.rows
-    } catch (error) {
-        throw new Error(`Failed to get table checksums: ${error.message}`)
-    }
+    const result = await connection.query(query)
+    return result.rows
 }
 
 async function selectDestination(sourceKey) {
     const destConfig = dbMapping.destination[sourceKey]
     if (!destConfig) {
-        throw new Error(`No destination configuration found for database: ${sourceKey}`)
+        throw new Error(`No destination configuration found for: ${sourceKey}`)
     }
     
     console.log(`Destination database will be: ${destConfig.database}`)
@@ -40,15 +34,14 @@ async function selectDestination(sourceKey) {
 }
 
 async function compareDatabases(sourceConfig, destConfig) {
-    const sourceClient = new Client(sourceConfig)
-    const destClient = new Client(destConfig)
+    let sourceConn, destConn
 
     try {
-        await sourceClient.connect()
-        await destClient.connect()
+        sourceConn = await DatabaseConnection.createConnection(sourceConfig)
+        destConn = await DatabaseConnection.createConnection(destConfig)
 
-        const sourceResults = await getTableChecksums(sourceClient)
-        const destResults = await getTableChecksums(destClient)
+        const sourceResults = await getTableStructure(sourceConn)
+        const destResults = await getTableStructure(destConn)
 
         return sourceResults.map(sourceRow => {
             const destRow = destResults.find(r => r.table_name === sourceRow.table_name)
@@ -65,10 +58,8 @@ async function compareDatabases(sourceConfig, destConfig) {
     } catch (error) {
         throw new Error(`Database comparison failed: ${error.message}`)
     } finally {
-        await Promise.all([
-            sourceClient.end().catch(console.error),
-            destClient.end().catch(console.error)
-        ])
+        if (sourceConn) await sourceConn.disconnect()
+        if (destConn) await destConn.disconnect()
     }
 }
 
@@ -128,6 +119,6 @@ if (require.main === module) {
 
 module.exports = {
     compareDatabases,
-    getTableChecksums,
+    getTableStructure,
     selectDestination
 }
