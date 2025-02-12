@@ -7,9 +7,9 @@ const databases = [
 
 const environments = {
   test: {
-    username: process.env.TEST_DB_USER,
-    password: process.env.TEST_DB_PASSWORD,
-    host: process.env.TEST_DB_HOST,
+    username: process.env.DEV_DB_USER,
+    password: process.env.DEV_DB_PASSWORD,
+    host: process.env.DEV_DB_HOST,
     port: 5432,
     suffix: 'test'
   },
@@ -28,7 +28,8 @@ const createDbConfig = (dbName, envConfig) => ({
   host: envConfig.host,
   port: envConfig.port,
   database: `${dbName}-${envConfig.suffix}`,
-  connectionName: dbName
+  connectionName: dbName,
+  ssl: true
 })
 
 const createEnvironmentMapping = (environmentConfig) => 
