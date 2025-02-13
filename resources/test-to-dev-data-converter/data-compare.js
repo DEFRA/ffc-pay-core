@@ -1,5 +1,6 @@
 const DatabaseConnection = require('./config/database-connection')
-const { selectSource, passwordPrompt, confirmPrompt } = require('./select-database')
+const { selectSource } = require('./select-database')
+const { passwordPrompt, confirmPrompt } = require('./inquirer-prompts')
 const dbMapping = require('./config/db-mapping')
 
 async function getTableStructure(connection) {
@@ -65,20 +66,18 @@ async function compareDatabases(sourceConfig, destConfig) {
 
 async function main() {
     try {
-        // Get source configuration
         const sourceConfig = await selectSource()
         if (!sourceConfig.connectionName) {
             throw new Error('Invalid source configuration - missing connectionName')
         }
 
-        // Get matching destination configuration
         const destConfig = await selectDestination(sourceConfig.connectionName)
         
         console.log('\nWill compare:')
         console.log(`Source: ${sourceConfig.database}`)
         console.log(`Destination: ${destConfig.database}`)
         
-        const confirmed = await confirmPrompt()
+        const confirmed = await confirmPrompt('Do you want to proceed with the database comparison?')
         if (!confirmed) {
             console.log('Operation cancelled by user')
             return

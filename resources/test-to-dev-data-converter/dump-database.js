@@ -1,5 +1,6 @@
 const { spawn } = require('child_process')
-const { selectSource, passwordPrompt } = require('./select-database')
+const { selectSource } = require('./select-database')
+const { passwordPrompt } = require('./inquirer-prompts')
 
 async function runPgDump() {
     // Get the selected source config (prompts for selection if run from terminal)
