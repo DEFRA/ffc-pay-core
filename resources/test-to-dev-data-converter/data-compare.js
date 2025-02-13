@@ -19,9 +19,12 @@ async function getTableStructure(connection) {
         ) cols
         GROUP BY table_name;
     `
-    
-    const result = await connection.query(query)
-    return result.rows
+    try {  
+        const result = await connection.query(query)
+        return result.rows
+    } catch (error) {
+    throw new Error(`Failed to get table structure: ${error.message}`)
+    }
 }
 
 async function getTableChecksums(client) {
