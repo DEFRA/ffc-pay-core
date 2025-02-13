@@ -1,4 +1,4 @@
-const { rawlist, password, confirm } = require('@inquirer/prompts')
+const { selectDatabasePrompt } = require('./inquirer-prompts')
 const dbMapping = require('./config/db-mapping')
 
 function getSourceChoices() {
@@ -8,34 +8,16 @@ function getSourceChoices() {
     }))
 }
 
-async function selectSource(prompter = rawlist) {
-    const sourceChoices = getSourceChoices()
-    const selectedKey = await prompter({
-        message: 'Choose which source to connect to:',
-        choices: sourceChoices
-    })
-
+async function selectSource() {
+    const selectedKey = await selectDatabasePrompt(getSourceChoices())
     const sourceConfig = dbMapping.source[selectedKey]
+    
     if (!sourceConfig) {
         throw new Error(`No source configuration found for: ${selectedKey}`)
     }
+    
     console.log(`Selected source: ${selectedKey}`)
     return sourceConfig
-}
-
-async function passwordPrompt(prompter = password) {
-    const enteredPassword = await prompter({
-        message: 'Enter password',
-        mask: '*'
-    })
-    return enteredPassword
-}
-
-async function confirmPrompt(prompter = confirm) {
-    const confirmed = await prompter({
-        message: 'Are you sure you want to continue?'
-    })
-    return confirmed
 }
 
 if (require.main === module) {
@@ -49,8 +31,6 @@ if (require.main === module) {
 }
 
 module.exports = { 
-    selectSource, 
-    passwordPrompt,
-    confirmPrompt,
-    getSourceChoices
+    getSourceChoices,
+    selectSource 
 }
