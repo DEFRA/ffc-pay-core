@@ -7,6 +7,16 @@ async function selectDatabasePrompt(choices, prompter = rawlist) {
     })
 }
 
+async function selectComparisonType(prompter = rawlist) {
+  return await prompter({
+      message: 'Choose comparison type:',
+      choices: [
+          { name: '1: Verify table structure only', value: 'structure' },
+          { name: '2: Verify table structure and values', value: 'full' }
+      ]
+  })
+}
+
 async function passwordPrompt(prompter = password) {
     return await prompter({
         message: 'Enter password',
@@ -22,6 +32,7 @@ async function confirmPrompt(message = 'Are you sure you want to continue?', pro
 
 module.exports = {
     selectDatabasePrompt,
+    selectComparisonType,
     passwordPrompt,
     confirmPrompt,
 }
