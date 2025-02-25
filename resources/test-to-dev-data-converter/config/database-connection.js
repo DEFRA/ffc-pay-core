@@ -1,40 +1,36 @@
 const { Client } = require('pg')
-const { DefaultAzureCredential } = require('@azure/identity')
 
 class DatabaseConnection {
     constructor(config) {
-        this.config = config
+        // Remove @hostname from username if it exists
+        const username = config.username.split('@')[0]
+        const host = config.host
+
+        this.config = {
+            ...config,
+            user: username,  // pg client uses 'user' instead of 'username'
+            host: host,
+            ssl: {
+                rejectUnauthorized: true
+            },
+            connectionTimeoutMillis: 20000,
+            keepAlive: true
+        }
         this.client = null
+        
         console.log('\nInitializing connection with config:', {
-            host: config.host,
-            database: config.database,
-            username: config.username,
-            port: config.port,
-            ssl: config.ssl ? 'enabled' : 'disabled'
+            host: this.config.host,
+            database: this.config.database,
+            user: this.config.user,
+            port: this.config.port
         })
     }
 
     async connect() {
         try {
-            console.log('\nAttempting Azure authentication...')
-            const credential = new DefaultAzureCredential()
-            const accessToken = await credential.getToken(
-                'https://ossrdbms-aad.database.windows.net',
-                { requestOptions: { timeout: 1000 } }
-            )
-            console.log('✓ Azure token acquired')
-
             console.log('\nConfiguring database client...')
-            this.client = new Client({
-                ...this.config,
-                password: accessToken.token,
-                ssl: {
-                    rejectUnauthorized: true,
-                    requestCert: true
-                },
-                connectionTimeoutMillis: 10000
-            })
-            console.log('✓ Client configured with SSL and timeout settings')
+            this.client = new Client(this.config)
+            console.log('✓ Client configured with SSL settings')
 
             console.log('\nAttempting database connection...')
             await this.client.connect()
@@ -45,9 +41,9 @@ class DatabaseConnection {
                 code: error.code,
                 host: this.config.host,
                 database: this.config.database,
-                username: this.config.username
+                user: this.config.user
             })
-            throw new Error(`Azure connection failed: ${error.message}`)
+            throw new Error(`Connection failed: ${error.message}`)
         }
     }
 

@@ -29,28 +29,37 @@ async function getTableStructure(connection) {
 
 async function getTableChecksums(client) {
     const query = `
+        WITH table_list AS (
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public'
+        ),
+        table_data AS (
+            SELECT 
+                t.table_name,
+                (
+                    SELECT json_agg(row_to_json(d.*)::text ORDER BY d.id)
+                    FROM (
+                        SELECT * FROM (
+                            SELECT format('SELECT * FROM %I', t.table_name)
+                        ) AS f(sql)
+                    ) s,
+                    LATERAL execute(s.sql) AS d
+                ) AS data
+            FROM table_list t
+        )
         SELECT 
             table_name,
-            COUNT(*) as row_count,
-            MD5(STRING_AGG(CAST(data AS text), ',' ORDER BY id)) as table_hash
-        FROM (
-            SELECT *,
-                   ROW_TO_JSON(t.*)::text as data
-            FROM information_schema.tables 
-            CROSS JOIN LATERAL (
-                SELECT *
-                FROM %I
-            ) t
-            WHERE table_schema = 'public'
-        ) subquery
-        GROUP BY table_name;
-    `
+            COALESCE(jsonb_array_length(data::jsonb), 0) as row_count,
+            MD5(COALESCE(data::text, '')) as table_hash
+        FROM table_data;
+    `;
 
     try {
-        const result = await client.query(query)
-        return result.rows
+        const result = await client.query(query);
+        return result.rows;
     } catch (error) {
-        throw new Error(`Failed to get table checksums: ${error.message}`)
+        throw new Error(`Failed to get table checksums: ${error.message}`);
     }
 }
 
