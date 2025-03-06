@@ -191,7 +191,7 @@ topicStatements[Azure Service Bus Topic - ffc-pay-statements]
 topicStatementPublish[Azure Service Bus Topic - ffc-doc-statement-publish]
 
 ffc-doc-statement-data ==> topicStatementData
-topicStatementData ==> ffc-doc--statement-constructor
+topicStatementData ==> ffc-doc-statement-constructor
 topicProcessing ==> ffc-doc-statement-constructor
 topicSubmit ==> ffc-doc-statement-constructor
 topicReturn ==> ffc-doc-statement-constructor
