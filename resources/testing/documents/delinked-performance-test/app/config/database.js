@@ -1,7 +1,7 @@
 const { DefaultAzureCredential, getBearerTokenProvider } = require('@azure/identity')
 const { PRODUCTION } = require('../constants/environments')
 
-function isProd() {
+function isProd () {
   return process.env.NODE_ENV === PRODUCTION
 }
 
