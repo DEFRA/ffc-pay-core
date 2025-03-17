@@ -1,5 +1,4 @@
 const { Sequelize, DataTypes } = require('sequelize')
-const { DefaultAzureCredential } = require('@azure/identity')
 const dbConfig = require('./app/config/database')
 
 const args = process.argv.slice(2)
@@ -38,25 +37,17 @@ const getTimestamps = (type) => {
 }
 
 async function getSequelize () {
-  if (process.env.NODE_ENV === 'production') {
-    const credential = new DefaultAzureCredential()
-    const token = await credential.getToken('https://ossrdbms-aad.database.windows.net/.default')
-    dbConfig.dialectOptions = {
-      ...dbConfig.dialectOptions,
-      ssl: {
-        ...dbConfig.dialectOptions.ssl,
-        azure: true
-      },
-      authentication: {
-        type: 'azure-active-directory-access-token',
-        options: {
-          token: token.token
-        }
-      }
-    }
+  console.log('Creating Sequelize instance with config:', JSON.stringify({
+    ...dbConfig,
+    hooks: '[hooks object]'
+  }, null, 2))
+
+  const sequelizeConfig = {
+    ...dbConfig,
+    logging: (msg) => console.log(`[SQL]: ${msg}`)
   }
 
-  const sequelize = new Sequelize(dbConfig)
+  const sequelize = new Sequelize(sequelizeConfig)
   console.log('Attempting to connect to the database...')
 
   try {
@@ -64,6 +55,7 @@ async function getSequelize () {
     console.log('Database connection has been established successfully.')
   } catch (error) {
     console.error('Unable to connect to the database:', error)
+    console.error('Connection error details:', error.parent || 'No additional details')
     throw error
   }
 

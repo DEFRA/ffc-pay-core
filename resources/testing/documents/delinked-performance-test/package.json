@@ -1,7 +1,8 @@
 {
   "dependencies": {
-    "sequelize": "^6.x",
+    "@azure/identity": "^4.8.0",
     "pg": "^8.x",
-    "pg-hstore": "^2.x"
+    "pg-hstore": "^2.x",
+    "sequelize": "^6.x"
   }
 }
