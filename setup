@@ -98,6 +98,7 @@ run_with_spinner "✍️  Injecting user inputs..." inject_inputs
 
 # ----------------- Fetch & Add Secrets ----------------- #
 declare -A secrets=(
+  ["__MESSAGE_QUEUE_HOST_PLACEHOLDER__"]="ffc-bashrc-message-queue-host"
   ["__MESSAGE_QUEUE_USER_PLACEHOLDER__"]="ffc-bashrc-message-queue-user"
   ["__MESSAGE_QUEUE_PASSWORD_PLACEHOLDER__"]="ffc-bashrc-message-queue-password"
   ["__AZURE_STORAGE_SHARE_ACCOUNT_NAME_PLACEHOLDER__"]="ffc-bashrc-azure-storage-share-account-name"
