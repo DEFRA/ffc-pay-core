@@ -126,7 +126,8 @@ msg_with_spinner "🔐 Fetching and injecting secrets from Key Vault..." fetch_s
 
 # ----------------- Source .bashrc and Cleanup trap ----------------- #
 trap - ERR
-echo "🔄 Sourcing updated .bashrc..."
-source ~/.bashrc
-
-echo "🎉 Setup complete. .bashrc has been updated."
+echo
+echo -e "\033[1;32m✅ Setup complete!\033[0m"
+echo -e "\033[1;33m👉 To apply changes, run:\033[0m"
+echo -e "\033[1;36m   source ~/.bashrc\033[0m"
+echo
