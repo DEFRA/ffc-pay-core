@@ -232,6 +232,14 @@ Runs `Seed` script if `ffc-pay-scripts` repository is cloned.
 
 [`./start`](start)
 
+### Setup
+
+Populates developers `~/.bashrc`
+
+Runs `Seed` script if `ffc-pay-scripts` repository is cloned.
+
+[`./start`](start)
+
 #### Optional arguments
 
 - `-f` - include Azure Functions
