@@ -224,17 +224,16 @@ Build/rebuild Docker container for all microservices.
 
 [`./build`](build)
 
+### Setup
+
+Backs up your existing `~/.bashrc`, copies in the template, injects your email, suffix, and fetches Azure Key Vault secrets.  
+Saves your Key Vault name, email and suffix in `~/.bashrc_setup.conf` so you only enter them once.
+
+[`./setup`](setup)
+
 ### Start
 
 Run all payment services.
-
-Runs `Seed` script if `ffc-pay-scripts` repository is cloned.
-
-[`./start`](start)
-
-### Setup
-
-Populates developers `~/.bashrc`
 
 Runs `Seed` script if `ffc-pay-scripts` repository is cloned.
 
