@@ -118,10 +118,16 @@ fi
 
 export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+
+# GPG Code Signing Setup (GIT)
 export GPG_TTY=$(tty)
+alias pre-commit="~/.pre-commit-env/bin/pre-commit"
+
+unset BROWSER
+export BROWSER=wslview
 
 # -------------- Defra Environment Setup -------------- #
-# Environment variables for local development and Azure integration
+#? Environment variables for local development
 
 # -------------------- Azure Service Bus -------------------- #
 export MESSAGE_QUEUE_HOST=__MESSAGE_QUEUE_HOST_PLACEHOLDER__
@@ -131,33 +137,22 @@ export MESSAGE_QUEUE_SUFFIX=__SUFFIX_PLACEHOLDER__
 
 # -------------------- Azure Storage -------------------- #
 export AZURE_STORAGE_SHARE_ACCOUNT_NAME=__AZURE_STORAGE_SHARE_ACCOUNT_NAME_PLACEHOLDER__
-export AZURE_STORAGE_SHARE_ACCOUNT_KEY=__AZURE_STORAGE_SHARE_ACCOUNT_KEY_PLACEHOLDER__ #! May no longer be required
-
-# -------------------- API Gateways -------------------- #
-export CH_API_GATEWAY=__CH_API_GATEWAY_PLACEHOLDER__ #! May no longer be required
 
 # -------------------- Notify Service -------------------- #
-export NOTIFY_API_KEY=__NOTIFY_API_KEY_PLACEHOLDER__                 # General API key
-export NOTIFY_API_KEY_LETTER=__NOTIFY_API_KEY_LETTER_PLACEHOLDER__   # Letter template key
-export NOTIFY_EMAIL_TEMPLATE_KEY=__NOTIFY_EMAIL_TEMPLATE_KEY_PLACEHOLDER__ # Email template key
+export NOTIFY_API_KEY=__NOTIFY_API_KEY_PLACEHOLDER__                 #? General API key
+export NOTIFY_API_KEY_LETTER=__NOTIFY_API_KEY_LETTER_PLACEHOLDER__   #? Letter template key
+export NOTIFY_EMAIL_TEMPLATE_KEY=__NOTIFY_EMAIL_TEMPLATE_KEY_PLACEHOLDER__ #? Email template key
 
 # -------------------- Feature Flags -------------------- #
-export DELINKED_PAYMENT_STATEMENT_ACTIVE=true #! May no longer be required
 export SFI23QUARTERLYSTATEMENT_ENABLED=true
 export SCHEDULE_ENABLED=true
 export SEND_CRM_MESSAGE_ENABLED=true
 export SAVE_LOG_ENABLED=true
-export HIGH_THROUGHPUT=true #! May no longer be required
 export PROCESSING_ACTIVE=true
 
 # -------------------- Postgres ETL Configuration -------------------- #
 export POSTGRES_USERNAME=__POSTGRES_USERNAME_PLACEHOLDER__
 export POSTGRES_PASSWORD=__POSTGRES_PASSWORD_PLACEHOLDER__
-
-# -------------------- Azure (Development) -------------------- #
-export AZURE_DEV_ENTRA_TENANT=__AZURE_DEV_ENTRA_TENANT_PLACEHOLDER__  #! May no longer be required
-export AZURE_DEV_ENTRA_TENANT_ID=__AZURE_DEV_ENTRA_TENANT_ID_PLACEHOLDER__  #! May no longer be required
-export AZURE_DEV_DATA_CLIENT_ID=__AZURE_DEV_DATA_CLIENT_ID_PLACEHOLDER__  #! May no longer be required
 
 # -------------------- Team Alert Emails -------------------- #
 export DEV_TEAM_EMAILS=__EMAIL_PLACEHOLDER__
@@ -183,7 +178,7 @@ export statementReceiverApiVersion=V1
 export statementReceiverEndpoint=https://ffc-doc-statement-receiver
 
 # -------------------- Debugging -------------------- #
-# Enable Postgres debugging if needed
+#? Enable Postgres debugging if needed
 # export DEBUG="pg*" 
 
 # -------------------- Optional: External Tools -------------------- #
