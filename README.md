@@ -231,6 +231,10 @@ Saves your Key Vault name, email and suffix in `~/.bashrc_setup.conf` so you onl
 
 [`./setup`](setup)
 
+#### Optional arguments
+
+- `-r` - removed saved configuration `.bashrc_setup.conf`
+
 ### Start
 
 Run all payment services.

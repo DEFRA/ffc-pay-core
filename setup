@@ -11,6 +11,17 @@ if [[ -f "$config_file" ]]; then
   source "$config_file"
 fi
 
+# Check for -r flag to delete config file
+if [[ "${1:-}" == "-r" ]]; then
+  if [[ -f "$config_file" ]]; then
+    rm -f "$config_file"
+    echo "🧹 Removed saved configuration: $config_file"
+  else
+    echo "ℹ️ No configuration file found to remove."
+  fi
+  exit 0
+fi
+
 # Prompt for any missing values
 inputEmpty=false
 
