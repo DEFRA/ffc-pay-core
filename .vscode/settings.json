@@ -1,0 +1,4 @@
+{
+  "standard.enableGlobally": true,
+  "editor.defaultFormatter": "standard.vscode-standard"
+}
