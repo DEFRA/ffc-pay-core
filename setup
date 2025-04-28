@@ -54,7 +54,7 @@ fi
 timestamp=$(date +%Y%m%d%H%M%S)
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 bashrc="$HOME/.bashrc"
-backup="$bashrc.backup.$timestamp"
+backup="$HOME/backup/bashrc.backup.$timestamp"
 
 # ----------------- Spinner ----------------- #
 spinner() {
@@ -90,6 +90,7 @@ trap 'fail_and_restore' ERR
 # ----------------- Begin Setup ----------------- #
 echo "📦 Backing up existing .bashrc (if any)..."
 if [[ -f "$bashrc" ]]; then
+  mkdir -p "$(dirname "$backup")"
   cp "$bashrc" "$backup"
 else
   echo "🧾 No existing .bashrc found."
@@ -103,6 +104,7 @@ inject_inputs() {
   sed -i \
     -e "s|__EMAIL_PLACEHOLDER__|${EMAIL}|g" \
     -e "s|__SUFFIX_PLACEHOLDER__|-${SUFFIX}|g" \
+    -e "s|__POSTGRES_USER_PLACEHOLDER__|${EMAIL%@*}@defra.onmicrosoft.com|g" \
     "$bashrc"
 }
 msg_with_spinner "✍️  Injecting user inputs..." inject_inputs
@@ -118,6 +120,12 @@ declare -A secrets=(
   ["__NOTIFY_EMAIL_TEMPLATE_KEY_PLACEHOLDER__"]="ffc-bashrc-notify-email-template-key-local"
   ["__POSTGRES_USERNAME_PLACEHOLDER__"]="ffc-bashrc-postgres-username"
   ["__POSTGRES_PASSWORD_PLACEHOLDER__"]="ffc-bashrc-postgres-password"
+  ["__POSTGRES_DEV_ADMIN_PLACEHOLDER__"]="ffc-bashrc-postgres-dev-admin"
+  ["__POSTGRES_DEV_HOST_PLACEHOLDER__"]="ffc-bashrc-postgres-dev-host"
+  ["__POSTGRES_DEV_DATA_DB_PLACEHOLDER__"]="ffc-bashrc-postgres-dev-data-db"
+  ["__POSTGRES_TEST_DATA_DB_PLACEHOLDER__"]="ffc-bashrc-postgres-test-data-db"
+  ["__DEV_TENANT_PLACEHOLDER__"]="ffc-bashrc-dev-tenant"
+  ["__DEV_TENANT_ID_PLACEHOLDER__"]="ffc-bashrc-dev-tenant-id"
 )
 
 fetch_secrets() {
