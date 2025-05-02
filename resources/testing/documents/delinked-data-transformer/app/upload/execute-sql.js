@@ -1,0 +1,326 @@
+const fs = require('fs')
+const readline = require('readline')
+const { logInfo, logProgress, logError } = require('../util/logger')
+
+async function executeSqlFile(sqlFile, client, schemaOnly = false) {
+  const stats = {
+    executed: 0,
+    skipped: {
+      total: 0,
+      metaCommands: 0,
+      constraints: 0,
+      alreadyExists: 0,
+      otherErrors: 0
+    },
+    skippedExamples: {
+      metaCommands: [],
+      constraints: [],
+      alreadyExists: [],
+      otherErrors: []
+    },
+    statementTypes: {
+      INSERT: 0,
+      UPDATE: 0,
+      DELETE: 0,
+      CREATE: 0,
+      ALTER: 0,
+      other: 0
+    }
+  }
+
+  logInfo(`Executing ${schemaOnly ? 'schema-only' : 'data-only'} SQL in transaction...`)
+
+  // Read and process in manageable chunks
+  const fileStream = fs.createReadStream(sqlFile, { encoding: 'utf8' })
+  const rl = readline.createInterface({
+    input: fileStream,
+    crlfDelay: Infinity
+  })
+
+  let inFunctionBlock = false
+  let inMultilineComment = false
+  let parenCount = 0
+  let statementCount = 0
+  let batchSize = 0
+  let currentStatement = '' // Fix: Initialize currentStatement
+  const BATCH_COMMIT_SIZE = 10000 // Commit every 10k statements for large imports
+
+  for await (const line of rl) {
+    const trimmedLine = line.trim()
+
+    // Skip empty lines and comment-only lines to avoid syntax errors
+    if (!trimmedLine || trimmedLine.startsWith('--')) {
+      continue
+    }
+
+    // Track multiline comments
+    if (!inMultilineComment && trimmedLine.includes('/*')) {
+      inMultilineComment = true
+    }
+    if (inMultilineComment && trimmedLine.includes('*/')) {
+      inMultilineComment = false
+      continue
+    }
+    if (inMultilineComment) {
+      continue
+    }
+
+    // Handle function creation blocks
+    if (!inFunctionBlock &&
+      (trimmedLine.match(/^\s*CREATE(\s+OR\s+REPLACE)?\s+FUNCTION/i) ||
+        trimmedLine.match(/^\s*CREATE(\s+OR\s+REPLACE)?\s+PROCEDURE/i))) {
+      inFunctionBlock = true
+    }
+
+    // Track paren count for statement boundaries
+    if (!inFunctionBlock) {
+      for (const char of trimmedLine) {
+        if (char === '(') parenCount++
+        if (char === ')') parenCount--
+      }
+    }
+
+    currentStatement += line + '\n'
+
+    // Detect end of statement
+    if (!inFunctionBlock &&
+      trimmedLine.endsWith(';') &&
+      parenCount <= 0) {
+
+      try {
+        // Pass schemaOnly to executeStatement
+        await executeStatement(currentStatement.trim(), client, stats, schemaOnly)
+      } catch (error) {
+        logError(`ERROR processing statement: ${error.message}`)
+        logError(`Statement content: ${truncateString(currentStatement, 150)}`)
+        throw error
+      }
+      currentStatement = ''
+      parenCount = 0
+      statementCount++
+      batchSize++
+
+      // For very large imports, do periodic COMMITs to avoid transaction size issues
+      if (batchSize >= BATCH_COMMIT_SIZE) {
+        await client.query('COMMIT')
+        await client.query('BEGIN')
+        logInfo(`Committed batch of ${batchSize} statements, starting new transaction`)
+        batchSize = 0
+      }
+
+      if (statementCount % 100 === 0) {
+        logProgress('.')
+      }
+    }
+    else if (inFunctionBlock &&
+      ((trimmedLine.includes('$$') && trimmedLine.endsWith(';')) ||
+        trimmedLine.endsWith('$$;'))) {
+
+      // Pass schemaOnly to executeStatement
+      await executeStatement(currentStatement.trim(), client, stats, schemaOnly)
+      currentStatement = ''
+      inFunctionBlock = false
+      statementCount++
+      batchSize++
+    }
+  }
+
+  // Handle any remaining statement
+  if (currentStatement.trim()) {
+    // Pass schemaOnly to executeStatement
+    await executeStatement(currentStatement.trim(), client, stats, schemaOnly)
+  }
+
+  // Log examples of skipped statements by category
+  logSkippedStatistics(stats)
+
+  return stats
+}
+
+/**
+ * Load data in manageable batches with enhanced error tracking
+ * @param {Object} client - Database client
+ * @param {string} sqlFile - SQL file with INSERT statements
+ * @returns {number} Count of rows inserted
+ */
+async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
+  const lineReader = require('readline').createInterface({
+    input: fs.createReadStream(sqlFile, { encoding: 'utf8' }),
+    crlfDelay: Infinity
+  })
+
+  let statement = ''
+  let statementCount = 0
+  let batchSize = 0
+  let rowCount = 0
+  let lineNum = 0
+  let statementStartLine = 0
+  const BATCH_SIZE = 500 // Azure PostgreSQL performs best with moderate batch sizes
+  const errorLogFile = `${sqlFile}.errors.log`
+
+  // Create error log file
+  fs.writeFileSync(errorLogFile, `SQL Error Log for ${sqlFile}\n${new Date().toISOString()}\n\n`, 'utf8')
+  logInfo(`SQL errors will be logged to ${errorLogFile}`)
+
+  // Start transaction and try to disable constraints
+  await client.query('BEGIN')
+
+  try {
+    // Try to use session_replication_role if available
+    await client.query('SET session_replication_role = replica')
+    logInfo('Foreign key constraints and triggers temporarily disabled')
+  } catch (err) {
+    // If not available (lack of permissions), try alternative approach
+    logInfo(`Note: Could not set session_replication_role: ${err.message}`)
+    logInfo('Trying alternative approach for handling constraints...')
+
+    try {
+      // Get all constraints (safer approach for Azure PostgreSQL)
+      const { rows: constraints } = await client.query(`
+        SELECT 
+          tc.constraint_name, 
+          tc.table_name
+        FROM 
+          information_schema.table_constraints tc 
+        WHERE 
+          tc.constraint_type = 'FOREIGN KEY' 
+          AND tc.table_schema = 'public'
+      `)
+
+      // Log but don't try to disable them as it requires ALTER privileges
+      logInfo(`Found ${constraints.length} foreign key constraints - will handle errors individually`)
+    } catch (err) {
+      logInfo(`Could not query constraints: ${err.message}`)
+    }
+  }
+
+  for await (const line of lineReader) {
+    lineNum++
+
+    // Track statement start lines for error reporting
+    if (statement === '') {
+      statementStartLine = lineNum
+    }
+
+    // Skip comments
+    if (line.trim().startsWith('--')) continue
+
+    statement += line + '\n'
+
+    // Execute complete statements
+    if (line.trim().endsWith(';')) {
+      try {
+        await client.query(statement)
+        statementCount++
+        batchSize++
+
+        // Count rows in multi-row INSERT (VALUES has line breaks)
+        if (statement.includes('VALUES\n')) {
+          // Each row typically has form (val1, val2),\n
+          const insertedRows = (statement.match(/\),\s*\(/g) || []).length + 1
+          rowCount += insertedRows
+        } else {
+          rowCount++
+        }
+
+        statement = ''
+
+        // Commit in batches to avoid transaction size issues
+        // Azure PostgreSQL performs better with controlled transaction sizes
+        if (batchSize >= BATCH_SIZE) {
+          await client.query('COMMIT')
+          await client.query('BEGIN')
+          logInfo(`Committed batch of ${batchSize} statements (${rowCount} rows)`)
+          batchSize = 0
+        }
+      } catch (err) {
+        // Enhanced error logging with context and line numbers
+        const errorDetail = `\n===== ERROR at statement #${statementCount + 1} (lines ${statementStartLine}-${lineNum}) =====\n` +
+          `Error: ${err.message}\n` +
+          `Statement:\n${statement}\n`;
+
+        fs.appendFileSync(errorLogFile, errorDetail, 'utf8');
+
+        // Extract error context for better debugging
+        let errorContext = '';
+        const errorTokenMatch = err.message.match(/at or near "([^"]+)"/);
+
+        if (errorTokenMatch) {
+          const errorToken = errorTokenMatch[1];
+          const tokenPos = statement.indexOf(errorToken);
+
+          if (tokenPos !== -1) {
+            // Extract content around the error position
+            const start = Math.max(0, tokenPos - 30);
+            const end = Math.min(statement.length, tokenPos + errorToken.length + 30);
+            errorContext = `... ${statement.substring(start, end)} ...`;
+
+            fs.appendFileSync(errorLogFile, `Likely error context: ${errorContext}\n`, 'utf8');
+          }
+        }
+
+        // Improved error categorization and logging
+        if (err.message.includes('syntax error')) {
+          logError(`❌ Error at statement #${statementCount + 1} (lines ${statementStartLine}-${lineNum}): ${err.message}`);
+          if (errorContext) {
+            logError(`❌ Error context: ${errorContext}`);
+          }
+        }
+        else if (err.message.includes('multiple primary keys') ||
+          err.message.includes('already exists') ||
+          err.message.includes('duplicate key')) {
+          // Skip and continue for schema-related errors
+          logInfo(`⚠️ Skipping statement with schema error: ${err.message}`);
+        }
+        else if (err.message.includes('violates foreign key constraint')) {
+          // Log constraint violations but continue
+          logInfo(`⚠️ Foreign key violation (continuing): ${err.message}`);
+        }
+        else {
+          // Other errors
+          logError(`❌ Error at statement #${statementCount + 1}: ${err.message}`);
+        }
+
+        // Continue with next statement
+        statement = '';
+      }
+    }
+  }
+
+  // Re-enable constraints if we disabled them
+  try {
+    await client.query('SET session_replication_role = DEFAULT')
+    logInfo('Foreign key constraints and triggers re-enabled')
+  } catch (err) {
+    logInfo(`Note: Could not reset session_replication_role: ${err.message}`)
+  }
+
+  if (batchSize > 0) {
+    await client.query('COMMIT')
+    logInfo(`Final batch: ${batchSize} statements (${rowCount} total rows)`)
+  }
+
+  return rowCount
+}
+
+async function executeStatement(stmt, client, stats, schemaOnly = false) {
+  //  function implementation...
+}
+
+function determineQueryType(stmt) {
+  // function implementation...
+}
+
+function logSkippedStatistics(stats) {
+  // function implementation...
+}
+
+function truncateString(str, maxLength) {
+  // function implementation...
+}
+
+module.exports = {
+  executeSqlFile,
+  loadDataInBatchesWithErrorTracking,
+  truncateString
+}

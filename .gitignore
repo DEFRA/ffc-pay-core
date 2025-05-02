@@ -3,6 +3,7 @@ resources/oracle-to-psql-converters/outputs/*
 resources/oracle-to-psql-converters/data-files/*
 !resources/oracle-to-psql-converters/outputs/.gitkeep
 !resources/oracle-to-psql-converters/data-files/.gitkeep
-delinked-performance-test/node_modules/
-test-to-dev-data-converter/data/*
+resources/testing/documents/delinked-data-transformer/node_modules/
 node_modules/
+resources/testing/documents/delinked-data-transformer/dumps*
+resources/testing/documents/delinked-data-transformer/transformed/*
