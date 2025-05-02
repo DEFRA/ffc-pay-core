@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "faker": "^5.5.3",
+    "pg": "^8.x",
+    "pg-hstore": "^2.x",
+    "sequelize": "^6.x",
+    "standard": "^17.1.2"
+  }
+}
