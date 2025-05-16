@@ -139,7 +139,8 @@ export MESSAGE_QUEUE_SUFFIX=__SUFFIX_PLACEHOLDER__
 export AZURE_STORAGE_SHARE_ACCOUNT_NAME=__AZURE_STORAGE_SHARE_ACCOUNT_NAME_PLACEHOLDER__
 
 # -------------------- Notify Service -------------------- #
-export NOTIFY_API_KEY=__NOTIFY_API_KEY_PLACEHOLDER__                 #? General API key
+export NOTIFY_API_KEY=__TEST_NOTIFY_API_KEY_PLACEHOLDER__               #? General API key
+# export NOTIFY_API_KEY=__SMOKE_NOTIFY_API_KEY_PLACEHOLDER__               #? Smoke Test API key, useful if you don't want an email sent out.
 export NOTIFY_API_KEY_LETTER=__NOTIFY_API_KEY_LETTER_PLACEHOLDER__   #? Letter template key
 export NOTIFY_EMAIL_TEMPLATE_KEY=__NOTIFY_EMAIL_TEMPLATE_KEY_PLACEHOLDER__ #? Email template key
 
