@@ -26,6 +26,9 @@ while :; do
 done
 
 cd "${projectRoot}"
+cd ./ffc-pay-core && \
+  git checkout main && \
+  git pull
 cd ./ffc-pay-batch-verifier && \
   git checkout main && \
   git pull
