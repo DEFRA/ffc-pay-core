@@ -25,7 +25,7 @@ function parseCopyStatement(sqlContent, tableName) {
     if (!line.trim()) return
 
     const values = line.split('\t').map(v => {
-      if (v === '\\N') return null // PostgreSQL NULL representation
+      if (v === '\\N') return null
       return v
     })
 
@@ -74,7 +74,8 @@ function transformAll() {
   /*
   Configuration mapping tables to their transformers and target databases
   This will need ordering so any transformations that effect other maps come first
-  and the affected maps will need to allow for the transformation - ie changing frn upstream
+  and the affected maps will need to allow for the transformation
+  For example, changing frn upstream will affect the organisations map so that needs to be run first
   */
   const transformConfig = {
     'organisations-data': {

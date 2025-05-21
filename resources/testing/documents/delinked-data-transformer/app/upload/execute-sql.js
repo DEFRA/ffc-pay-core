@@ -48,12 +48,10 @@ async function executeSqlFile(sqlFile, client, schemaOnly = false) {
   for await (const line of rl) {
     const trimmedLine = line.trim()
 
-    // Skip empty lines and comment-only lines to avoid syntax errors
     if (!trimmedLine || trimmedLine.startsWith('--')) {
       continue
     }
 
-    // Track multiline comments
     if (!inMultilineComment && trimmedLine.includes('/*')) {
       inMultilineComment = true
     }
@@ -65,14 +63,12 @@ async function executeSqlFile(sqlFile, client, schemaOnly = false) {
       continue
     }
 
-    // Handle function creation blocks
     if (!inFunctionBlock &&
       (trimmedLine.match(/^\s*CREATE(\s+OR\s+REPLACE)?\s+FUNCTION/i) ||
         trimmedLine.match(/^\s*CREATE(\s+OR\s+REPLACE)?\s+PROCEDURE/i))) {
       inFunctionBlock = true
     }
 
-    // Track paren count for statement boundaries
     if (!inFunctionBlock) {
       for (const char of trimmedLine) {
         if (char === '(') parenCount++
@@ -82,13 +78,11 @@ async function executeSqlFile(sqlFile, client, schemaOnly = false) {
 
     currentStatement += line + '\n'
 
-    // Detect end of statement
     if (!inFunctionBlock &&
       trimmedLine.endsWith(';') &&
       parenCount <= 0) {
 
       try {
-        // Pass schemaOnly to executeStatement
         await executeStatement(currentStatement.trim(), client, stats, schemaOnly)
       } catch (error) {
         logError(`ERROR processing statement: ${error.message}`)
@@ -100,7 +94,6 @@ async function executeSqlFile(sqlFile, client, schemaOnly = false) {
       statementCount++
       batchSize++
 
-      // For very large imports, do periodic COMMITs to avoid transaction size issues
       if (batchSize >= BATCH_COMMIT_SIZE) {
         await client.query('COMMIT')
         await client.query('BEGIN')
@@ -116,7 +109,6 @@ async function executeSqlFile(sqlFile, client, schemaOnly = false) {
       ((trimmedLine.includes('$$') && trimmedLine.endsWith(';')) ||
         trimmedLine.endsWith('$$;'))) {
 
-      // Pass schemaOnly to executeStatement
       await executeStatement(currentStatement.trim(), client, stats, schemaOnly)
       currentStatement = ''
       inFunctionBlock = false
@@ -125,24 +117,15 @@ async function executeSqlFile(sqlFile, client, schemaOnly = false) {
     }
   }
 
-  // Handle any remaining statement
   if (currentStatement.trim()) {
-    // Pass schemaOnly to executeStatement
     await executeStatement(currentStatement.trim(), client, stats, schemaOnly)
   }
 
-  // Log examples of skipped statements by category
   logSkippedStatistics(stats)
 
   return stats
 }
 
-/**
- * Load data in manageable batches with enhanced error tracking
- * @param {Object} client - Database client
- * @param {string} sqlFile - SQL file with INSERT statements
- * @returns {number} Count of rows inserted
- */
 async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
   const lineReader = require('readline').createInterface({
     input: fs.createReadStream(sqlFile, { encoding: 'utf8' }),
@@ -155,14 +138,12 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
   let rowCount = 0
   let lineNum = 0
   let statementStartLine = 0
-  const BATCH_SIZE = 500 // Azure PostgreSQL performs best with moderate batch sizes
+  const BATCH_SIZE = 500
   const errorLogFile = `${sqlFile}.errors.log`
 
-  // Create error log file
   fs.writeFileSync(errorLogFile, `SQL Error Log for ${sqlFile}\n${new Date().toISOString()}\n\n`, 'utf8')
   logInfo(`SQL errors will be logged to ${errorLogFile}`)
 
-  // Start transaction and try to disable constraints
   await client.query('BEGIN')
 
   try {
@@ -175,7 +156,7 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
     logInfo('Trying alternative approach for handling constraints...')
 
     try {
-      // Get all constraints (safer approach for Azure PostgreSQL)
+      // Get all constraints 
       const { rows: constraints } = await client.query(`
         SELECT 
           tc.constraint_name, 
@@ -187,7 +168,6 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
           AND tc.table_schema = 'public'
       `)
 
-      // Log but don't try to disable them as it requires ALTER privileges
       logInfo(`Found ${constraints.length} foreign key constraints - will handle errors individually`)
     } catch (err) {
       logInfo(`Could not query constraints: ${err.message}`)
@@ -207,7 +187,6 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
 
     statement += line + '\n'
 
-    // Execute complete statements
     if (line.trim().endsWith(';')) {
       try {
         await client.query(statement)
@@ -216,7 +195,6 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
 
         // Count rows in multi-row INSERT (VALUES has line breaks)
         if (statement.includes('VALUES\n')) {
-          // Each row typically has form (val1, val2),\n
           const insertedRows = (statement.match(/\),\s*\(/g) || []).length + 1
           rowCount += insertedRows
         } else {
@@ -225,8 +203,7 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
 
         statement = ''
 
-        // Commit in batches to avoid transaction size issues
-        // Azure PostgreSQL performs better with controlled transaction sizes
+        // Commit in batches
         if (batchSize >= BATCH_SIZE) {
           await client.query('COMMIT')
           await client.query('BEGIN')
@@ -234,14 +211,12 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
           batchSize = 0
         }
       } catch (err) {
-        // Enhanced error logging with context and line numbers
         const errorDetail = `\n===== ERROR at statement #${statementCount + 1} (lines ${statementStartLine}-${lineNum}) =====\n` +
           `Error: ${err.message}\n` +
           `Statement:\n${statement}\n`;
 
         fs.appendFileSync(errorLogFile, errorDetail, 'utf8');
 
-        // Extract error context for better debugging
         let errorContext = '';
         const errorTokenMatch = err.message.match(/at or near "([^"]+)"/);
 
@@ -250,7 +225,6 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
           const tokenPos = statement.indexOf(errorToken);
 
           if (tokenPos !== -1) {
-            // Extract content around the error position
             const start = Math.max(0, tokenPos - 30);
             const end = Math.min(statement.length, tokenPos + errorToken.length + 30);
             errorContext = `... ${statement.substring(start, end)} ...`;
@@ -259,7 +233,6 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
           }
         }
 
-        // Improved error categorization and logging
         if (err.message.includes('syntax error')) {
           logError(`❌ Error at statement #${statementCount + 1} (lines ${statementStartLine}-${lineNum}): ${err.message}`);
           if (errorContext) {
@@ -269,19 +242,15 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
         else if (err.message.includes('multiple primary keys') ||
           err.message.includes('already exists') ||
           err.message.includes('duplicate key')) {
-          // Skip and continue for schema-related errors
           logInfo(`⚠️ Skipping statement with schema error: ${err.message}`);
         }
         else if (err.message.includes('violates foreign key constraint')) {
-          // Log constraint violations but continue
           logInfo(`⚠️ Foreign key violation (continuing): ${err.message}`);
         }
         else {
-          // Other errors
           logError(`❌ Error at statement #${statementCount + 1}: ${err.message}`);
         }
 
-        // Continue with next statement
         statement = '';
       }
     }
