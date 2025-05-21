@@ -208,17 +208,13 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
 }
 
 function formatCopyRowAsValues(row) {
-  // Split the row by tabs (PostgreSQL COPY format)
   const cells = row.split('\t')
-
-  // Format each cell according to PostgreSQL data types
   const formattedCells = cells.map(cell => {
     // Handle NULL values
     if (cell === '\\N' || cell.toLowerCase() === 'null') {
       return 'NULL'
     }
 
-    // Handle boolean values - be consistent with PostgreSQL syntax
     if (cell.toLowerCase() === 'true' || cell === 't') {
       return 'true'
     }
@@ -230,8 +226,6 @@ function formatCopyRowAsValues(row) {
     if (/^-?\d+(\.\d+)?$/.test(cell)) {
       return cell
     }
-
-    // For all other values, escape single quotes and wrap in single quotes
     // Also escape any backslashes in the data
     return `'${cell.replace(/\\/g, "\\\\").replace(/'/g, "''")}'`
   })
