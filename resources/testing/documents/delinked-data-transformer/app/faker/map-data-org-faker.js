@@ -15,20 +15,20 @@ const generateRealisticBritishAddress = () => {
     `${faker.commerce.product()} Ltd, ${streetName}`,
     `Flat ${faker.number.int({ min: 1, max: 20 })}, ${houseNumber} ${streetName}`
   ]
-  
+
   return faker.helpers.arrayElement(addressFormats)
 }
 
 const generateBritishLineTwo = () => {
   const lineTwoFormats = [
-    ``,
+    '',
     `Near ${faker.location.city()}`,
-    ``,
+    '',
     `Lower ${faker.word.adjective()}`,
-    ``,
-    `${faker.location.cardinalDirection()} ${faker.location.county()}`,
+    '',
+    `${faker.location.cardinalDirection()} ${faker.location.county()}`
   ]
-  
+
   return faker.helpers.arrayElement(lineTwoFormats)
 }
 

@@ -5,7 +5,7 @@ const { processForAzure } = require('../transform/sql-processor')
 const { loadDataInBatchesWithErrorTracking } = require('./execute-sql')
 const fs = require('fs')
 
-async function uploadToDev() {
+async function uploadToDev () {
   logInfo('Starting database restoration process (data-only approach)...')
 
   // Database discovery section with proper import
@@ -77,7 +77,6 @@ async function uploadToDev() {
 
       // Clean up
       safeRemoveFile(processedFilePath)
-
     } catch (e) {
       logError(`Error on ${targetDbName}: ${e.message}`)
       errorCount++
@@ -99,7 +98,7 @@ async function uploadToDev() {
  * @param {string} dbName - Database name
  * @returns {boolean} Whether schema exists
  */
-async function verifySchema(client, dbName) {
+async function verifySchema (client, dbName) {
   // Check if essential tables exist
   const { rows } = await client.query(`
     SELECT COUNT(*) as table_count
@@ -114,7 +113,7 @@ async function verifySchema(client, dbName) {
 }
 
 // Update the extractSchemaOnly function
-async function extractSchemaOnly(sqlFile, targetDb) {
+async function extractSchemaOnly (sqlFile, targetDb) {
   const outputFile = `/tmp/schema_only_${targetDb}_${Date.now()}.sql`
   const writeStream = fs.createWriteStream(outputFile)
 
@@ -146,7 +145,7 @@ async function extractSchemaOnly(sqlFile, targetDb) {
         return
       }
 
-      // Skip any "ALTER TABLE ... ADD PRIMARY KEY" statements to avoid 
+      // Skip any "ALTER TABLE ... ADD PRIMARY KEY" statements to avoid
       // multiple primary key errors later
       if (/ALTER\s+TABLE.*ADD\s+PRIMARY\s+KEY/i.test(trimmed)) {
         return
@@ -157,7 +156,6 @@ async function extractSchemaOnly(sqlFile, targetDb) {
         /^\s*CREATE\s+SEQUENCE/i.test(trimmed) ||
         /^\s*CREATE\s+TYPE/i.test(trimmed) ||
         /^\s*CREATE\s+INDEX/i.test(trimmed)) {
-
         statement += line + '\n'
 
         if (line.endsWith(';')) {
@@ -192,7 +190,6 @@ async function extractSchemaOnly(sqlFile, targetDb) {
       else if (/^\s*ALTER\s+TABLE/i.test(trimmed) &&
         !/ADD\s+CONSTRAINT/i.test(trimmed) &&
         !/PRIMARY\s+KEY/i.test(trimmed)) {
-
         statement += line + '\n'
 
         if (line.endsWith(';')) {
@@ -222,7 +219,7 @@ async function extractSchemaOnly(sqlFile, targetDb) {
  * @param {Object} client - Database client
  * @param {string} schemaFile - Path to schema file
  */
-async function applySchema(client, schemaFile) {
+async function applySchema (client, schemaFile) {
   logInfo('Applying schema to target database')
 
   const lineReader = require('readline').createInterface({
@@ -264,7 +261,7 @@ async function applySchema(client, schemaFile) {
   logInfo(`Schema applied: ${successCount} statements executed, ${errorCount} errors (warnings)`)
 }
 
-async function clearDatabaseSimple(client) {
+async function clearDatabaseSimple (client) {
   try {
     // Step 1: Get all tables
     const { rows } = await client.query(`
@@ -357,8 +354,8 @@ async function clearDatabaseSimple(client) {
   }
 }
 
-async function extractDataOnly(sqlFile, targetDb) {
-  logInfo(`WARNING: extractDataOnly is deprecated. Use processForAzure instead.`)
+async function extractDataOnly (sqlFile, targetDb) {
+  logInfo('WARNING: extractDataOnly is deprecated. Use processForAzure instead.')
   // Process with Azure-specific optimizations
   const { processedFilePath } = await processForAzure(sqlFile, targetDb, targetDb)
   return processedFilePath
