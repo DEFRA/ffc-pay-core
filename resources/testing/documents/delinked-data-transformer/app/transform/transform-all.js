@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const { anonymizeOrganisations } = require('../faker/map-data-org-faker')
 
-function parseCopyStatement(sqlContent, tableName) {
+function parseCopyStatement (sqlContent, tableName) {
   // Regex to match COPY statements with their data blocks
   const copyRegex = new RegExp(
     `COPY\\s+(\\w+)\\.(["']?${tableName}["']?)\\s+\\((.*?)\\)\\s+FROM\\s+stdin;([\\s\\S]*?)^\\\\.`,
@@ -48,7 +48,7 @@ function parseCopyStatement(sqlContent, tableName) {
   }
 }
 
-function formatAsCopyStatement(tableInfo, transformedRows) {
+function formatAsCopyStatement (tableInfo, transformedRows) {
   const { schema, tableName, columns } = tableInfo
 
   const header = `COPY ${schema}.${tableName} (${columns.join(', ')}) FROM stdin;`
@@ -66,7 +66,7 @@ function formatAsCopyStatement(tableInfo, transformedRows) {
   return `${header}\n${dataRows}\n\\.`
 }
 
-function transformAll() {
+function transformAll () {
   console.log('===== SQL Data Transformation Process =====')
   const dumpDir = path.resolve(process.cwd(), '../../dumps')
   console.log(`Looking for dump files in: ${dumpDir}`)
@@ -89,7 +89,7 @@ function transformAll() {
       transformer: anonymizeOrganisations,
       database: 'ffc-doc-statement-constructor-test',
       files: ['ffc-doc-statement-constructor-test_full.sql']
-    },
+    }
     // Add more table configs as needed following this structure
   }
 
@@ -101,7 +101,7 @@ function transformAll() {
   }
 
   Object.entries(transformConfig).forEach(([configKey, config]) => {
-    const { tableName, transformer, database, files } = config  // Add tableName here
+    const { tableName, transformer, database, files } = config // Add tableName here
     const databaseDir = path.join(dumpDir, database)
 
     if (!fs.existsSync(databaseDir)) {
@@ -141,7 +141,7 @@ function transformAll() {
           return acc
         }, {})
 
-        console.log(`🌱 Seeding statistics:`)
+        console.log('🌱 Seeding statistics:')
         Object.entries(seedCounts).forEach(([prop, count]) => {
           console.log(`   - ${count} records seeded using '${prop}'`)
           stats.seedingStats[prop] = (stats.seedingStats[prop] || 0) + count

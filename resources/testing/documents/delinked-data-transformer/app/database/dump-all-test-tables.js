@@ -4,12 +4,12 @@ const { spawn } = require('child_process')
 const { createConnection, listDatabases, getDatabaseStats } = require('./db-connection')
 const os = require('os')
 
+const { ETL_DATABASES, ETL_TABLE_PREFIX, EXCLUDE_ETL_TABLES } = require('./config')
+
 // Set maximum concurrency based on CPUs, but limit to avoid overwhelming the server
 const MAX_CONCURRENT_DATABASES = Math.min(os.cpus().length, 3) // Reduced from 4 to prevent throttling
 
 /**
- * Dumps all databases in a highly optimized manner with concurrency
- * 
  * RESTORE INSTRUCTIONS for plain SQL dumps:
  * psql --dbname=<target_db> --file=<filename.sql>
  */
@@ -20,17 +20,14 @@ async function dumpAllTestTables() {
   fs.mkdirSync(dumpDir, { recursive: true })
   
   try {
-    // First get ALL databases to diagnose discovery issues
     console.log('--- Database Discovery Diagnostics ---')
     const allDatabases = await listDatabases(['%'])
     console.log(`Total databases on server: ${allDatabases.length}`)
     
-    // Log all "ffc" databases to help troubleshoot pattern matching
     const allFfcDatabases = allDatabases.filter(db => db.toLowerCase().includes('ffc'))
     console.log('All FFC-related databases on server:')
     allFfcDatabases.forEach(db => console.log(`  - ${db}`))
     
-    // Standard patterns for test databases - expand patterns to catch more
     const dbPatterns = ['ffc-doc-%-test', 'ffc-pay-%-test']
     console.log(`\nSearching for databases matching patterns: ${dbPatterns.join(', ')}`)
     
@@ -38,7 +35,6 @@ async function dumpAllTestTables() {
     console.log(`Found ${databases.length} matching databases:`)
     databases.forEach(db => console.log(`  - ${db}`))
     
-    // Check for potential missing databases
     const missingDatabases = allFfcDatabases
       .filter(db => db.endsWith('-test'))
       .filter(db => !databases.includes(db))
@@ -53,7 +49,6 @@ async function dumpAllTestTables() {
       const batch = databases.slice(i, i + MAX_CONCURRENT_DATABASES)
       console.log(`\nProcessing batch of ${batch.length} databases (${i+1}-${Math.min(i+MAX_CONCURRENT_DATABASES, databases.length)} of ${databases.length})`)
       
-      // Process each batch serially to ensure consistent results
       const results = []
       for (const database of batch) {
         try {
@@ -65,7 +60,6 @@ async function dumpAllTestTables() {
         }
       }
       
-      // Report any failures in the batch
       const failures = results.filter(r => !r.success)
       if (failures.length > 0) {
         console.error(`\n${failures.length} database(s) failed in this batch:`)
@@ -81,6 +75,35 @@ async function dumpAllTestTables() {
 }
 
 /**
+ * Gets a list of tables with the ETL prefix in the specified database
+ */
+async function getEtlTables(dbConnection) {
+  try {
+    console.log(`Identifying ETL tables in ${dbConnection.database}...`)
+    const result = await dbConnection.pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name LIKE '${ETL_TABLE_PREFIX}%'
+    `)
+    
+    const tables = result.rows.map(row => row.table_name)
+    if (tables.length > 0) {
+      console.log(`Found ${tables.length} ETL tables to protect:`)
+      tables.forEach(table => console.log(`  - ${table}`))
+    } else {
+      console.log('No ETL tables found in this database')
+    }
+    
+    return tables
+  } catch (error) {
+    console.error(`Error identifying ETL tables: ${error.message}`)
+    // Return empty array but don't fail - safer to continue with extra caution
+    return []
+  }
+}
+
+/**
  * Process a single database dump
  */
 async function processDatabase(database, dumpDir) {
@@ -88,11 +111,9 @@ async function processDatabase(database, dumpDir) {
   const dbConnection = await createConnection(database)
   
   try {
-    // Create directory for this database dumps
     const dbDumpDir = path.join(dumpDir, database)
     fs.mkdirSync(dbDumpDir, { recursive: true })
     
-    // Full database dump with schema and data - use SQL file
     const fullDumpPath = path.join(dbDumpDir, `${database}_full.sql`)
     await performFullDump(dbConnection, fullDumpPath)
     console.log(`Completed full dump of ${database} to ${fullDumpPath}`)
@@ -114,13 +135,21 @@ async function performFullDump(dbConnection, outputPath) {
       const startTime = new Date();
       console.log(`[${startTime.toISOString()}] Starting dump of ${dbConnection.database}...`);
       
-      // Get database stats for progress tracking
       const dbStats = await getDatabaseStats(dbConnection);
       console.log(`Database ${dbConnection.database} stats: ${(dbStats.totalSizeMB).toFixed(2)} MB, ${dbStats.tableCount} tables`);
       
+      // Add ETL tables protection - SAFEGUARD 1
+      let etlTables = [];
+      let isEtlDatabase = false;
+      
+      if (EXCLUDE_ETL_TABLES && dbConnection.database.toLowerCase() === ETL_DATABASES.toLowerCase()) {
+        isEtlDatabase = true;
+        console.log(`⚠️ ETL PROTECTION ACTIVE: Preparing to exclude ETL tables from ${dbConnection.database}`);
+        etlTables = await getEtlTables(dbConnection);
+      }
+
       if (dbStats.largeTables.length > 0) {
         console.log('Largest tables:');
-        // Fix: Ensure size_mb is properly converted to a number
         dbStats.largeTables.forEach(t => {
           try {
             const sizeInMB = parseFloat(t.size_mb);
@@ -134,7 +163,6 @@ async function performFullDump(dbConnection, outputPath) {
       const env = { ...process.env, PGPASSWORD: dbConnection.token };
       const config = dbConnection.config;
       
-      // Make sure parent directory exists
       const outputDir = path.dirname(outputPath);
       if (!fs.existsSync(outputDir)) {
         fs.mkdirSync(outputDir, { recursive: true });
@@ -149,15 +177,20 @@ async function performFullDump(dbConnection, outputPath) {
         '--no-owner',
         '--no-privileges', 
         '--no-tablespaces',
-        // Use plain SQL format
         '--format=plain', 
-        // Add encoding to make this readable
         '--encoding=UTF8',
-        // Output file
         '--file', outputPath,
-        // Add verbose output for diagnosing issues
         '--verbose' 
       ];
+      
+      // Add ETL table exclusions - SAFEGUARD 2
+      if (isEtlDatabase && etlTables.length > 0) {
+        console.log(`⚠️ ETL PROTECTION: Adding pg_dump exclusions for ${etlTables.length} ETL tables`);
+        etlTables.forEach(table => {
+          args.push('--exclude-table', table);
+          args.push('--exclude-table-data', table);
+        });
+      }
       
       if (dbStats.totalSizeMB > 500) { // For databases over 500MB
         args.push('--data-only');       // Only dump data, schema already created
@@ -170,17 +203,14 @@ async function performFullDump(dbConnection, outputPath) {
       let processedTables = new Set();
       let currentTable = '';
       
-      // Monitor dump progress
       const progressInterval = setInterval(() => {
         try {
-          // For plain format, get the file size
           if (fs.existsSync(outputPath)) {
             const stats = fs.statSync(outputPath);
             const currentSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
             const elapsedSeconds = Math.round((Date.now() - startTime.getTime()) / 1000);
             const mbPerSecond = (currentSizeMB / Math.max(1, elapsedSeconds)).toFixed(2);
             
-            // Estimate progress based on tables processed
             const percentComplete = Math.min(
               100, 
               Math.round((processedTables.size / Math.max(1, dbStats.tableCount)) * 100)
@@ -194,23 +224,18 @@ async function performFullDump(dbConnection, outputPath) {
             );
           }
         } catch (err) {
-          // Ignore file stat errors during writing
           console.log(`Warning: Could not get file size: ${err.message}`);
         }
       }, 20000); // Check every 20 seconds
       
-      // Detect stalled processes
       const stallCheckInterval = setInterval(() => {
         const timeSinceLastActivity = Date.now() - lastProgressTime;
         
-        // If no activity for 5 minutes, consider it stalled
         if (timeSinceLastActivity > 5 * 60 * 1000) {
           console.error(`[${new Date().toISOString()}] WARNING: Dump for ${config.database} appears stalled - no activity for ${Math.round(timeSinceLastActivity/1000)}s`);
           
-          // Try to get more diagnostic info from the server
           if (pgDump && pgDump.pid) {
             console.log(`Attempting to diagnose stalled dump process (PID: ${pgDump.pid})...`);
-            // Add any PostgreSQL specific diagnostics here
           }
         }
       }, 60000); // Check every minute
@@ -220,26 +245,22 @@ async function performFullDump(dbConnection, outputPath) {
         stderrOutput += message;
         lastProgressTime = Date.now();
         
-        // Track table progress from pg_dump output
         if (message.includes('dumping contents of table')) {
           const tableMatch = message.match(/dumping contents of table "?([^"\s]+)"?/);
           if (tableMatch && tableMatch[1]) {
             currentTable = tableMatch[1];
             processedTables.add(currentTable);
             
-            // Only log every few tables to avoid flooding the console
             if (processedTables.size % 5 === 0 || processedTables.size === 1) {
               console.log(`[${new Date().toISOString()}] ${config.database}: ${message.trim()} (${processedTables.size}/${dbStats.tableCount})`);
             }
           }
         } else if (message.includes('error:')) {
-          // Always log errors
           console.error(`[${new Date().toISOString()}] ERROR in ${config.database}: ${message.trim()}`);
         }
       });
       
       pgDump.stdout.on('data', (data) => {
-        // Update last activity time even if we don't log stdout
         lastProgressTime = Date.now();
       });
       
@@ -252,7 +273,6 @@ async function performFullDump(dbConnection, outputPath) {
         
         if (code === 0) {
           try {
-            // For file format, get file size
             const stats = fs.statSync(outputPath);
             const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
             const compressionRatio = dbStats.totalSizeMB > 0 ? 
@@ -314,5 +334,5 @@ if (require.main === module) {
     .catch((error) => {
       console.error('Error during database dump:', error);
       process.exit(1);
-    });
+    })
 }

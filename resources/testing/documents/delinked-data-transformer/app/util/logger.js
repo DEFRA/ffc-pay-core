@@ -7,37 +7,39 @@
  * @param {string} message - Message to log
  * @param {string} level - Log level (info, warn, error)
  */
-function logInfo(message, level = 'info') {
-  const prefix = level === 'error' ? '❌' :
-    level === 'warn' ? '⚠️' :
-      '   ';
-  console.log(`${prefix} ${message}`);
+function logInfo (message, level = 'info') {
+  const prefix = level === 'error'
+    ? '❌'
+    : level === 'warn'
+      ? '⚠️'
+      : '   '
+  console.log(`${prefix} ${message}`)
 }
 
 /**
  * Log error message
  * @param {string} message - Error message
  */
-function logError(message) {
-  console.error(`❌ ${message}`);
+function logError (message) {
+  console.error(`❌ ${message}`)
 }
 
 /**
  * Log progress indicator without newline
  * @param {string} char - Character to display
  */
-function logProgress(char = '.') {
-  process.stdout.write(char);
+function logProgress (char = '.') {
+  process.stdout.write(char)
 }
 
 /**
  * Logs execution summary
  * @param {Object} stats - Execution statistics
  */
-function logExecutionSummary(stats) {
-  console.log(`\nExecution summary:`)
+function logExecutionSummary (stats) {
+  console.log('\nExecution summary:')
   console.log(`  - Executed statements: ${stats.executed}`)
-  console.log(`  - Statement types:`)
+  console.log('  - Statement types:')
   Object.entries(stats.statementTypes).forEach(([type, count]) => {
     if (count > 0) {
       console.log(`    * ${type}: ${count}`)

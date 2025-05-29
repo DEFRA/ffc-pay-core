@@ -3,6 +3,9 @@ const readline = require('readline')
 const os = require('os')
 const path = require('path')
 const { logInfo, logProgress } = require('../util/logger')
+const EXCLUDE_ETL_TABLES = true // Flag to enable/disable ETL table protection
+const ETL_DATABASE = 'ffc-doc-statement-data-test' // Database containing ETL tables to protect
+const ETL_TABLE_PREFIX = 'etl' // Prefix of tables to protect
 
 async function processForAzure(inputFile, sourceDb, targetDb) {
   const tempSqlFile = path.join(os.tmpdir(), `processed_${path.basename(inputFile)}`)
@@ -12,26 +15,79 @@ async function processForAzure(inputFile, sourceDb, targetDb) {
 
   try {
     // Add SQL to disable constraints before and enable after the data import
-    outputStream.write('-- Disable triggers and constraints for faster import\n');
-    outputStream.write('SET session_replication_role = replica;\n\n');
-    outputStream.write('-- Processing dump file for better insertion\n\n');
+    outputStream.write('-- Disable triggers and constraints for faster import\n')
+    outputStream.write('SET session_replication_role = replica\n\n')
+    outputStream.write('-- Processing dump file for better insertion\n\n')
 
     const stats = await processLargeFile(inputFile, outputStream, sourceDb, targetDb)
 
     // Add SQL to re-enable constraints after import
-    outputStream.write('\n-- Re-enable triggers and constraints\n');
-    outputStream.write('SET session_replication_role = DEFAULT;\n');
+    outputStream.write('\n-- Re-enable triggers and constraints\n')
+    outputStream.write('SET session_replication_role = DEFAULT\n')
 
     logInfo(`Processed SQL written to ${tempSqlFile}`)
 
-    return {
-      processedFilePath: tempSqlFile,
-      stats
+      // Final verification - SAFEGUARD 4
+  if (EXCLUDE_ETL_TABLES && sourceDb.toLowerCase() === ETL_DATABASE.toLowerCase()) {
+    logInfo('Performing final ETL protection verification check...')
+    const verificationResult = await verifyNoEtlOperations(tempSqlFile)
+    if (!verificationResult.safe) {
+      const errorMsg = `⚠️ CRITICAL SAFETY ERROR: Found ${verificationResult.count} unfiltered ETL operations in processed SQL!`
+      logInfo(errorMsg)
+      throw new Error(errorMsg)
+    } else {
+      logInfo('✅ Final ETL protection verification passed - No ETL table operations found.')
+    }
+  }
+  
+  return {
+    processedFilePath: tempSqlFile,
+    stats
     }
   } catch (error) {
     logInfo(`Error processing SQL file: ${error.message}`)
     throw error
   }
+}
+
+async function verifyNoEtlOperations(sqlFile) {
+  return new Promise((resolve, reject) => {
+    const fileStream = fs.createReadStream(sqlFile, { encoding: 'utf8' })
+    const rl = readline.createInterface({
+      input: fileStream,
+      crlfDelay: Infinity
+    })
+    
+    let dangerous = false
+    let count = 0
+    let dangerousLines = []
+    const etlPattern = /(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i
+    
+    rl.on('line', (line) => {
+      if (!line.startsWith('--') && etlPattern.test(line)) {
+        dangerous = true
+        count++
+        if (dangerousLines.length < 5) { // Limit to 5 examples
+          dangerousLines.push(line)
+        }
+      }
+    })
+    
+    rl.on('close', () => {
+      if (dangerous) {
+        logInfo('⚠️ Found potentially dangerous ETL operations:')
+        dangerousLines.forEach(line => logInfo(`  ${line}`))
+        if (count > dangerousLines.length) {
+          logInfo(`  ...and ${count - dangerousLines.length} more`)
+        }
+      }
+      resolve({ safe: !dangerous, count, examples: dangerousLines })
+    })
+    
+    rl.on('error', (err) => {
+      reject(err)
+    })
+  })
 }
 
 async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
@@ -45,8 +101,12 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
     let inCopy = false
     let lineCount = 0
     let originalInsertCount = 0
+    
+    // Add ETL protection variables
+    let etlTablesSkipped = 0
+    const isEtlDatabase = sourceDb.toLowerCase() === ETL_DATABASE.toLowerCase()
+    const etlTablePattern = /^\s*(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE)\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i
 
-    // Current table and columns for COPY processing
     let currentTable = null
     let currentColumns = []
     let copyData = []
@@ -60,12 +120,13 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
       copyRowsConverted: 0,
       dbCommandsSkipped: 0,
       constraintsSkipped: 0,
-      originalInsertCount: 0
+      originalInsertCount: 0,
+      etlTablesSkipped: 0
     }
 
     outputStream.write('-- Processing dump file for better insertion\n\n')
 
-    rl.on('line', (line) => {
+        rl.on('line', (line) => {
       lineCount++
       stats.lineCount++
 
@@ -76,7 +137,26 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
       const t = line.trim()
 
       if (t.startsWith('--')) {
+        outputStream.write(line + '\n')
         return
+      }
+      
+      // ETL protection - SAFEGUARD 3
+      if (EXCLUDE_ETL_TABLES && isEtlDatabase) {
+        // Check for ETL table operations
+        if (etlTablePattern.test(t)) {
+          etlTablesSkipped++
+          outputStream.write(`-- ⚠️ ETL PROTECTION: EXCLUDED OPERATION: ${line}\n`)
+          return
+        }
+        
+        // Special check for COPY commands involving ETL tables
+        if (/^\s*COPY\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i.test(t)) {
+          etlTablesSkipped++
+          outputStream.write(`-- ⚠️ ETL PROTECTION: EXCLUDED COPY OPERATION: ${line}\n`)
+          inCopy = false // Prevent entering COPY mode for this table
+          return
+        }
       }
 
       if (/^\s*INSERT\s+INTO/i.test(t)) {
@@ -88,9 +168,9 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
       }
 
       // Process COPY blocks by converting to INSERTs
-      if (/^\s*COPY\s+.*FROM\s+stdin;/i.test(t)) {
+      if (/^\s*COPY\s+.*FROM\s+stdin/i.test(t)) {
         // Extract table name and columns
-        const copyMatch = t.match(/COPY\s+([\w."]+)(?:\s+\((.*?)\))?\s+FROM\s+stdin;/i)
+        const copyMatch = t.match(/COPY\s+([\w."]+)(?:\s+\((.*?)\))?\s+FROM\s+stdin/i)
         if (copyMatch) {
           currentTable = copyMatch[1]
           currentColumns = copyMatch[2] ? copyMatch[2].split(/,\s*/) : []
@@ -109,7 +189,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
             const batch = copyData.slice(i, i + COPY_BATCH_SIZE)
             const insertColumns = currentColumns.length > 0 ? `(${currentColumns.join(', ')})` : ''
             const values = batch.map(row => formatCopyRowAsValues(row)).join(',\n')
-            const insertStmt = `INSERT INTO ${currentTable} ${insertColumns} VALUES\n${values};`
+            const insertStmt = `INSERT INTO ${currentTable} ${insertColumns} VALUES\n${values}`
 
             outputStream.write(insertStmt + '\n')
             stats.copyRowsConverted += batch.length
@@ -135,7 +215,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
           if (copyData.length >= COPY_BATCH_SIZE * 10) {
             const insertColumns = currentColumns.length > 0 ? `(${currentColumns.join(', ')})` : ''
             const values = copyData.map(row => formatCopyRowAsValues(row)).join(',\n')
-            const insertStmt = `INSERT INTO ${currentTable} ${insertColumns} VALUES\n${values};`
+            const insertStmt = `INSERT INTO ${currentTable} ${insertColumns} VALUES\n${values}`
 
             outputStream.write(insertStmt + '\n')
             stats.copyRowsConverted += copyData.length
@@ -174,24 +254,29 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
 
       if (/ALTER\s+TABLE\s+.*\s+ADD\s+CONSTRAINT/i.test(t)) {
         stats.constraintsSkipped++
-        outputStream.write(`-- SKIPPED CONSTRAINT: ${line}\n`); // Comment it out instead of removing
-        return;
+        outputStream.write(`-- SKIPPED CONSTRAINT: ${line}\n`) // Comment it out instead of removing
+        return
       }
 
       if (/CREATE\s+UNIQUE\s+INDEX/i.test(t)) {
         stats.constraintsSkipped++
-        outputStream.write(`-- SKIPPED UNIQUE INDEX: ${line}\n`);
-        return;
+        outputStream.write(`-- SKIPPED UNIQUE INDEX: ${line}\n`)
+        return
       }
 
       if (/REFERENCES\s+/i.test(t) && /CREATE\s+TABLE/i.test(t)) {
-        processedLine = processedLine.replace(/REFERENCES\s+[^,)]+/gi, '/* CONSTRAINT DISABLED */ ');
+        processedLine = processedLine.replace(/REFERENCES\s+[^,)]+/gi, '/* CONSTRAINT DISABLED */ ')
       }
 
       outputStream.write(processedLine + '\n')
     })
 
     rl.on('close', () => {
+      if (EXCLUDE_ETL_TABLES && isEtlDatabase) {
+        logInfo(`ETL Protection: Skipped ${etlTablesSkipped} operations on ETL tables`)
+        stats.etlTablesSkipped = etlTablesSkipped
+      }
+      
       logInfo(`Processed ${lineCount} lines (${stats.originalInsertCount} original INSERTs, ${copyRowsConverted} rows from COPY converted)`)
       outputStream.end()
       resolve(stats)

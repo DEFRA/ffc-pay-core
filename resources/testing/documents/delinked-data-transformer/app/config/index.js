@@ -2,12 +2,12 @@ const Joi = require('joi')
 
 // Define config schema
 const schema = Joi.object({
-  writeTestDbToDev: Joi.boolean().default(false),
+  writeTestDbToDev: Joi.boolean().default(false)
 })
 
 // Build config
 const writeDb = {
-  writeTestDbToDev: process.env.WRITE_TEST_DB_TO_DEV,
+  writeTestDbToDev: process.env.WRITE_TEST_DB_TO_DEV
 }
 
 // Validate config
