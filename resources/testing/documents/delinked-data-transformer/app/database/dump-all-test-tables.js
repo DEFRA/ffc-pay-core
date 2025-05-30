@@ -84,7 +84,7 @@ async function getEtlTables (dbConnection) {
       SELECT table_name 
       FROM information_schema.tables 
       WHERE table_schema = 'public' 
-      AND table_name LIKE '${ETL_TABLE_PREFIX}%'
+      AND table_name ILIKE '${ETL_TABLE_PREFIX}%'
     `)
 
     const tables = result.rows.map(row => row.table_name)
@@ -130,195 +130,198 @@ async function processDatabase (database, dumpDir) {
 }
 
 async function performFullDump (dbConnection, outputPath) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const startTime = new Date()
-      console.log(`[${startTime.toISOString()}] Starting dump of ${dbConnection.database}...`)
+  return new Promise((resolve, reject) => {
+    (async () => {
+      try {
+        const startTime = new Date()
+        console.log(`[${startTime.toISOString()}] Starting dump of ${dbConnection.database}...`)
 
-      const dbStats = await getDatabaseStats(dbConnection)
-      console.log(`Database ${dbConnection.database} stats: ${(dbStats.totalSizeMB).toFixed(2)} MB, ${dbStats.tableCount} tables`)
+        const dbStats = await getDatabaseStats(dbConnection)
+        console.log(`Database ${dbConnection.database} stats: ${(dbStats.totalSizeMB).toFixed(2)} MB, ${dbStats.tableCount} tables`)
 
-      // Add ETL tables protection - SAFEGUARD 1
-      let etlTables = []
-      let isEtlDatabase = false
+        // Add ETL tables protection - SAFEGUARD 1
+        let etlTables = []
+        let isEtlDatabase = false
 
-      if (EXCLUDE_ETL_TABLES && dbConnection.database.toLowerCase() === ETL_DATABASES.toLowerCase()) {
-        isEtlDatabase = true
-        console.log(`⚠️ ETL PROTECTION ACTIVE: Preparing to exclude ETL tables from ${dbConnection.database}`)
-        etlTables = await getEtlTables(dbConnection)
-      }
+        if (EXCLUDE_ETL_TABLES && ETL_DATABASES.some(db => dbConnection.database.toLowerCase() === db.toLowerCase())) {
+          isEtlDatabase = true
+          console.log(`⚠️ ETL PROTECTION ACTIVE: Preparing to exclude ETL tables from ${dbConnection.database}`)
+          etlTables = await getEtlTables(dbConnection)
+        }
 
-      if (dbStats.largeTables.length > 0) {
-        console.log('Largest tables:')
-        dbStats.largeTables.forEach(t => {
+        if (dbStats.largeTables.length > 0) {
+          console.log('Largest tables:')
+          dbStats.largeTables.forEach(t => {
+            try {
+              const sizeInMB = parseFloat(t.size_mb)
+              console.log(`  - ${t.table_name}: ${isNaN(sizeInMB) ? 'size unknown' : sizeInMB.toFixed(2) + ' MB'}`)
+            } catch (err) {
+              console.log(`  - ${t.table_name}: size unknown`)
+            }
+          })
+        }
+
+        const env = { ...process.env, PGPASSWORD: dbConnection.token }
+        const config = dbConnection.config
+
+        const outputDir = path.dirname(outputPath)
+        if (!fs.existsSync(outputDir)) {
+          fs.mkdirSync(outputDir, { recursive: true })
+        }
+
+        // Configure arguments for pg_dump with plain format
+        const args = [
+          '-h', config.host,
+          '-p', config.port,
+          '-U', config.username,
+          '-d', config.database,
+          '--no-owner',
+          '--no-privileges',
+          '--no-tablespaces',
+          '--format=plain',
+          '--encoding=UTF8',
+          '--file', outputPath,
+          '--verbose'
+        ]
+        console.log(`Database check: '${dbConnection.database}' is in ETL_DATABASES: ${ETL_DATABASES.some(db => dbConnection.database.toLowerCase() === db.toLowerCase())}`)
+        // Add ETL table exclusions - SAFEGUARD 2
+        if (isEtlDatabase && etlTables.length > 0) {
+          console.log(`⚠️ ETL PROTECTION: Adding pg_dump exclusions for ${etlTables.length} ETL tables`)
+          etlTables.forEach(table => {
+            // Use double quotes for identifiers with mixed case
+            args.push('--exclude-table', `public."${table}"`)
+            args.push('--exclude-table-data', `public."${table}"`)
+          })
+        }
+
+        if (dbStats.totalSizeMB > 500) { // For databases over 500MB
+          args.push('--data-only') // Only dump data, schema already created
+        }
+
+        const pgDump = spawn('pg_dump', args, { env })
+
+        let stderrOutput = ''
+        let lastProgressTime = Date.now()
+        const processedTables = new Set()
+        let currentTable = ''
+
+        const progressInterval = setInterval(() => {
           try {
-            const sizeInMB = parseFloat(t.size_mb)
-            console.log(`  - ${t.table_name}: ${isNaN(sizeInMB) ? 'size unknown' : sizeInMB.toFixed(2) + ' MB'}`)
-          } catch (err) {
-            console.log(`  - ${t.table_name}: size unknown`)
-          }
-        })
-      }
+            if (fs.existsSync(outputPath)) {
+              const stats = fs.statSync(outputPath)
+              const currentSizeMB = (stats.size / (1024 * 1024)).toFixed(2)
+              const elapsedSeconds = Math.round((Date.now() - startTime.getTime()) / 1000)
+              const mbPerSecond = (currentSizeMB / Math.max(1, elapsedSeconds)).toFixed(2)
 
-      const env = { ...process.env, PGPASSWORD: dbConnection.token }
-      const config = dbConnection.config
+              const percentComplete = Math.min(
+                100,
+                Math.round((processedTables.size / Math.max(1, dbStats.tableCount)) * 100)
+              )
 
-      const outputDir = path.dirname(outputPath)
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true })
-      }
-
-      // Configure arguments for pg_dump with plain format
-      const args = [
-        '-h', config.host,
-        '-p', config.port,
-        '-U', config.username,
-        '-d', config.database,
-        '--no-owner',
-        '--no-privileges',
-        '--no-tablespaces',
-        '--format=plain',
-        '--encoding=UTF8',
-        '--file', outputPath,
-        '--verbose'
-      ]
-
-      // Add ETL table exclusions - SAFEGUARD 2
-      if (isEtlDatabase && etlTables.length > 0) {
-        console.log(`⚠️ ETL PROTECTION: Adding pg_dump exclusions for ${etlTables.length} ETL tables`)
-        etlTables.forEach(table => {
-          args.push('--exclude-table', table)
-          args.push('--exclude-table-data', table)
-        })
-      }
-
-      if (dbStats.totalSizeMB > 500) { // For databases over 500MB
-        args.push('--data-only') // Only dump data, schema already created
-      }
-
-      const pgDump = spawn('pg_dump', args, { env })
-
-      let stderrOutput = ''
-      let lastProgressTime = Date.now()
-      const processedTables = new Set()
-      let currentTable = ''
-
-      const progressInterval = setInterval(() => {
-        try {
-          if (fs.existsSync(outputPath)) {
-            const stats = fs.statSync(outputPath)
-            const currentSizeMB = (stats.size / (1024 * 1024)).toFixed(2)
-            const elapsedSeconds = Math.round((Date.now() - startTime.getTime()) / 1000)
-            const mbPerSecond = (currentSizeMB / Math.max(1, elapsedSeconds)).toFixed(2)
-
-            const percentComplete = Math.min(
-              100,
-              Math.round((processedTables.size / Math.max(1, dbStats.tableCount)) * 100)
-            )
-
-            console.log(
+              console.log(
               `[${new Date().toISOString()}] ${config.database}: ` +
               `Progress: ${percentComplete}% (${processedTables.size}/${dbStats.tableCount} tables), ` +
               `Size: ${currentSizeMB} MB, Rate: ${mbPerSecond} MB/s` +
               (currentTable ? `, Current: ${currentTable}` : '')
-            )
+              )
+            }
+          } catch (err) {
+            console.log(`Warning: Could not get file size: ${err.message}`)
           }
-        } catch (err) {
-          console.log(`Warning: Could not get file size: ${err.message}`)
-        }
-      }, 20000) // Check every 20 seconds
+        }, 20000) // Check every 20 seconds
 
-      const stallCheckInterval = setInterval(() => {
-        const timeSinceLastActivity = Date.now() - lastProgressTime
+        const stallCheckInterval = setInterval(() => {
+          const timeSinceLastActivity = Date.now() - lastProgressTime
 
-        if (timeSinceLastActivity > 5 * 60 * 1000) {
-          console.error(`[${new Date().toISOString()}] WARNING: Dump for ${config.database} appears stalled - no activity for ${Math.round(timeSinceLastActivity / 1000)}s`)
+          if (timeSinceLastActivity > 5 * 60 * 1000) {
+            console.error(`[${new Date().toISOString()}] WARNING: Dump for ${config.database} appears stalled - no activity for ${Math.round(timeSinceLastActivity / 1000)}s`)
 
-          if (pgDump && pgDump.pid) {
-            console.log(`Attempting to diagnose stalled dump process (PID: ${pgDump.pid})...`)
-          }
-        }
-      }, 60000) // Check every minute
-
-      pgDump.stderr.on('data', (data) => {
-        const message = data.toString()
-        stderrOutput += message
-        lastProgressTime = Date.now()
-
-        if (message.includes('dumping contents of table')) {
-          const tableMatch = message.match(/dumping contents of table "?([^"\s]+)"?/)
-          if (tableMatch && tableMatch[1]) {
-            currentTable = tableMatch[1]
-            processedTables.add(currentTable)
-
-            if (processedTables.size % 5 === 0 || processedTables.size === 1) {
-              console.log(`[${new Date().toISOString()}] ${config.database}: ${message.trim()} (${processedTables.size}/${dbStats.tableCount})`)
+            if (pgDump && pgDump.pid) {
+              console.log(`Attempting to diagnose stalled dump process (PID: ${pgDump.pid})...`)
             }
           }
-        } else if (message.includes('error:')) {
-          console.error(`[${new Date().toISOString()}] ERROR in ${config.database}: ${message.trim()}`)
-        }
-      })
+        }, 60000) // Check every minute
 
-      pgDump.stdout.on('data', (data) => {
-        lastProgressTime = Date.now()
-      })
+        pgDump.stderr.on('data', (data) => {
+          const message = data.toString()
+          stderrOutput += message
+          lastProgressTime = Date.now()
 
-      pgDump.on('close', (code) => {
-        clearInterval(progressInterval)
-        clearInterval(stallCheckInterval) // Clear stall detection
-        clearTimeout(dumpTimeout)
-        const endTime = new Date()
-        const elapsedSeconds = Math.round((endTime.getTime() - startTime.getTime()) / 1000)
+          if (message.includes('dumping contents of table')) {
+            const tableMatch = message.match(/dumping contents of table "?([^"\s]+)"?/)
+            if (tableMatch && tableMatch[1]) {
+              currentTable = tableMatch[1]
+              processedTables.add(currentTable)
 
-        if (code === 0) {
-          try {
-            const stats = fs.statSync(outputPath)
-            const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2)
-            const compressionRatio = dbStats.totalSizeMB > 0
-              ? (dbStats.totalSizeMB / parseFloat(fileSizeMB)).toFixed(2)
-              : 'unknown'
+              if (processedTables.size % 5 === 0 || processedTables.size === 1) {
+                console.log(`[${new Date().toISOString()}] ${config.database}: ${message.trim()} (${processedTables.size}/${dbStats.tableCount})`)
+              }
+            }
+          } else if (message.includes('error:')) {
+            console.error(`[${new Date().toISOString()}] ERROR in ${config.database}: ${message.trim()}`)
+          }
+        })
 
-            console.log(
+        pgDump.stdout.on('data', (data) => {
+          lastProgressTime = Date.now()
+        })
+
+        pgDump.on('close', (code) => {
+          clearInterval(progressInterval)
+          clearInterval(stallCheckInterval) // Clear stall detection
+          clearTimeout(dumpTimeout)
+          const endTime = new Date()
+          const elapsedSeconds = Math.round((endTime.getTime() - startTime.getTime()) / 1000)
+
+          if (code === 0) {
+            try {
+              const stats = fs.statSync(outputPath)
+              const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2)
+              const compressionRatio = dbStats.totalSizeMB > 0
+                ? (dbStats.totalSizeMB / parseFloat(fileSizeMB)).toFixed(2)
+                : 'unknown'
+
+              console.log(
               `[${endTime.toISOString()}] Full dump for ${config.database} completed successfully:\n` +
               `  - File size: ${fileSizeMB} MB (compression ratio: ${compressionRatio}x)\n` +
               `  - Duration: ${elapsedSeconds}s (${(parseFloat(fileSizeMB) / Math.max(1, elapsedSeconds)).toFixed(2)} MB/s)\n` +
               `  - Tables processed: ${processedTables.size}/${dbStats.tableCount}`
-            )
-            resolve()
-          } catch (err) {
-            console.error(`Warning: Could not get final file size: ${err.message}`)
-            console.log(`[${endTime.toISOString()}] Full dump for ${config.database} completed successfully`)
-            resolve()
+              )
+              resolve()
+            } catch (err) {
+              console.error(`Warning: Could not get final file size: ${err.message}`)
+              console.log(`[${endTime.toISOString()}] Full dump for ${config.database} completed successfully`)
+              resolve()
+            }
+          } else {
+            console.error(`[${endTime.toISOString()}] FAILED: pg_dump for ${config.database} exited with code ${code} after ${elapsedSeconds}s`)
+            reject(new Error(`pg_dump process for ${config.database} exited with code ${code}: ${stderrOutput}`))
           }
-        } else {
-          console.error(`[${endTime.toISOString()}] FAILED: pg_dump for ${config.database} exited with code ${code} after ${elapsedSeconds}s`)
-          reject(new Error(`pg_dump process for ${config.database} exited with code ${code}: ${stderrOutput}`))
-        }
-      })
+        })
 
-      pgDump.on('error', (error) => {
-        clearInterval(progressInterval)
-        clearInterval(stallCheckInterval) // Clear stall detection
-        clearTimeout(dumpTimeout)
-        console.error(`[${new Date().toISOString()}] ERROR: pg_dump process error for ${config.database}: ${error.message}`)
-        reject(new Error(`pg_dump process error for ${config.database}: ${error.message}`))
-      })
-
-      // Add a timeout for the entire operation
-      const dumpTimeout = setTimeout(() => {
-        if (pgDump && !pgDump.killed) {
-          console.error(`[${new Date().toISOString()}] ERROR: Dump operation timeout after 60 minutes for ${config.database}`)
-          pgDump.kill()
+        pgDump.on('error', (error) => {
           clearInterval(progressInterval)
-          clearInterval(stallCheckInterval)
-          reject(new Error(`Dump operation timeout after 60 minutes for ${config.database}`))
-        }
-      }, 60 * 60 * 1000) // 60 minutes timeout
-    } catch (error) {
-      console.error(`[${new Date().toISOString()}] ERROR: Exception in performFullDump for ${config.database}: ${error.message}`)
-      reject(error)
-    }
+          clearInterval(stallCheckInterval) // Clear stall detection
+          clearTimeout(dumpTimeout)
+          console.error(`[${new Date().toISOString()}] ERROR: pg_dump process error for ${config.database}: ${error.message}`)
+          reject(new Error(`pg_dump process error for ${config.database}: ${error.message}`))
+        })
+
+        // Add a timeout for the entire operation
+        const dumpTimeout = setTimeout(() => {
+          if (pgDump && !pgDump.killed) {
+            console.error(`[${new Date().toISOString()}] ERROR: Dump operation timeout after 60 minutes for ${config.database}`)
+            pgDump.kill()
+            clearInterval(progressInterval)
+            clearInterval(stallCheckInterval)
+            reject(new Error(`Dump operation timeout after 60 minutes for ${config.database}`))
+          }
+        }, 60 * 60 * 1000) // 60 minutes timeout
+      } catch (error) {
+        console.error(`[${new Date().toISOString()}] ERROR: Exception in performFullDump for ${dbConnection?.config?.database || 'unknown'}: ${error.message}`)
+        reject(error)
+      }
+    })()
   })
 }
 
