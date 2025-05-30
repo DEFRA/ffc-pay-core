@@ -3,11 +3,9 @@ const readline = require('readline')
 const os = require('os')
 const path = require('path')
 const { logInfo, logProgress } = require('../util/logger')
-const EXCLUDE_ETL_TABLES = true // Flag to enable/disable ETL table protection
-const ETL_DATABASE = 'ffc-doc-statement-data-test' // Database containing ETL tables to protect
-const ETL_TABLE_PREFIX = 'etl' // Prefix of tables to protect
+const { EXCLUDE_ETL_TABLES, ETL_DATABASES } = require('../constants/etl-protection')
 
-async function processForAzure(inputFile, sourceDb, targetDb) {
+async function processForAzure (inputFile, sourceDb, targetDb) {
   const tempSqlFile = path.join(os.tmpdir(), `processed_${path.basename(inputFile)}`)
   const outputStream = fs.createWriteStream(tempSqlFile)
 
@@ -27,22 +25,22 @@ async function processForAzure(inputFile, sourceDb, targetDb) {
 
     logInfo(`Processed SQL written to ${tempSqlFile}`)
 
-      // Final verification - SAFEGUARD 4
-  if (EXCLUDE_ETL_TABLES && sourceDb.toLowerCase() === ETL_DATABASE.toLowerCase()) {
-    logInfo('Performing final ETL protection verification check...')
-    const verificationResult = await verifyNoEtlOperations(tempSqlFile)
-    if (!verificationResult.safe) {
-      const errorMsg = `⚠️ CRITICAL SAFETY ERROR: Found ${verificationResult.count} unfiltered ETL operations in processed SQL!`
-      logInfo(errorMsg)
-      throw new Error(errorMsg)
-    } else {
-      logInfo('✅ Final ETL protection verification passed - No ETL table operations found.')
+    // Final verification - SAFEGUARD 4
+    if (EXCLUDE_ETL_TABLES && ETL_DATABASES.some(db => sourceDb.toLowerCase() === db.toLowerCase())) {
+      logInfo('Performing final ETL protection verification check...')
+      const verificationResult = await verifyNoEtlOperations(tempSqlFile)
+      if (!verificationResult.safe) {
+        const errorMsg = `⚠️ CRITICAL SAFETY ERROR: Found ${verificationResult.count} unfiltered ETL operations in processed SQL!`
+        logInfo(errorMsg)
+        throw new Error(errorMsg)
+      } else {
+        logInfo('✅ Final ETL protection verification passed - No ETL table operations found.')
+      }
     }
-  }
-  
-  return {
-    processedFilePath: tempSqlFile,
-    stats
+
+    return {
+      processedFilePath: tempSqlFile,
+      stats
     }
   } catch (error) {
     logInfo(`Error processing SQL file: ${error.message}`)
@@ -50,19 +48,19 @@ async function processForAzure(inputFile, sourceDb, targetDb) {
   }
 }
 
-async function verifyNoEtlOperations(sqlFile) {
+async function verifyNoEtlOperations (sqlFile) {
   return new Promise((resolve, reject) => {
     const fileStream = fs.createReadStream(sqlFile, { encoding: 'utf8' })
     const rl = readline.createInterface({
       input: fileStream,
       crlfDelay: Infinity
     })
-    
+
     let dangerous = false
     let count = 0
-    let dangerousLines = []
+    const dangerousLines = []
     const etlPattern = /(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i
-    
+
     rl.on('line', (line) => {
       if (!line.startsWith('--') && etlPattern.test(line)) {
         dangerous = true
@@ -72,7 +70,7 @@ async function verifyNoEtlOperations(sqlFile) {
         }
       }
     })
-    
+
     rl.on('close', () => {
       if (dangerous) {
         logInfo('⚠️ Found potentially dangerous ETL operations:')
@@ -83,14 +81,14 @@ async function verifyNoEtlOperations(sqlFile) {
       }
       resolve({ safe: !dangerous, count, examples: dangerousLines })
     })
-    
+
     rl.on('error', (err) => {
       reject(err)
     })
   })
 }
 
-async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
+async function processLargeFile (inputFile, outputStream, sourceDb, targetDb) {
   return new Promise((resolve, reject) => {
     const fileStream = fs.createReadStream(inputFile, { encoding: 'utf8' })
     const rl = readline.createInterface({
@@ -101,16 +99,15 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
     let inCopy = false
     let lineCount = 0
     let originalInsertCount = 0
-    
+
     // Add ETL protection variables
     let etlTablesSkipped = 0
-    const isEtlDatabase = sourceDb.toLowerCase() === ETL_DATABASE.toLowerCase()
+    const isEtlDatabase = ETL_DATABASES.some(db => sourceDb.toLowerCase() === db.toLowerCase())
     const etlTablePattern = /^\s*(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE)\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i
 
     let currentTable = null
     let currentColumns = []
     let copyData = []
-    let copyBlocksConverted = 0
     let copyRowsConverted = 0
     const COPY_BATCH_SIZE = 1000 // Number of rows to include in a single INSERT statement
 
@@ -126,7 +123,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
 
     outputStream.write('-- Processing dump file for better insertion\n\n')
 
-        rl.on('line', (line) => {
+    rl.on('line', (line) => {
       lineCount++
       stats.lineCount++
 
@@ -140,7 +137,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
         outputStream.write(line + '\n')
         return
       }
-      
+
       // ETL protection - SAFEGUARD 3
       if (EXCLUDE_ETL_TABLES && isEtlDatabase) {
         // Check for ETL table operations
@@ -149,7 +146,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
           outputStream.write(`-- ⚠️ ETL PROTECTION: EXCLUDED OPERATION: ${line}\n`)
           return
         }
-        
+
         // Special check for COPY commands involving ETL tables
         if (/^\s*COPY\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i.test(t)) {
           etlTablesSkipped++
@@ -176,7 +173,6 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
           currentColumns = copyMatch[2] ? copyMatch[2].split(/,\s*/) : []
           logInfo(`Converting COPY to INSERTs for table ${currentTable}`)
           stats.copyBlocksConverted++
-          copyBlocksConverted++
         }
         inCopy = true
         return
@@ -240,15 +236,13 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
       let processedLine = line.replace(new RegExp(sourceDb, 'g'), targetDb)
 
       if (/^\s*CREATE\s+TABLE\s+/i.test(t)) {
-        processedLine = processedLine.replace(/CREATE\s+TABLE\s+("?[\w\.]+"?)/i,
+        processedLine = processedLine.replace(/CREATE\s+TABLE\s+("?[\w.]+"?)/i,
           'CREATE TABLE IF NOT EXISTS $1')
-      }
-      else if (/^\s*CREATE\s+INDEX\s+/i.test(t)) {
-        processedLine = processedLine.replace(/CREATE\s+INDEX\s+("?[\w\.]+"?)/i,
+      } else if (/^\s*CREATE\s+INDEX\s+/i.test(t)) {
+        processedLine = processedLine.replace(/CREATE\s+INDEX\s+("?[\w.]+"?)/i,
           'CREATE INDEX IF NOT EXISTS $1')
-      }
-      else if (/^\s*CREATE\s+SEQUENCE\s+/i.test(t)) {
-        processedLine = processedLine.replace(/CREATE\s+SEQUENCE\s+("?[\w\.]+"?)/i,
+      } else if (/^\s*CREATE\s+SEQUENCE\s+/i.test(t)) {
+        processedLine = processedLine.replace(/CREATE\s+SEQUENCE\s+("?[\w.]+"?)/i,
           'CREATE SEQUENCE IF NOT EXISTS $1')
       }
 
@@ -276,7 +270,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
         logInfo(`ETL Protection: Skipped ${etlTablesSkipped} operations on ETL tables`)
         stats.etlTablesSkipped = etlTablesSkipped
       }
-      
+
       logInfo(`Processed ${lineCount} lines (${stats.originalInsertCount} original INSERTs, ${copyRowsConverted} rows from COPY converted)`)
       outputStream.end()
       resolve(stats)
@@ -292,7 +286,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb) {
   })
 }
 
-function formatCopyRowAsValues(row) {
+function formatCopyRowAsValues (row) {
   const cells = row.split('\t')
   const formattedCells = cells.map(cell => {
     // Handle NULL values
@@ -312,13 +306,13 @@ function formatCopyRowAsValues(row) {
       return cell
     }
     // Also escape any backslashes in the data
-    return `'${cell.replace(/\\/g, "\\\\").replace(/'/g, "''")}'`
+    return `'${cell.replace(/\\/g, '\\\\').replace(/'/g, "''")}'`
   })
 
   return `(${formattedCells.join(', ')})`
 }
 
-function getProcessedSqlPath(sourceDbName) {
+function getProcessedSqlPath (sourceDbName) {
   const tempSqlFile = path.join(os.tmpdir(), `processed_${sourceDbName}_full.sql`)
   return fs.existsSync(tempSqlFile) ? tempSqlFile : null
 }

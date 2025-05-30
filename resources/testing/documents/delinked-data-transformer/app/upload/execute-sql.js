@@ -1,10 +1,7 @@
 const fs = require('fs')
 const readline = require('readline')
 const { logInfo, logProgress, logError } = require('../util/logger')
-// Add at the top of execute-sql.js
-const EXCLUDE_ETL_TABLES = true // Flag to enable/disable ETL table protection
-const ETL_DATABASE = 'ffc-doc-statement-data-test' // Database containing ETL tables to protect 
-const ETL_TABLE_PREFIX = 'etl' // Prefix of tables to protect
+const { EXCLUDE_ETL_TABLES } = require('../constants/etl-protection')
 
 async function executeSqlFile (sqlFile, client, schemaOnly = false) {
   const stats = {
@@ -268,111 +265,111 @@ async function loadDataInBatchesWithErrorTracking (client, sqlFile) {
   return rowCount
 }
 
-async function executeStatement(stmt, client, stats = {}, schemaOnly = false) {
-  const queryType = determineQueryType(stmt);
-  
+async function executeStatement (stmt, client, stats = {}, schemaOnly = false) {
+  const queryType = determineQueryType(stmt)
+
   // Skip data modification statements in schema-only mode
   if (schemaOnly && ['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE'].includes(queryType)) {
-    stats.skipped = (stats.skipped || 0) + 1;
-    stats[`skipped_${queryType.toLowerCase()}`] = (stats[`skipped_${queryType.toLowerCase()}`] || 0) + 1;
-    return;
+    stats.skipped = (stats.skipped || 0) + 1
+    stats[`skipped_${queryType.toLowerCase()}`] = (stats[`skipped_${queryType.toLowerCase()}`] || 0) + 1
+    return
   }
-  
+
   // ETL protection check
-  const isEtlOperation = EXCLUDE_ETL_TABLES && 
-                        /^\s*(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE)\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i.test(stmt);
-  
+  const isEtlOperation = EXCLUDE_ETL_TABLES &&
+                        /^\s*(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE)\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i.test(stmt)
+
   if (isEtlOperation) {
-    stats.skippedEtl = (stats.skippedEtl || 0) + 1;
-    console.log(`⚠️ ETL PROTECTION: Skipping operation on ETL table: ${truncateString(stmt, 100)}`);
-    return;
+    stats.skippedEtl = (stats.skippedEtl || 0) + 1
+    console.log(`⚠️ ETL PROTECTION: Skipping operation on ETL table: ${truncateString(stmt, 100)}`)
+    return
   }
-  
+
   try {
-    const startTime = Date.now();
-    const result = await client.query(stmt);
-    const duration = Date.now() - startTime;
-    
+    const startTime = Date.now()
+    const result = await client.query(stmt)
+    const duration = Date.now() - startTime
+
     // Update statistics
-    stats.executed = (stats.executed || 0) + 1;
-    stats[`executed_${queryType.toLowerCase()}`] = (stats[`executed_${queryType.toLowerCase()}`] || 0) + 1;
-    stats.totalTimeMs = (stats.totalTimeMs || 0) + duration;
-    
+    stats.executed = (stats.executed || 0) + 1
+    stats[`executed_${queryType.toLowerCase()}`] = (stats[`executed_${queryType.toLowerCase()}`] || 0) + 1
+    stats.totalTimeMs = (stats.totalTimeMs || 0) + duration
+
     if (duration > 1000) {
-      console.log(`Long-running query (${duration}ms): ${truncateString(stmt, 100)}`);
+      console.log(`Long-running query (${duration}ms): ${truncateString(stmt, 100)}`)
     }
-    
-    return result;
+
+    return result
   } catch (error) {
-    stats.errors = (stats.errors || 0) + 1;
-    console.error(`Error executing statement: ${error.message}`);
-    console.error(`Statement: ${truncateString(stmt, 200)}`);
-    throw error;
+    stats.errors = (stats.errors || 0) + 1
+    console.error(`Error executing statement: ${error.message}`)
+    console.error(`Statement: ${truncateString(stmt, 200)}`)
+    throw error
   }
 }
 
-function determineQueryType(stmt) {
-  const trimmedStmt = stmt.trim().toUpperCase();
-  
-  if (trimmedStmt.startsWith('INSERT')) return 'INSERT';
-  if (trimmedStmt.startsWith('UPDATE')) return 'UPDATE';
-  if (trimmedStmt.startsWith('DELETE')) return 'DELETE';
-  if (trimmedStmt.startsWith('CREATE TABLE')) return 'CREATE_TABLE';
-  if (trimmedStmt.startsWith('CREATE')) return 'CREATE';
-  if (trimmedStmt.startsWith('ALTER')) return 'ALTER';
-  if (trimmedStmt.startsWith('DROP')) return 'DROP';
-  if (trimmedStmt.startsWith('TRUNCATE')) return 'TRUNCATE';
-  if (trimmedStmt.startsWith('SELECT')) return 'SELECT';
-  if (trimmedStmt.startsWith('COPY')) return 'COPY';
-  
-  return 'OTHER';
+function determineQueryType (stmt) {
+  const trimmedStmt = stmt.trim().toUpperCase()
+
+  if (trimmedStmt.startsWith('INSERT')) return 'INSERT'
+  if (trimmedStmt.startsWith('UPDATE')) return 'UPDATE'
+  if (trimmedStmt.startsWith('DELETE')) return 'DELETE'
+  if (trimmedStmt.startsWith('CREATE TABLE')) return 'CREATE_TABLE'
+  if (trimmedStmt.startsWith('CREATE')) return 'CREATE'
+  if (trimmedStmt.startsWith('ALTER')) return 'ALTER'
+  if (trimmedStmt.startsWith('DROP')) return 'DROP'
+  if (trimmedStmt.startsWith('TRUNCATE')) return 'TRUNCATE'
+  if (trimmedStmt.startsWith('SELECT')) return 'SELECT'
+  if (trimmedStmt.startsWith('COPY')) return 'COPY'
+
+  return 'OTHER'
 }
 
-function logSkippedStatistics(stats) {
-  if (!stats) return;
-  
-  logInfo('\n--- SQL Execution Statistics ---');
-  
+function logSkippedStatistics (stats) {
+  if (!stats) return
+
+  logInfo('\n--- SQL Execution Statistics ---')
+
   if (stats.executed) {
-    logInfo(`✅ Executed statements: ${stats.executed}`);
+    logInfo(`✅ Executed statements: ${stats.executed}`)
   }
-  
+
   if (stats.skipped && stats.skipped > 0) {
-    logInfo(`⏭️ Skipped statements: ${stats.skipped}`);
-    
+    logInfo(`⏭️ Skipped statements: ${stats.skipped}`)
+
     // Report on specific types of skipped statements
-    const skippedByType = [];
-    
-    if (stats.skipped_insert) skippedByType.push(`${stats.skipped_insert} INSERTs`);
-    if (stats.skipped_update) skippedByType.push(`${stats.skipped_update} UPDATEs`);
-    if (stats.skipped_delete) skippedByType.push(`${stats.skipped_delete} DELETEs`);
-    if (stats.skipped_truncate) skippedByType.push(`${stats.skipped_truncate} TRUNCATEs`);
-    
+    const skippedByType = []
+
+    if (stats.skipped_insert) skippedByType.push(`${stats.skipped_insert} INSERTs`)
+    if (stats.skipped_update) skippedByType.push(`${stats.skipped_update} UPDATEs`)
+    if (stats.skipped_delete) skippedByType.push(`${stats.skipped_delete} DELETEs`)
+    if (stats.skipped_truncate) skippedByType.push(`${stats.skipped_truncate} TRUNCATEs`)
+
     if (skippedByType.length > 0) {
-      logInfo(`   Breakdown: ${skippedByType.join(', ')}`);
+      logInfo(`   Breakdown: ${skippedByType.join(', ')}`)
     }
   }
-  
+
   if (stats.skippedEtl) {
-    logInfo(`🛡️ ETL Protection: ${stats.skippedEtl} operations on ETL tables prevented`);
+    logInfo(`🛡️ ETL Protection: ${stats.skippedEtl} operations on ETL tables prevented`)
   }
-  
+
   if (stats.errors) {
-    logInfo(`❌ Errors: ${stats.errors}`);
+    logInfo(`❌ Errors: ${stats.errors}`)
   }
-  
+
   if (stats.totalTimeMs) {
-    logInfo(`⏱️ Total execution time: ${(stats.totalTimeMs / 1000).toFixed(2)} seconds`);
+    logInfo(`⏱️ Total execution time: ${(stats.totalTimeMs / 1000).toFixed(2)} seconds`)
   }
-  
-  logInfo('--------------------------------');
+
+  logInfo('--------------------------------')
 }
 
-function truncateString(str, maxLength) {
-  if (!str) return '';
-  if (str.length <= maxLength) return str;
-  
-  return str.substring(0, maxLength - 3) + '...';
+function truncateString (str, maxLength) {
+  if (!str) return ''
+  if (str.length <= maxLength) return str
+
+  return str.substring(0, maxLength - 3) + '...'
 }
 
 module.exports = {

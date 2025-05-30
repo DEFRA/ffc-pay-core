@@ -162,13 +162,13 @@ async function extractSchemaOnly (sqlFile, targetDb) {
           // Clean up constraints from CREATE TABLE statements
           if (/CREATE\s+TABLE/i.test(statement)) {
             // Remove foreign key constraints
-            statement = statement.replace(/,\s*CONSTRAINT\s+[\w\"]+"?\s+FOREIGN\s+KEY[^,)]+/gi, '')
+            statement = statement.replace(/,\s*CONSTRAINT\s+[\w"]+"?\s+FOREIGN\s+KEY[^,)]+/gi, '')
 
             // Remove primary key inline definitions
             statement = statement.replace(/\s+PRIMARY\s+KEY/gi, '')
 
             // Remove unique constraints
-            statement = statement.replace(/,\s*CONSTRAINT\s+[\w\"]+"?\s+UNIQUE[^,)]+/gi, '')
+            statement = statement.replace(/,\s*CONSTRAINT\s+[\w"]+"?\s+UNIQUE[^,)]+/gi, '')
 
             // Clean up any trailing/duplicate commas
             statement = statement.replace(/,\s*,/g, ',')
@@ -185,9 +185,7 @@ async function extractSchemaOnly (sqlFile, targetDb) {
           statement = ''
           statementCount++
         }
-      }
-      // Handle simple column ADD/ALTER but skip constraints
-      else if (/^\s*ALTER\s+TABLE/i.test(trimmed) &&
+      } else if (/^\s*ALTER\s+TABLE/i.test(trimmed) &&
         !/ADD\s+CONSTRAINT/i.test(trimmed) &&
         !/PRIMARY\s+KEY/i.test(trimmed)) {
         statement += line + '\n'
