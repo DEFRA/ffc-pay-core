@@ -3,16 +3,8 @@ const readline = require('readline')
 const os = require('os')
 const path = require('path')
 const { logInfo, logProgress } = require('../util/logger')
-const { EXCLUDE_ETL_TABLES, ETL_DATABASES } = require('../constants/etl-protection')
+const { EXCLUDE_ETL_TABLES, ETL_DATABASES, PROTECTED_TABLES } = require('../constants/etl-protection')
 
-/**
- * Process an SQL file for Azure compatibility
- * @param {string} inputFile - Path to the input SQL file
- * @param {string} sourceDb - Name of the source database
- * @param {string} targetDb - Name of the target database
- * @param {boolean} dataOnlyMode - Whether to process for data-only import (skip schema statements)
- * @returns {Object} Object containing the path to the processed file and statistics
- */
 async function processForAzure(inputFile, sourceDb, targetDb, dataOnlyMode = false) {
   const tempSqlFile = path.join(os.tmpdir(), `processed_${path.basename(inputFile)}`)
   const outputStream = fs.createWriteStream(tempSqlFile)
@@ -39,12 +31,20 @@ async function processForAzure(inputFile, sourceDb, targetDb, dataOnlyMode = fal
     // Final verification - SAFEGUARD 4
     if (EXCLUDE_ETL_TABLES && ETL_DATABASES.some(db => sourceDb.toLowerCase() === db.toLowerCase())) {
       logInfo('🔍 ETL VERIFICATION: Performing final ETL protection verification...')
-      const verificationResult = await verifyNoEtlOperations(tempSqlFile)
-      if (!verificationResult.safe) {
-        throw new Error(`⚠️ CRITICAL SAFETY ERROR: Found ${verificationResult.count} unfiltered ETL operations!`)
+      const etlVerification = await verifyNoOperationsOnProtectedTables(tempSqlFile, 'etl')
+      if (!etlVerification.safe) {
+        throw new Error(`⚠️ CRITICAL SAFETY ERROR: Found ${etlVerification.count} unfiltered ETL operations!`)
       }
       logInfo('✅ ETL VERIFICATION: No ETL operations found in processed SQL')
     }
+    
+    // Liquibase verification
+    logInfo('🔍 LIQUIBASE VERIFICATION: Performing final Liquibase protection verification...')
+    const liquibaseVerification = await verifyNoOperationsOnProtectedTables(tempSqlFile, 'liquibase')
+    if (!liquibaseVerification.safe) {
+      throw new Error(`⚠️ CRITICAL SAFETY ERROR: Found ${liquibaseVerification.count} unfiltered Liquibase operations!`)
+    }
+    logInfo('✅ LIQUIBASE VERIFICATION: No Liquibase operations found in processed SQL')
 
     return {
       processedFilePath: tempSqlFile,
@@ -56,12 +56,7 @@ async function processForAzure(inputFile, sourceDb, targetDb, dataOnlyMode = fal
   }
 }
 
-/**
- * Verify no ETL operations exist in the processed SQL file
- * @param {string} sqlFile - Path to the SQL file to verify
- * @returns {Object} Object containing verification results
- */
-async function verifyNoEtlOperations(sqlFile) {
+async function verifyNoOperationsOnProtectedTables(sqlFile, protectionType) {
   return new Promise((resolve, reject) => {
     const fileStream = fs.createReadStream(sqlFile, { encoding: 'utf8' })
     const rl = readline.createInterface({
@@ -72,10 +67,19 @@ async function verifyNoEtlOperations(sqlFile) {
     let dangerous = false
     let count = 0
     const dangerousLines = []
-    const etlPattern = /(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i
+    
+    // Choose the appropriate pattern based on protection type
+    let pattern
+    if (protectionType === 'etl') {
+      pattern = /(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i
+    } else if (protectionType === 'liquibase') {
+      // Create regex pattern for Liquibase tables
+      const liquibaseTables = PROTECTED_TABLES.join('|')
+      pattern = new RegExp(`(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)\\s+(?:public\\.)?("?(${liquibaseTables})"?|(${liquibaseTables})[\\s,);])`, 'i')
+    }
 
     rl.on('line', (line) => {
-      if (etlPattern.test(line)) {
+      if (pattern && pattern.test(line)) {
         dangerous = true
         count++
         dangerousLines.push(line)
@@ -84,7 +88,7 @@ async function verifyNoEtlOperations(sqlFile) {
 
     rl.on('close', () => {
       if (dangerous) {
-        logInfo(`⚠️ ETL PROTECTION VIOLATION: Found ${count} operations on ETL tables!`)
+        logInfo(`⚠️ ${protectionType.toUpperCase()} PROTECTION VIOLATION: Found ${count} operations on protected tables!`)
         dangerousLines.forEach((line, i) => {
           if (i < 5) logInfo(`  ${i + 1}: ${line.substring(0, 100)}...`)
         })
@@ -105,15 +109,6 @@ async function verifyNoEtlOperations(sqlFile) {
   })
 }
 
-/**
- * Process a large SQL file, converting COPY statements to INSERT VALUES for Azure compatibility
- * @param {string} inputFile - Path to the input SQL file
- * @param {stream.Writable} outputStream - Output stream to write processed SQL
- * @param {string} sourceDb - Name of the source database
- * @param {string} targetDb - Name of the target database
- * @param {boolean} dataOnlyMode - Whether to process for data-only import (skip schema statements)
- * @returns {Object} Statistics about the processing
- */
 async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dataOnlyMode = false) {
   return new Promise((resolve, reject) => {
     const fileStream = fs.createReadStream(inputFile, { encoding: 'utf8' })
@@ -129,7 +124,8 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
       copyRowsConverted: 0,
       copyBlocksConverted: 0,
       commentLines: 0,
-      schemaStatementsSkipped: 0
+      schemaStatementsSkipped: 0,
+      liquibaseStatementsSkipped: 0
     }
 
     let inCopy = false
@@ -145,6 +141,9 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
     // ETL protection
     const isEtlDatabase = ETL_DATABASES.some(db => sourceDb.toLowerCase() === db.toLowerCase())
     const etlTablePattern = /^(?:public\.)?(["']?etl[^"']*["']?|etl[^\s(]*)/i
+    
+    // Liquibase protection
+    const liquibaseTablePattern = new RegExp(`^(?:public\\.)?(?:["']?(${PROTECTED_TABLES.join('|')})["']?|(${PROTECTED_TABLES.join('|')})[\\s,);])`, 'i')
 
     rl.on('line', (line) => {
       stats.lines++
@@ -191,6 +190,17 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
           }
         }
       }
+      
+      // Liquibase protection - skip operations on Liquibase tables
+      const liquibaseMatch = line.match(liquibaseTablePattern)
+      if (liquibaseMatch && !line.trim().startsWith('--')) {
+        if (line.match(/(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)/i)) {
+          skipLine = true
+          stats.liquibaseStatementsSkipped++
+          outputStream.write(`-- ⚠️ LIQUIBASE PROTECTION: EXCLUDED OPERATION: ${line}\n`)
+          return
+        }
+      }
 
       // Process COPY blocks and convert to INSERT VALUES
       if (line.startsWith('COPY ') && line.includes(' FROM stdin;')) {
@@ -203,6 +213,14 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
         if (copyMatch) {
           currentCopyTable = copyMatch[1]
           currentCopyColumns = copyMatch[2].split(',').map(col => col.trim())
+          
+          // Skip COPY for Liquibase tables
+          const tableName = currentCopyTable.replace(/^public\./, '').replace(/"/g, '')
+          if (PROTECTED_TABLES.some(t => t.toLowerCase() === tableName.toLowerCase())) {
+            logInfo(`⚠️ LIQUIBASE PROTECTION: Skipping COPY block for ${currentCopyTable}`)
+            skipLine = true
+            return
+          }
           
           // Output a comment about the conversion
           outputStream.write(`-- Converting COPY to INSERTs for table ${currentCopyTable}\n`)
@@ -220,6 +238,12 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
         if (line === '\\.') {
           // End of COPY block
           inCopy = false
+          
+          // Skip if this is a protected table
+          if (skipLine) {
+            skipLine = false
+            return
+          }
           
           // Generate INSERT statements for the collected data
           let currentInsert = `INSERT INTO ${currentCopyTable} (${currentCopyColumns.join(', ')}) VALUES\n`
@@ -262,7 +286,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
           return
         }
         
-        if (collectingCopyData && line.trim() !== '') {
+        if (collectingCopyData && line.trim() !== '' && !skipLine) {
           copyBuffer.push(line)
         }
         return
@@ -286,6 +310,9 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
       if (dataOnlyMode) {
         logInfo(`Skipped ${stats.schemaStatementsSkipped} schema statements in data-only mode`)
       }
+      if (stats.liquibaseStatementsSkipped > 0) {
+        logInfo(`Protected ${stats.liquibaseStatementsSkipped} Liquibase statements`)
+      }
       resolve(stats)
     })
 
@@ -295,11 +322,6 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
   })
 }
 
-/**
- * Format a COPY row as an INSERT VALUES tuple
- * @param {string} row - The row data from a COPY block
- * @returns {string} Formatted values tuple for INSERT
- */
 function formatCopyRowAsValues(row) {
   const cells = row.split('\t')
   const formattedCells = cells.map(cell => {
@@ -328,11 +350,6 @@ function formatCopyRowAsValues(row) {
   return `(${formattedCells.join(', ')})`
 }
 
-/**
- * Get the path to a processed SQL file for the given database
- * @param {string} sourceDbName - Name of the source database
- * @returns {string|null} Path to the processed SQL file, or null if it doesn't exist
- */
 function getProcessedSqlPath(sourceDbName) {
   const tempSqlFile = path.join(os.tmpdir(), `processed_${sourceDbName}_full.sql`)
   return fs.existsSync(tempSqlFile) ? tempSqlFile : null
