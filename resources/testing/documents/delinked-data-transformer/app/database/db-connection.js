@@ -48,8 +48,6 @@ async function createConnection (database = 'postgres', options = {}) {
   console.log(`Connection configuration: host=${config.host}, port=${config.port}, database=${config.database}, username=${config.user}`)
   console.log(`Connection timeouts: idle=${config.idleTimeoutMillis}ms, connection=${config.connectionTimeoutMillis}ms`)
   console.log(`SSL enabled: ${config.ssl}, Max pool size: ${config.max}`)
-
-  console.log(`Creating connection pool [${new Date().toISOString()}]...`)
   const pool = new Pool(config)
 
   pool.on('error', err => {
@@ -62,15 +60,6 @@ async function createConnection (database = 'postgres', options = {}) {
 
     const connectionStartTime = Date.now()
     console.log(`Connection attempt started at ${connectionStartTime}`)
-
-    // Add event listeners to track connection state
-    pool.on('connect', () => {
-      console.log(`Pool connect event fired [${new Date().toISOString()}]`)
-    })
-
-    pool.on('acquire', () => {
-      console.log(`Pool acquire event fired [${new Date().toISOString()}]`)
-    })
 
     const client = await pool.connect()
     console.log(`Connected to PostgreSQL database "${database}" using Azure AD authentication in ${Date.now() - connectionStartTime}ms`)
@@ -103,16 +92,12 @@ async function createConnection (database = 'postgres', options = {}) {
   }
 }
 
-/**
- * Get an Azure token with the broadest possible permissions for database operations
- * @returns {Promise<string>} Azure authentication token
- */
+  // Get an Azure token enhanced for broader permissions
+
 async function getEnhancedAzureToken () {
-  // Try multiple strategies for getting the most permissive token
   try {
     console.log('Attempting enhanced Azure authentication (Strategy 1)...')
     console.log(`Using tenant ID: ${process.env.DEV_TENANT_ID || 'Not specified'}`)
-    console.log(`Using client ID: ${process.env.AZURE_CLIENT_ID || 'Not specified'}`)
 
     // Strategy 1: Enhanced DefaultAzureCredential with broader scope
     const credential = new DefaultAzureCredential({
@@ -156,11 +141,6 @@ async function getEnhancedAzureToken () {
   }
 }
 
-/**
- * List all databases matching specified patterns in a single query
- * @param {Array<string>} patterns - SQL LIKE patterns to match database names
- * @returns {Promise<Array<string>>} Array of database names
- */
 async function listDatabases (patterns = null) {
   const connection = await createConnection('postgres')
 
@@ -185,11 +165,6 @@ async function listDatabases (patterns = null) {
   }
 }
 
-/**
- * Get database statistics for monitoring and reporting
- * @param {Object} connection - Database connection from createConnection
- * @returns {Promise<Object>} Database statistics
- */
 async function getDatabaseStats (connection) {
   try {
     // Get total database size

@@ -9,14 +9,13 @@ const os = require('os')
 
 /**
  * Main function to handle database restoration to dev environments
- * Optimized for Azure PostgreSQL compatibility
+ * Optimized for Azure PostgreSQL
  */
 async function uploadToDev() {
   logInfo('Starting database restoration process (data-only approach)...')
   logInfo(`Running on ${os.hostname()} with Node.js ${process.version}`)
   logInfo(`System resources: ${os.cpus().length} CPUs, ${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB RAM`)
 
-  // Database discovery section with proper import
   try {
     logInfo('--- Database Discovery ---')
     // Look for both test and dev databases
@@ -35,7 +34,6 @@ async function uploadToDev() {
   let errorCount = 0
   let startTime = Date.now()
 
-  // Process each database file
   for (const { sourceDbName, targetDbName, filePath } of databaseFiles) {
     const dbStartTime = Date.now()
     logInfo(`\n📦 Processing database: ${sourceDbName}`)
@@ -44,7 +42,6 @@ async function uploadToDev() {
 
     let client
     try {
-      // Step 1: Connect to database with diagnostic info
       logInfo(`Connecting to ${targetDbName}...`)
       client = await createConnection(targetDbName)
 
@@ -65,7 +62,7 @@ async function uploadToDev() {
       // Step 3: Clear existing data before import
       await clearDatabaseSimple(client)
 
-      // Step 4: Process SQL file with Azure optimizations
+      // Step 4: Process SQL file
       // Removed duplicate processing message
       const dataOnlyMode = schemaExists
       if (dataOnlyMode) {
@@ -74,7 +71,6 @@ async function uploadToDev() {
       
       logInfo(`Processing SQL dump file: ${filePath} (${formatFileSize(fs.statSync(filePath).size)})`)
       
-      // Use stall detection wrapper for long-running operations
       const processingResult = await withStallDetection(
         () => processForAzure(filePath, sourceDbName, targetDbName, dataOnlyMode),
         'SQL processing',
@@ -92,7 +88,7 @@ async function uploadToDev() {
         logInfo(`Large dataset detected (${stats.copyRowsConverted} rows), implementing batched processing`)
       }
 
-      // Step 5: Execute SQL with enhanced error tracking and stall detection
+      // Step 5: Execute SQL
       const insertCount = await withStallDetection(
         () => loadDataInBatchesWithErrorTracking(client, processedFilePath),
         'SQL execution',
@@ -140,12 +136,6 @@ async function uploadToDev() {
   return errorCount === 0
 }
 
-/**
- * Runs a function with stall detection to identify when processing hangs
- * @param {Function} fn - Async function to run
- * @param {string} operationName - Name of operation for logging
- * @param {number} stallThresholdSec - Seconds to wait before considering stalled
- */
 async function withStallDetection(fn, operationName, stallThresholdSec = 120) {
   let lastActivityTime = Date.now()
   let isComplete = false
@@ -167,8 +157,6 @@ async function withStallDetection(fn, operationName, stallThresholdSec = 120) {
   
   // Progress monitoring function wrapper
   const updateActivity = () => { lastActivityTime = Date.now() }
-  
-  // Patch console.log temporarily to detect activity from the function
   const originalLog = console.log
   console.log = (...args) => {
     updateActivity()
@@ -187,12 +175,6 @@ async function withStallDetection(fn, operationName, stallThresholdSec = 120) {
   }
 }
 
-/**
- * Verifies if the schema exists in the target database
- * @param {Object} client - Database client
- * @param {string} dbName - Database name
- * @returns {boolean} Whether schema exists
- */
 async function verifySchema(client, dbName) {
   // Check if essential tables exist
   const { rows } = await client.query(`
@@ -307,7 +289,7 @@ async function applySchema(client, schemaFile) {
 }
 
 /**
- * Clears all data from database tables while respecting ETL protection
+ * Clears all data from database tables while respecting ETL and liquibase protection
  */
 async function clearDatabaseSimple(client) {
   try {
@@ -363,14 +345,12 @@ async function clearDatabaseSimple(client) {
         AND tc.table_schema = 'public'
     `)
 
-    // Simple topological sort to determine deletion order
     const dependencyGraph = {}
     for (const { tablename } of tablesToClear) {
       dependencyGraph[tablename] = []
     }
 
     for (const rel of tableRelationships) {
-      // Only include relationships for tables we want to clear
       if (dependencyGraph[rel.table_name] && dependencyGraph[rel.referenced_table]) {
         dependencyGraph[rel.table_name].push(rel.referenced_table)
       }
