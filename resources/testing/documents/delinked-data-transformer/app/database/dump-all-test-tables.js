@@ -4,7 +4,7 @@ const { spawn } = require('child_process')
 const { createConnection, listDatabases, getDatabaseStats } = require('./db-connection')
 const os = require('os')
 
-const { ETL_DATABASES, ETL_TABLE_PREFIX, EXCLUDE_ETL_TABLES } = require('../constants/etl-protection')
+const { ETL_DATABASES, ETL_TABLE_PREFIX, EXCLUDE_ETL_TABLES, PROTECTED_TABLES } = require('../constants/etl-protection')
 
 // Set maximum concurrency based on CPUs, but limit to avoid overwhelming the server
 const MAX_CONCURRENT_DATABASES = Math.min(os.cpus().length, 3) // Reduced from 4 to prevent throttling
@@ -184,6 +184,7 @@ async function performFullDump (dbConnection, outputPath) {
           '--verbose'
         ]
         console.log(`Database check: '${dbConnection.database}' is in ETL_DATABASES: ${ETL_DATABASES.some(db => dbConnection.database.toLowerCase() === db.toLowerCase())}`)
+
         // Add ETL table exclusions - SAFEGUARD 2
         if (isEtlDatabase && etlTables.length > 0) {
           console.log(`⚠️ ETL PROTECTION: Adding pg_dump exclusions for ${etlTables.length} ETL tables`)
@@ -193,6 +194,13 @@ async function performFullDump (dbConnection, outputPath) {
             args.push('--exclude-table-data', `public."${table}"`)
           })
         }
+
+        // Add Liquibase table exclusions
+        console.log(`⚠️ LIQUIBASE PROTECTION: Adding pg_dump exclusions for Liquibase tracking tables`)
+        PROTECTED_TABLES.forEach(table => {
+          args.push('--exclude-table', `public."${table}"`)
+          args.push('--exclude-table-data', `public."${table}"`)
+      })
 
         if (dbStats.totalSizeMB > 500) { // For databases over 500MB
           args.push('--data-only') // Only dump data, schema already created
