@@ -11,7 +11,7 @@ const os = require('os')
  * Main function to handle database restoration to dev environments
  * Optimized for Azure PostgreSQL
  */
-async function uploadToDev() {
+async function uploadToDev () {
   logInfo('Starting database restoration process (data-only approach)...')
   logInfo(`Running on ${os.hostname()} with Node.js ${process.version}`)
   logInfo(`System resources: ${os.cpus().length} CPUs, ${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB RAM`)
@@ -32,7 +32,7 @@ async function uploadToDev() {
 
   let successCount = 0
   let errorCount = 0
-  let startTime = Date.now()
+  const startTime = Date.now()
 
   for (const { sourceDbName, targetDbName, filePath } of databaseFiles) {
     const dbStartTime = Date.now()
@@ -58,7 +58,7 @@ async function uploadToDev() {
 
       // Step 2: Schema verification
       const schemaExists = await verifySchema(client, targetDbName)
-      
+
       // Step 3: Clear existing data before import
       await clearDatabaseSimple(client)
 
@@ -68,17 +68,17 @@ async function uploadToDev() {
       if (dataOnlyMode) {
         logInfo('Schema already exists - processing for data-only import')
       }
-      
+
       logInfo(`Processing SQL dump file: ${filePath} (${formatFileSize(fs.statSync(filePath).size)})`)
-      
+
       const processingResult = await withStallDetection(
         () => processForAzure(filePath, sourceDbName, targetDbName, dataOnlyMode),
         'SQL processing',
         120 // 2 minute stall threshold
       )
-      
+
       const { processedFilePath, stats } = processingResult
-      
+
       logInfo(`SQL file processed: ${stats.copyBlocksConverted} COPY blocks, ${stats.copyRowsConverted} rows converted`)
       logInfo(`Processed file size: ${formatFileSize(fs.statSync(processedFilePath).size)}`)
 
@@ -94,11 +94,11 @@ async function uploadToDev() {
         'SQL execution',
         180 // 3 minute stall threshold
       )
-      
+
       const dbDuration = Math.round((Date.now() - dbStartTime) / 1000)
       logInfo(`✅ Successfully restored ${sourceDbName} to ${targetDbName}`)
       logInfo(`📊 Results: ${insertCount} rows inserted in ${formatDuration(dbDuration)}`)
-      
+
       // Clean up temp files
       safeRemoveFile(processedFilePath)
       successCount++
@@ -132,29 +132,29 @@ async function uploadToDev() {
   logInfo(`✅ Success: ${successCount} databases`)
   if (errorCount) logInfo(`❌ Failures: ${errorCount} databases`)
   logInfo('==========================================')
-  
+
   return errorCount === 0
 }
 
-async function withStallDetection(fn, operationName, stallThresholdSec = 120) {
+async function withStallDetection (fn, operationName, stallThresholdSec = 120) {
   let lastActivityTime = Date.now()
   let isComplete = false
-  
+
   // Create heartbeat function to check for stalls
   const stallDetector = setInterval(() => {
     const stallTime = Math.round((Date.now() - lastActivityTime) / 1000)
-    
+
     if (stallTime > stallThresholdSec && !isComplete) {
       logInfo(`⚠️ Possible stall detected in ${operationName} (${stallTime} seconds without progress)`)
       logInfo(`Current memory usage: ${formatFileSize(process.memoryUsage().heapUsed)} heap / ${formatFileSize(process.memoryUsage().rss)} total`)
-      
+
       // For Azure PostgreSQL, long-running operations might be throttled
       if (stallTime > stallThresholdSec * 2) {
         logInfo(`⚠️ Extended stall in ${operationName} - check Azure portal for resource limitations or throttling events`)
       }
     }
   }, 30000) // Check every 30 seconds
-  
+
   // Progress monitoring function wrapper
   const updateActivity = () => { lastActivityTime = Date.now() }
   const originalLog = console.log
@@ -162,7 +162,7 @@ async function withStallDetection(fn, operationName, stallThresholdSec = 120) {
     updateActivity()
     originalLog.apply(console, args)
   }
-  
+
   try {
     // Run the actual function
     const result = await fn()
@@ -175,7 +175,7 @@ async function withStallDetection(fn, operationName, stallThresholdSec = 120) {
   }
 }
 
-async function verifySchema(client, dbName) {
+async function verifySchema (client, dbName) {
   // Check if essential tables exist
   const { rows } = await client.query(`
     SELECT COUNT(*) as table_count
@@ -192,7 +192,7 @@ async function verifySchema(client, dbName) {
 /**
  * Extract schema-only SQL from a full dump
  */
-async function extractSchemaOnly(sqlFile, targetDb) {
+async function extractSchemaOnly (sqlFile, targetDb) {
   const outputFile = `/tmp/schema_only_${targetDb}_${Date.now()}.sql`
   const writeStream = fs.createWriteStream(outputFile)
 
@@ -202,7 +202,7 @@ async function extractSchemaOnly(sqlFile, targetDb) {
       crlfDelay: Infinity
     })
 
-    let statement = ''
+    const statement = ''
     let inCopy = false
     let statementCount = 0
 
@@ -250,7 +250,7 @@ async function extractSchemaOnly(sqlFile, targetDb) {
 /**
  * Applies schema to target database
  */
-async function applySchema(client, schemaFile) {
+async function applySchema (client, schemaFile) {
   logInfo('Applying schema to target database')
 
   const lineReader = require('readline').createInterface({
@@ -291,7 +291,7 @@ async function applySchema(client, schemaFile) {
 /**
  * Clears all data from database tables while respecting ETL and liquibase protection
  */
-async function clearDatabaseSimple(client) {
+async function clearDatabaseSimple (client) {
   try {
     // Step 1: Get all tables
     const { rows } = await client.query(`
@@ -309,20 +309,20 @@ async function clearDatabaseSimple(client) {
 
     // Filter out ETL tables and Liquibase tables
     const tablesToClear = rows.filter(row => {
-      const isEtlTable = row.tablename.toLowerCase().startsWith(ETL_TABLE_PREFIX) || 
+      const isEtlTable = row.tablename.toLowerCase().startsWith(ETL_TABLE_PREFIX) ||
                          row.tablename.startsWith(ETL_TABLE_PREFIX.toUpperCase())
       const isLiquibaseTable = PROTECTED_TABLES.includes(row.tablename.toLowerCase())
-      
+
       if (isEtlTable) {
         logInfo(`⚠️ ETL PROTECTION: Skipping ETL table: ${row.tablename}`)
         return false
       }
-      
+
       if (isLiquibaseTable) {
         logInfo(`⚠️ LIQUIBASE PROTECTION: Skipping Liquibase table: ${row.tablename}`)
         return false
       }
-      
+
       return true
     })
 
@@ -408,20 +408,20 @@ async function clearDatabaseSimple(client) {
 /**
  * Format file size in human readable format
  */
-function formatFileSize(bytes) {
-  if (bytes < 1024) return bytes + ' bytes';
-  else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  else if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  else return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+function formatFileSize (bytes) {
+  if (bytes < 1024) return bytes + ' bytes'
+  else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+  else if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
+  else return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB'
 }
 
 /**
  * Format duration in human readable format
  */
-function formatDuration(seconds) {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-  return `${minutes}m ${remainingSeconds}s`;
+function formatDuration (seconds) {
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = seconds % 60
+  return `${minutes}m ${remainingSeconds}s`
 }
 
 module.exports = {
