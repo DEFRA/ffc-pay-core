@@ -194,6 +194,23 @@ async function performFullDump (dbConnection, outputPath) {
             args.push('--exclude-table-data', `public."${table}"`)
           })
         }
+        
+        // Add ETL sequences exclusion
+        if (isEtlDatabase) {
+          console.log(`⚠️ ETL SEQUENCE PROTECTION: Excluding ETL-related sequences`)
+          
+          // Use a pattern-based approach to catch all ETL-related sequences
+          args.push('--exclude-table-data', `public."etl*_seq*"`)
+          args.push('--exclude-table', `public."etl*_seq*"`)
+          
+          // Also catch uppercase ETL sequences
+          args.push('--exclude-table-data', `public."ETL*_seq*"`)
+          args.push('--exclude-table', `public."ETL*_seq*"`)
+          
+          // Match the specific naming pattern in your dump
+          args.push('--exclude-table-data', `public."etlStage*_seq*"`)
+          args.push('--exclude-table', `public."etlStage*_seq*"`)
+        }
 
         // Add Liquibase table exclusions
         console.log(`⚠️ LIQUIBASE PROTECTION: Adding pg_dump exclusions for Liquibase tracking tables`)

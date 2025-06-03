@@ -8,7 +8,7 @@ const { EXCLUDE_ETL_TABLES, ETL_TABLE_PREFIX, PROTECTED_TABLES } = require('../c
  * @param {Object} client - Database client
  * @param {string} sqlFile - Path to SQL file
  */
-async function executeSqlFile(client, sqlFile) {
+async function executeSqlFile (client, sqlFile) {
   logInfo(`Executing SQL file: ${sqlFile}`)
   return loadDataInBatchesWithErrorTracking(client, sqlFile)
 }
@@ -18,7 +18,7 @@ async function executeSqlFile(client, sqlFile) {
  * @param {Object} client - Database client
  * @param {string} sqlFile - Path to SQL file
  */
-async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
+async function loadDataInBatchesWithErrorTracking (client, sqlFile) {
   // Validate input
   if (!fs.existsSync(sqlFile)) {
     throw new Error(`SQL file not found: ${sqlFile}`)
@@ -38,9 +38,9 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
   let errorCount = 0
   let skippedSchemaCount = 0
   let successCount = 0
-  const BATCH_SIZE = 200  // Optimized for Azure PostgreSQL
+  const BATCH_SIZE = 200 // Optimized for Azure PostgreSQL
   const errorLogFile = `${sqlFile}.errors.log`
-  
+
   // Timing variables for better reporting
   const startTime = Date.now()
   let lastProgressTime = Date.now()
@@ -76,21 +76,21 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
       logInfo(`Note: Could not set session_replication_role: ${err.message}`)
       logInfo('Continuing with standard transaction - constraints will be enforced')
     }
-    
+
     // Create monitoring timers
     const heartbeatTimer = setInterval(() => {
       const elapsedSec = Math.round((Date.now() - lastProgressTime) / 1000)
       if (elapsedSec > 30) {
         logInfo(`Still processing - ${rowCount} rows so far (no change in last ${elapsedSec} seconds)`)
       }
-    }, 30000)  // Log every 30 seconds of inactivity
+    }, 30000) // Log every 30 seconds of inactivity
 
     const memoryMonitor = setInterval(() => {
       const memoryUsage = process.memoryUsage()
       logInfo(`Memory usage: ${Math.round(memoryUsage.heapUsed / 1024 / 1024)} MB / ${Math.round(memoryUsage.rss / 1024 / 1024)} MB (heap/total)`)
-      
+
       // Check for potential memory issues in Azure environment
-      const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024;
+      const heapUsedMB = memoryUsage.heapUsed / 1024 / 1024
       if (heapUsedMB > 1000) { // 1GB warning threshold
         logInfo(`Memory usage approaching Azure Functions limit: ${Math.round(heapUsedMB)} MB`)
       }
@@ -112,8 +112,8 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
 
       // Process complete statements
       if (line.trim().endsWith(';')) {
-        const statementType = getStatementType(statement);
-        
+        const statementType = getStatementType(statement)
+
         // ETL protection check (redundant safeguard)
         if (EXCLUDE_ETL_TABLES && isEtlTableStatement(statement)) {
           logInfo(`⚠️ ETL PROTECTION: Skipping operation on ETL table at line ${statementStartLine}`)
@@ -130,8 +130,8 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
               successCount++
             } catch (err) {
               // Check for expected schema errors in Azure
-              let isExpectedError = false;
-              
+              let isExpectedError = false
+
               for (const [errorType, pattern] of Object.entries(schemaErrorPatterns)) {
                 if (pattern.test(err.message)) {
                   logInfo(`Expected schema error (${errorType}): ${truncateString(err.message, 100)}`)
@@ -140,7 +140,7 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
                   break
                 }
               }
-              
+
               if (!isExpectedError) {
                 // Unexpected schema error - log but continue
                 const errorMessage = `Schema Error at line ${statementStartLine}: ${err.message}`
@@ -152,7 +152,7 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
           } else {
             // Data modification statement - standard processing
             await client.query(statement)
-            
+
             // Count rows for INSERT statements
             if (statementType === 'INSERT') {
               // Simple heuristic to count rows in multi-value INSERT
@@ -160,19 +160,19 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
               const rowsInStatement = valueMatches ? valueMatches.length : 1
               rowCount += rowsInStatement
             }
-            
+
             batchSize++
             statementCount++
             successCount++
-            
+
             // Progress updates
             const currentTime = Date.now()
             if (currentTime - lastProgressTime > 5000 || batchSize >= BATCH_SIZE) {
               const rowsPerSecond = Math.round((rowCount - lastRowCount) / ((currentTime - lastProgressTime) / 1000 || 1))
               const elapsedTime = Math.round((currentTime - startTime) / 1000)
-              
+
               logInfo(`Processed ${rowCount} total rows (${rowsPerSecond} rows/sec) - ${Math.round(elapsedTime / 60)}m ${elapsedTime % 60}s elapsed`)
-              
+
               lastProgressTime = currentTime
               lastRowCount = rowCount
             }
@@ -191,20 +191,20 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
           logInfo(errorMessage)
           fs.appendFileSync(errorLogFile, `\n${errorMessage}\n${statement}\n---\n`, 'utf8')
           errorCount++
-          
+
           // Check for severe errors that might require special handling
           const severeErrors = [
             'insufficient privilege',
             'permission denied',
             'terminating connection',
             'deadlock detected'
-          ];
-          
+          ]
+
           if (severeErrors.some(e => err.message.toLowerCase().includes(e))) {
             logError(`Severe error detected - may require attention: ${err.message}`)
           }
         }
-        
+
         statement = ''
       }
     }
@@ -228,7 +228,7 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
     }
 
     const totalTimeMin = Math.round((Date.now() - startTime) / 60000)
-    
+
     // Final summary
     logInfo('\n===== SQL Execution Summary =====')
     logInfo(`✅ Execution complete: ${rowCount} rows in ${totalTimeMin} minutes`)
@@ -242,40 +242,39 @@ async function loadDataInBatchesWithErrorTracking(client, sqlFile) {
     logInfo('================================\n')
 
     return rowCount
-
   } catch (error) {
     // Major unhandled error
     clearTimeout(importTimeout)
     logError(`Critical error during execution: ${error.message}`)
     logError(error.stack)
     await client.query('ROLLBACK')
-    throw error;
+    throw error
   }
 }
 
 /**
  * Check if statement operates on protected tables (ETL or Liquibase)
  */
-function isEtlTableStatement(statement) {
+function isEtlTableStatement (statement) {
   // Original ETL table check
   const etlTablePattern = new RegExp(
     `(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)\\s+(?:public\\.)?("?${ETL_TABLE_PREFIX}[^"]*"?|${ETL_TABLE_PREFIX}[^\\s(]*)`, 'i'
   )
-  
+
   // Check Liquibase tables
   const liquibasePattern = new RegExp(
     `(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)\\s+(?:public\\.)?("?(${PROTECTED_TABLES.join('|')})[^"]*"?|(${PROTECTED_TABLES.join('|')})[^\\s(]*)`, 'i'
   )
-  
+
   return etlTablePattern.test(statement) || liquibasePattern.test(statement)
 }
 
 /**
  * Get the type of SQL statement
  */
-function getStatementType(statement) {
+function getStatementType (statement) {
   const trimmedStmt = statement.trim().toUpperCase()
-  
+
   if (trimmedStmt.startsWith('INSERT')) return 'INSERT'
   if (trimmedStmt.startsWith('UPDATE')) return 'UPDATE'
   if (trimmedStmt.startsWith('DELETE')) return 'DELETE'
@@ -288,20 +287,20 @@ function getStatementType(statement) {
   if (trimmedStmt.startsWith('TRUNCATE')) return 'TRUNCATE'
   if (trimmedStmt.startsWith('SELECT')) return 'SELECT'
   if (trimmedStmt.startsWith('COPY')) return 'COPY'
-  
+
   return 'OTHER'
 }
 
 /**
  * Check if a statement is schema-related
  */
-function isSchemaStatement(type) {
+function isSchemaStatement (type) {
   return [
-    'CREATE_TABLE', 
-    'CREATE_INDEX', 
-    'CREATE_SEQUENCE', 
-    'CREATE', 
-    'ALTER', 
+    'CREATE_TABLE',
+    'CREATE_INDEX',
+    'CREATE_SEQUENCE',
+    'CREATE',
+    'ALTER',
     'DROP'
   ].includes(type)
 }
@@ -309,7 +308,7 @@ function isSchemaStatement(type) {
 /**
  * Execute a single SQL statement with logging and ETL protection
  */
-async function executeStatement(stmt, client, stats = {}, schemaOnly = false) {
+async function executeStatement (stmt, client, stats = {}, schemaOnly = false) {
   const queryType = getStatementType(stmt)
 
   // Skip data modification statements in schema-only mode
@@ -352,7 +351,7 @@ async function executeStatement(stmt, client, stats = {}, schemaOnly = false) {
 /**
  * Log execution statistics
  */
-function logSkippedStatistics(stats) {
+function logSkippedStatistics (stats) {
   if (!stats) return
 
   logInfo('\n--- SQL Execution Statistics ---')
@@ -395,7 +394,7 @@ function logSkippedStatistics(stats) {
 /**
  * Truncate a string to a maximum length
  */
-function truncateString(str, maxLength) {
+function truncateString (str, maxLength) {
   if (!str) return ''
   if (str.length <= maxLength) return str
 
