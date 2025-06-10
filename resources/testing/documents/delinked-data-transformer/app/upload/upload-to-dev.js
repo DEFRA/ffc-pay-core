@@ -2,8 +2,9 @@ const { createConnection, listDatabases } = require('../database/db-connection')
 const { findSqlDumpFiles, safeRemoveFile } = require('../util/file-utils')
 const { logInfo, logError } = require('../util/logger')
 const { processForAzure } = require('../transform/sql-processor')
-const { loadDataInBatchesWithErrorTracking } = require('./execute-sql')
+const { loadDataInBatchesWithErrorTracking, parseAndProcessSqlFile } = require('./execute-sql')
 const { ETL_TABLE_PREFIX, PROTECTED_TABLES } = require('../constants/etl-protection')
+const { loadInDependencyOrder } = require('./dependency-loader')
 const fs = require('fs')
 const os = require('os')
 
@@ -63,7 +64,6 @@ async function uploadToDev () {
       await clearDatabaseSimple(client)
 
       // Step 4: Process SQL file
-      // Removed duplicate processing message
       const dataOnlyMode = schemaExists
       if (dataOnlyMode) {
         logInfo('Schema already exists - processing for data-only import')
@@ -88,16 +88,45 @@ async function uploadToDev () {
         logInfo(`Large dataset detected (${stats.copyRowsConverted} rows), implementing batched processing`)
       }
 
-      // Step 5: Execute SQL
-      const insertCount = await withStallDetection(
-        () => loadDataInBatchesWithErrorTracking(client, processedFilePath),
-        'SQL execution',
+      // Step 5: First try to parse the SQL file to get statements
+      logInfo('Parsing SQL file into executable statements...')
+      const errorLogFile = `${processedFilePath}.errors.log`
+      const errorStream = fs.createWriteStream(errorLogFile)
+
+      // Create a progress reporting callback
+      let currentPosition = 0
+      const progressCallback = (position) => {
+        currentPosition = position
+      }
+
+      // Parse SQL file into statements
+      const statements = await withStallDetection(
+        () => parseAndProcessSqlFile(
+          processedFilePath,
+          progressCallback,
+          errorStream,
+          stats.copyRowsConverted > MAX_ROWS_PER_TRANSACTION
+        ),
+        'SQL parsing',
+        120 // 2 minute stall threshold
+      )
+
+      logInfo(`Successfully parsed ${statements.length} SQL statements from file`)
+
+      // Step 6: Execute using dependency-aware loading to avoid constraint errors
+      logInfo('Using dependency-aware loading to handle foreign key constraints...')
+
+      const results = await withStallDetection(
+        () => loadInDependencyOrder(client, statements),
+        'SQL execution with dependency ordering',
         180 // 3 minute stall threshold
       )
 
+      const insertCount = results.rowsInserted
+
       const dbDuration = Math.round((Date.now() - dbStartTime) / 1000)
       logInfo(`✅ Successfully restored ${sourceDbName} to ${targetDbName}`)
-      logInfo(`📊 Results: ${insertCount} rows inserted in ${formatDuration(dbDuration)}`)
+      logInfo(`📊 Results: ${insertCount} rows inserted (${results.success} successful operations, ${results.errors} errors) in ${formatDuration(dbDuration)}`)
 
       // Clean up temp files
       safeRemoveFile(processedFilePath)
