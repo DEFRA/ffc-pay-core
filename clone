@@ -87,4 +87,7 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
   test -d ffc-doc-statement-receiver\
     && >&2 echo "The 'ffc-doc-statement-receiver' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-doc-statement-receiver.git
+  test -d ffc-doc-alerting\
+    && >&2 echo "The 'ffc-doc-alerting' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/ffc-doc-alerting.git
 )

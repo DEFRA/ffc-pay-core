@@ -125,3 +125,6 @@ echo
 echo 'ffc-doc-statement-receiver: ' &&
   kubectl get deployment ffc-doc-statement-receiver -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
+echo 'ffc-doc-alerting: ' &&
+  kubectl get deployment ffc-doc-alerting -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo

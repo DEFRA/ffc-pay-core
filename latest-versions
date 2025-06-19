@@ -77,3 +77,6 @@ echo 'ffc-doc-statement-publisher' &&
 
 echo 'ffc-doc-statement-receiver' &&
   curl --silent "https://api.github.com/repos/defra/ffc-doc-statement-receiver/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
+echo 'ffc-doc-alerting' &&
+  curl --silent "https://api.github.com/repos/defra/ffc-doc-alerting/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
