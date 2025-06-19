@@ -3,7 +3,7 @@ const fs = require('fs')
 const SQL_TEMPLATES = {
   organisations: 'INSERT INTO public.organisations (sbi, "addressLine1", "addressLine2", "addressLine3", city, county, postcode, "emailAddress", frn, name, updated) VALUES\n',
   delinkedCalc: 'INSERT INTO public."delinkedCalculation" ("applicationId", "calculationId", sbi, frn, "paymentBand1", "paymentBand2", "paymentBand3", "paymentBand4", "percentageReduction1", "percentageReduction2", "percentageReduction3", "percentageReduction4", "progressiveReductions1", "progressiveReductions2", "progressiveReductions3", "progressiveReductions4", "totalProgressiveReduction", "referenceAmount", "totalDelinkedPayment", "paymentAmountCalculated", "datePublished", updated) VALUES\n',
-  d365: 'INSERT INTO public.d365 ("calculationId", "paymentPeriod", "paymentReference", "paymentAmount", "transactionDate") VALUES\n'
+  d365: 'INSERT INTO public.d365 ("calculationId", "paymentPeriod", "paymentReference", "paymentAmount", "marketingYear", "transactionDate") VALUES\n'
 }
 
 function validateArgs () {
@@ -68,7 +68,7 @@ function generateSqlStatements (totalRecords, separateFiles) {
 
         organisationsSql += `(${sbi}, 'Street', 'Area', 'District', 'City', 'County', 'AA1 1BB', '${emailAddress}', ${frn}, '${name}', '${currentDate}')`
         delinkedCalcSql += `(${applicationId}, ${calculationId}, ${sbi}, '${frn}', '30000', '50000', '150000', '99999999.99', '50', '55', '65', '70', '15000', '11000', '65000', '35000', '126000', '2000000', '75000', '37500', '${currentDate}', '${updatedDate}')`
-        d365Sql += `(${calculationId}, '2024', '${paymentReference}', 37500, '${currentDate}')`
+        d365Sql += `(${calculationId}, '2024', '${paymentReference}', 37500, '2024', '${currentDate}')`
 
         if (i < batchEnd) {
           organisationsSql += ',\n'
