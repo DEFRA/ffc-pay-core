@@ -15,6 +15,7 @@ show_help() {
 
     Options:
       -s, --statements  include statement services
+      -S, --statements-only  include only statement services, do not run payments services
       -h, --help       display this help text
     "
 }
@@ -71,6 +72,9 @@ if [ "${statements}" = "true" ]; then
   ./ffc-doc-statement-generator/scripts/start -d;
   ./ffc-doc-statement-publisher/scripts/start -d;
   ./ffc-doc-statement-receiver/scripts/start -d;
+  ./ffc-doc-alerting/scripts/start -d;
 fi
 
-ffc-pay-core/seed
+if [ "${payments}" = "true" ]; then
+  ffc-pay-core/seed
+fi

@@ -103,3 +103,6 @@ cd ./ffc-doc-statement-publisher && \
 cd "${projectRoot}"
 cd ./ffc-doc-statement-receiver && \
   docker compose down $@
+cd "${projectRoot}"
+cd ./ffc-doc-alerting && \
+  docker compose down $@
