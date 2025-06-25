@@ -66,4 +66,5 @@ if [ "${statements}" = "true" ]; then
   code ./ffc-doc-statement-generator;
   code ./ffc-doc-statement-publisher;
   code ./ffc-doc-statement-receiver;
+  code ./ffc-doc-alerting;
 fi

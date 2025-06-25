@@ -136,3 +136,7 @@ cd "${projectRoot}"
 cd ./ffc-doc-statement-receiver && \
   git checkout main && \
   git pull
+cd "${projectRoot}"
+cd ./ffc-doc-alerting && \
+  git checkout main && \
+  git pull

@@ -103,3 +103,6 @@ cd ./ffc-doc-statement-publisher && \
 cd "${projectRoot}"
 cd ./ffc-doc-statement-receiver && \
   git pull
+cd "${projectRoot}"
+cd ./ffc-doc-alerting && \
+  git pull
