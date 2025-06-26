@@ -1,8 +1,10 @@
 # Dependencies
+resources/testing/documents/delinked-data-transformer/node_modules/
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+resources/testing/documents/delinked-data-transformer/dumps/
 
 # Environment variables
 .env
