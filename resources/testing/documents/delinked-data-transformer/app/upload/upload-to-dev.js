@@ -1,25 +1,25 @@
 const { createConnection, listDatabases } = require('../database/db-connection')
 const { findSqlDumpFiles, safeRemoveFile } = require('../util/file-utils')
-const { logInfo, logError } = require('../util/logger')
+const { logInfo, logError, logWarning } = require('../util/logger')
 const { processForAzure } = require('../transform/sql-processor')
-const { loadDataInBatchesWithErrorTracking, parseAndProcessSqlFile } = require('./execute-sql')
+const { parseAndProcessSqlFile } = require('./execute-sql')
 const { ETL_TABLE_PREFIX, PROTECTED_TABLES } = require('../constants/etl-protection')
 const { loadInDependencyOrder } = require('./dependency-loader')
+const { backupDatabase } = require('../database/backup-and-restore')
 const fs = require('fs')
 const os = require('os')
 
-/**
- * Main function to handle database restoration to dev environments
- * Optimized for Azure PostgreSQL
- */
-async function uploadToDev () {
+async function uploadToDev(dryRun = false) {
+  if (dryRun) {
+    logInfo('🔍 DRY RUN MODE: All operations will be simulated without making actual changes')
+  }
+  
   logInfo('Starting database restoration process (data-only approach)...')
   logInfo(`Running on ${os.hostname()} with Node.js ${process.version}`)
   logInfo(`System resources: ${os.cpus().length} CPUs, ${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB RAM`)
 
   try {
     logInfo('--- Database Discovery ---')
-    // Look for both test and dev databases
     const targetDatabases = await listDatabases(['ffc-doc-%-dev', 'ffc-pay-%-dev', 'ffc-doc-%-test', 'ffc-pay-%-test'])
     logInfo(`Found ${targetDatabases.length} available target databases:`)
     logInfo(targetDatabases)
@@ -44,26 +44,43 @@ async function uploadToDev () {
     let client
     try {
       logInfo(`Connecting to ${targetDbName}...`)
-      client = await createConnection(targetDbName)
+      if (!dryRun) {
+        client = await createConnection(targetDbName)
 
-      const { rows } = await client.query(
-        'SELECT current_database(), current_user, version(), current_timestamp'
-      )
+        const { rows } = await client.query(
+          'SELECT current_database(), current_user, version(), current_timestamp'
+        )
 
-      logInfo('=== Connection Details ===')
-      logInfo(`Database: ${rows[0].current_database}`)
-      logInfo(`User: ${rows[0].current_user}`)
-      logInfo(`PostgreSQL: ${rows[0].version.split(',')[0]}`)
-      logInfo(`Connection time: ${rows[0].current_timestamp}`)
-      logInfo('========================')
+        logInfo('=== Connection Details ===')
+        logInfo(`Database: ${rows[0].current_database}`)
+        logInfo(`User: ${rows[0].current_user}`)
+        logInfo(`PostgreSQL: ${rows[0].version.split(',')[0]}`)
+        logInfo(`Connection time: ${rows[0].current_timestamp}`)
+        logInfo('========================')
+      } else {
+        logInfo('[DRY RUN] Would connect to database and retrieve connection details')
+      }
 
-      // Step 2: Schema verification
-      const schemaExists = await verifySchema(client, targetDbName)
+      let schemaExists = false
+      if (!dryRun) {
+        schemaExists = await verifySchema(client, targetDbName)
+      } else {
+        logInfo('[DRY RUN] Would verify schema existence')
+        schemaExists = true // Assume schema exists for dry run
+      }
 
-      // Step 3: Clear existing data before import
-      await clearDatabaseSimple(client)
+      if (!dryRun) {
+        await backupDatabase(targetDbName, '../dev-backups')
+      } else {
+        logInfo(`[DRY RUN] Would backup database ${targetDbName} to 'dev-backups'`)
+      }
+      
+      if (!dryRun) {
+        await clearDatabaseSimple(client, dryRun)
+      } else {
+        logInfo('[DRY RUN] Would clear database tables while preserving schema and respecting ETL/Liquibase protections')
+      }
 
-      // Step 4: Process SQL file
       const dataOnlyMode = schemaExists
       if (dataOnlyMode) {
         logInfo('Schema already exists - processing for data-only import')
@@ -71,80 +88,102 @@ async function uploadToDev () {
 
       logInfo(`Processing SQL dump file: ${filePath} (${formatFileSize(fs.statSync(filePath).size)})`)
 
-      const processingResult = await withStallDetection(
-        () => processForAzure(filePath, sourceDbName, targetDbName, dataOnlyMode),
-        'SQL processing',
-        120 // 2 minute stall threshold
-      )
+      let processingResult
+      if (!dryRun) {
+        processingResult = await withStallDetection(
+          () => processForAzure(filePath, sourceDbName, targetDbName, dataOnlyMode, dryRun),
+          'SQL processing',
+          120 // 2 minute stall threshold
+        )
+      } else {
+        logInfo('[DRY RUN] Would process SQL file for Azure compatibility')
+        processingResult = { 
+          processedFilePath: `${filePath}.processed`,
+          stats: { 
+            copyBlocksConverted: 'X', 
+            copyRowsConverted: 1000 // Mock value for dry run
+          }
+        }
+      }
 
       const { processedFilePath, stats } = processingResult
 
       logInfo(`SQL file processed: ${stats.copyBlocksConverted} COPY blocks, ${stats.copyRowsConverted} rows converted`)
-      logInfo(`Processed file size: ${formatFileSize(fs.statSync(processedFilePath).size)}`)
+      if (!dryRun) {
+        logInfo(`Processed file size: ${formatFileSize(fs.statSync(processedFilePath).size)}`)
+      } else {
+        logInfo('[DRY RUN] Would report processed file size')
+      }
 
-      // Check if the dataset is large and needs special handling
       const MAX_ROWS_PER_TRANSACTION = 50000
       if (stats.copyRowsConverted > MAX_ROWS_PER_TRANSACTION) {
         logInfo(`Large dataset detected (${stats.copyRowsConverted} rows), implementing batched processing`)
       }
 
-      // Step 5: First try to parse the SQL file to get statements
-      logInfo('Parsing SQL file into executable statements...')
-      const errorLogFile = `${processedFilePath}.errors.log`
-      const errorStream = fs.createWriteStream(errorLogFile)
+      let statements = []
 
-      // Create a progress reporting callback
-      let currentPosition = 0
-      const progressCallback = (position) => {
-        currentPosition = position
+      if (!dryRun) {
+        logInfo('Parsing SQL file into executable statements...')
+        const errorLogFile = `${processedFilePath}.errors.log`
+        const errorStream = fs.createWriteStream(errorLogFile)
+
+        let currentPosition = 0
+        const progressCallback = (position) => {
+          currentPosition = position
+        }
+
+        statements = await withStallDetection(
+          () => parseAndProcessSqlFile(
+            processedFilePath,
+            progressCallback,
+            errorStream,
+            stats.copyRowsConverted > MAX_ROWS_PER_TRANSACTION
+          ),
+          'SQL parsing',
+          120 // 2 minute stall threshold
+        )
+
+        logInfo(`Successfully parsed ${statements.length} SQL statements from file`)
+      } else {
+        logInfo('[DRY RUN] Would parse SQL file into executable statements')
       }
 
-      // Parse SQL file into statements
-      const statements = await withStallDetection(
-        () => parseAndProcessSqlFile(
-          processedFilePath,
-          progressCallback,
-          errorStream,
-          stats.copyRowsConverted > MAX_ROWS_PER_TRANSACTION
-        ),
-        'SQL parsing',
-        120 // 2 minute stall threshold
-      )
-
-      logInfo(`Successfully parsed ${statements.length} SQL statements from file`)
-
-      // Step 6: Execute using dependency-aware loading to avoid constraint errors
-      logInfo('Using dependency-aware loading to handle foreign key constraints...')
-
-      const results = await withStallDetection(
-        () => loadInDependencyOrder(client, statements),
-        'SQL execution with dependency ordering',
-        180 // 3 minute stall threshold
-      )
+      let results = { rowsInserted: 0, success: 0, errors: 0 }
+      if (!dryRun) {
+        logInfo('Using dependency-aware loading to handle foreign key constraints...')
+        results = await withStallDetection(
+          () => loadInDependencyOrder(client, statements, dryRun),
+          'SQL execution with dependency ordering',
+          180 // 3 minute stall threshold
+        )
+      } else {
+        logInfo('[DRY RUN] Would execute SQL statements using dependency-aware loading')
+        results = { rowsInserted: 'X', success: 'X', errors: 0 }
+      }
 
       const insertCount = results.rowsInserted
 
       const dbDuration = Math.round((Date.now() - dbStartTime) / 1000)
-      logInfo(`✅ Successfully restored ${sourceDbName} to ${targetDbName}`)
-      logInfo(`📊 Results: ${insertCount} rows inserted (${results.success} successful operations, ${results.errors} errors) in ${formatDuration(dbDuration)}`)
+      logInfo(`${dryRun ? '[DRY RUN] Would complete restoration of' : '✅ Successfully restored'} ${sourceDbName} to ${targetDbName}`)
+      logInfo(`📊 ${dryRun ? 'Estimated' : 'Actual'} Results: ${insertCount} rows inserted (${results.success} successful operations, ${results.errors} errors) in ${formatDuration(dbDuration)}`)
 
-      // Clean up temp files
-      safeRemoveFile(processedFilePath)
+      if (!dryRun) {
+        safeRemoveFile(processedFilePath)
+      } else {
+        logInfo(`[DRY RUN] Would remove temporary file: ${processedFilePath}`)
+      }
       successCount++
     } catch (error) {
-      logError(`❌ Error processing ${sourceDbName}: ${error.message}`)
+      logError(`❌ Error ${dryRun ? 'simulating' : 'processing'} ${sourceDbName}: ${error.message}`)
       logError(error.stack)
       errorCount++
     } finally {
-      if (client) {
+      if (client && !dryRun) {
         try {
-          // Check which method is available for this connection type
           if (typeof client.release === 'function') {
-            // For connection pools
             client.release()
             logInfo(`Released connection to ${targetDbName}`)
           } else if (typeof client.end === 'function') {
-            // For direct clients
             await client.end()
             logInfo(`Disconnected from ${targetDbName}`)
           }
@@ -157,19 +196,18 @@ async function uploadToDev () {
 
   const totalDuration = Math.round((Date.now() - startTime) / 1000)
   logInfo('\n======== Database Restoration Summary ========')
-  logInfo(`Total time: ${formatDuration(totalDuration)}`)
-  logInfo(`✅ Success: ${successCount} databases`)
+  logInfo(`${dryRun ? '[DRY RUN]' : 'Actual'} Total time: ${formatDuration(totalDuration)}`)
+  logInfo(`${dryRun ? '[DRY RUN] Would complete' : '✅ Success:'} ${successCount} databases`)
   if (errorCount) logInfo(`❌ Failures: ${errorCount} databases`)
   logInfo('==========================================')
 
   return errorCount === 0
 }
 
-async function withStallDetection (fn, operationName, stallThresholdSec = 120) {
+async function withStallDetection(fn, operationName, stallThresholdSec = 120) {
   let lastActivityTime = Date.now()
   let isComplete = false
 
-  // Create heartbeat function to check for stalls
   const stallDetector = setInterval(() => {
     const stallTime = Math.round((Date.now() - lastActivityTime) / 1000)
 
@@ -177,14 +215,12 @@ async function withStallDetection (fn, operationName, stallThresholdSec = 120) {
       logInfo(`⚠️ Possible stall detected in ${operationName} (${stallTime} seconds without progress)`)
       logInfo(`Current memory usage: ${formatFileSize(process.memoryUsage().heapUsed)} heap / ${formatFileSize(process.memoryUsage().rss)} total`)
 
-      // For Azure PostgreSQL, long-running operations might be throttled
       if (stallTime > stallThresholdSec * 2) {
         logInfo(`⚠️ Extended stall in ${operationName} - check Azure portal for resource limitations or throttling events`)
       }
     }
   }, 30000) // Check every 30 seconds
 
-  // Progress monitoring function wrapper
   const updateActivity = () => { lastActivityTime = Date.now() }
   const originalLog = console.log
   console.log = (...args) => {
@@ -193,19 +229,16 @@ async function withStallDetection (fn, operationName, stallThresholdSec = 120) {
   }
 
   try {
-    // Run the actual function
     const result = await fn()
     isComplete = true
     return result
   } finally {
-    // Cleanup
     clearInterval(stallDetector)
     console.log = originalLog
   }
 }
 
-async function verifySchema (client, dbName) {
-  // Check if essential tables exist
+async function verifySchema(client, dbName) {
   const { rows } = await client.query(`
     SELECT COUNT(*) as table_count
     FROM pg_tables
@@ -218,11 +251,14 @@ async function verifySchema (client, dbName) {
   return tableCount > 0
 }
 
-/**
- * Extract schema-only SQL from a full dump
- */
-async function extractSchemaOnly (sqlFile, targetDb) {
+async function extractSchemaOnly(sqlFile, targetDb, dryRun = false) {
   const outputFile = `/tmp/schema_only_${targetDb}_${Date.now()}.sql`
+  
+  if (dryRun) {
+    logInfo(`[DRY RUN] Would extract schema from ${sqlFile} to ${outputFile}`)
+    return outputFile
+  }
+  
   const writeStream = fs.createWriteStream(outputFile)
 
   return new Promise((resolve, reject) => {
@@ -238,7 +274,6 @@ async function extractSchemaOnly (sqlFile, targetDb) {
     writeStream.write('-- SCHEMA ONLY IMPORT\n\n')
 
     lineReader.on('line', (line) => {
-      // Skip COPY data blocks
       if (line.startsWith('COPY ')) {
         inCopy = true
         writeStream.write(line + '\n')
@@ -253,12 +288,10 @@ async function extractSchemaOnly (sqlFile, targetDb) {
         return
       }
 
-      // Skip INSERT statements
       if (line.trim().startsWith('INSERT INTO')) {
         return
       }
 
-      // Include CREATE TABLE and other schema statements
       writeStream.write(line + '\n')
       if (line.includes('CREATE TABLE') || line.includes('CREATE INDEX')) {
         statementCount++
@@ -276,11 +309,13 @@ async function extractSchemaOnly (sqlFile, targetDb) {
   })
 }
 
-/**
- * Applies schema to target database
- */
-async function applySchema (client, schemaFile) {
+async function applySchema(client, schemaFile, dryRun = false) {
   logInfo('Applying schema to target database')
+
+  if (dryRun) {
+    logInfo(`[DRY RUN] Would apply schema from ${schemaFile} to database`)
+    return { success: 0, errors: 0 }
+  }
 
   const lineReader = require('readline').createInterface({
     input: fs.createReadStream(schemaFile, { encoding: 'utf8' }),
@@ -294,7 +329,6 @@ async function applySchema (client, schemaFile) {
   await client.query('BEGIN')
 
   for await (const line of lineReader) {
-    // Skip comments
     if (line.trim().startsWith('--')) {
       continue
     }
@@ -306,7 +340,6 @@ async function applySchema (client, schemaFile) {
         await client.query(statement)
         successCount++
       } catch (err) {
-        // Ignore errors for now - some might be expected
         errorCount++
       }
       statement = ''
@@ -315,29 +348,28 @@ async function applySchema (client, schemaFile) {
 
   await client.query('COMMIT')
   logInfo(`Schema applied: ${successCount} statements executed, ${errorCount} errors (warnings)`)
+  
+  return { success: successCount, errors: errorCount }
 }
 
-/**
- * Clears all data from database tables while respecting ETL and liquibase protection
- */
-async function clearDatabaseSimple (client) {
+async function clearDatabaseSimple(client, dryRun = false) {
   try {
-    // Step 1: Get all tables
-    const { rows } = await client.query(`
+    const { rows } = dryRun ? { rows: [] } : await client.query(`
       SELECT tablename 
       FROM pg_tables 
       WHERE schemaname = 'public'
     `)
 
-    if (rows.length === 0) {
+    if (dryRun) {
+      logInfo('[DRY RUN] Would query database for all public tables')
+    } else if (rows.length === 0) {
       logInfo('No tables found to clear')
       return
+    } else {
+      logInfo(`Found ${rows.length} tables in database`)
     }
 
-    logInfo(`Found ${rows.length} tables in database`)
-
-    // Filter out ETL tables and Liquibase tables
-    const tablesToClear = rows.filter(row => {
+    const tablesToClear = dryRun ? [] : rows.filter(row => {
       const isEtlTable = row.tablename.toLowerCase().startsWith(ETL_TABLE_PREFIX) ||
                          row.tablename.startsWith(ETL_TABLE_PREFIX.toUpperCase())
       const isLiquibaseTable = PROTECTED_TABLES.includes(row.tablename.toLowerCase())
@@ -355,102 +387,125 @@ async function clearDatabaseSimple (client) {
       return true
     })
 
-    logInfo(`After ETL protection, will clear ${tablesToClear.length} of ${rows.length} tables`)
-
-    // Step 2: Begin transaction
-    await client.query('BEGIN')
-
-    // Step 3: Get table relationships to determine proper deletion order
-    const { rows: tableRelationships } = await client.query(`
-      SELECT 
-        tc.table_name, 
-        ccu.table_name AS referenced_table
-      FROM 
-        information_schema.table_constraints AS tc 
-        JOIN information_schema.constraint_column_usage AS ccu
-          ON ccu.constraint_name = tc.constraint_name
-      WHERE 
-        tc.constraint_type = 'FOREIGN KEY' 
-        AND tc.table_schema = 'public'
-    `)
-
-    const dependencyGraph = {}
-    for (const { tablename } of tablesToClear) {
-      dependencyGraph[tablename] = []
+    if (dryRun) {
+      logInfo('[DRY RUN] Would filter tables based on ETL and Liquibase protection rules')
+    } else {
+      logInfo(`After ETL protection, will clear ${tablesToClear.length} of ${rows.length} tables`)
     }
 
-    for (const rel of tableRelationships) {
-      if (dependencyGraph[rel.table_name] && dependencyGraph[rel.referenced_table]) {
-        dependencyGraph[rel.table_name].push(rel.referenced_table)
+    if (!dryRun) {
+      await client.query('BEGIN')
+    } else {
+      logInfo('[DRY RUN] Would begin transaction')
+    }
+
+    if (dryRun) {
+      logInfo('[DRY RUN] Would query table relationships to determine deletion order')
+    } else {
+      const { rows: tableRelationships } = await client.query(`
+        SELECT 
+          tc.table_name, 
+          ccu.table_name AS referenced_table
+        FROM 
+          information_schema.table_constraints AS tc 
+          JOIN information_schema.constraint_column_usage AS ccu
+            ON ccu.constraint_name = tc.constraint_name
+        WHERE 
+          tc.constraint_type = 'FOREIGN KEY' 
+          AND tc.table_schema = 'public'
+      `)
+
+      const dependencyGraph = {}
+      for (const { tablename } of tablesToClear) {
+        dependencyGraph[tablename] = []
       }
-    }
 
-    // Find tables with no dependencies first
-    const processOrder = []
-    const visited = new Set()
-
-    const visit = (table) => {
-      if (visited.has(table)) return
-      visited.add(table)
-
-      if (dependencyGraph[table]) {
-        for (const dependency of dependencyGraph[table]) {
-          visit(dependency)
+      for (const rel of tableRelationships) {
+        if (dependencyGraph[rel.table_name] && dependencyGraph[rel.referenced_table]) {
+          dependencyGraph[rel.table_name].push(rel.referenced_table)
         }
       }
 
-      processOrder.push(table)
-    }
+      const processOrder = []
+      const visited = new Set()
 
-    for (const table in dependencyGraph) {
-      if (!visited.has(table)) {
-        visit(table)
+      const visit = (table) => {
+        if (visited.has(table)) return
+        visited.add(table)
+
+        if (dependencyGraph[table]) {
+          for (const dependency of dependencyGraph[table]) {
+            visit(dependency)
+          }
+        }
+
+        processOrder.push(table)
       }
-    }
 
-    // Now process in reverse order (leaf nodes first)
-    for (const tablename of processOrder.reverse()) {
-      try {
-        // Try Azure-optimized truncation first
-        await client.query(`TRUNCATE TABLE "${tablename}" CASCADE`)
-        logInfo(`Cleared table: ${tablename}`)
-      } catch (err) {
-        logInfo(`Note: Could not clear table ${tablename}: ${err.message}. Trying alternative approach.`)
+      for (const table in dependencyGraph) {
+        if (!visited.has(table)) {
+          visit(table)
+        }
+      }
+
+      for (const tablename of processOrder.reverse()) {
         try {
-          // On Azure PostgreSQL, sometimes DELETE works better than TRUNCATE
-          await client.query(`DELETE FROM "${tablename}"`)
-          logInfo(`Cleared table: ${tablename} (using DELETE)`)
-        } catch (err2) {
-          logError(`Failed to clear table ${tablename}: ${err2.message}`)
+          await client.query(`TRUNCATE TABLE "${tablename}" CASCADE`)
+          logInfo(`Cleared table: ${tablename}`)
+        } catch (err) {
+          logInfo(`Note: Could not clear table ${tablename}: ${err.message}. Trying alternative approach.`)
+          try {
+            await client.query(`DELETE FROM "${tablename}"`)
+            logInfo(`Cleared table: ${tablename} (using DELETE)`)
+          } catch (err2) {
+            logError(`Failed to clear table ${tablename}: ${err2.message}`)
+          }
         }
       }
     }
 
-    await client.query('COMMIT')
-    logInfo('Tables cleared successfully')
+    if (!dryRun) {
+      await client.query('COMMIT')
+      logInfo('Tables cleared successfully')
+    } else {
+      logInfo('[DRY RUN] Would commit transaction after clearing tables')
+    }
   } catch (err) {
-    await client.query('ROLLBACK')
+    if (!dryRun) {
+      await client.query('ROLLBACK')
+    } else {
+      logInfo('[DRY RUN] Would rollback transaction due to error')
+    }
     throw err
   }
 }
 
-/**
- * Format file size in human readable format
- */
-function formatFileSize (bytes) {
+function formatFileSize(bytes) {
   if (bytes < 1024) return bytes + ' bytes'
   else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
   else if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
   else return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB'
 }
 
-/**
- * Format duration in human readable format
- */
-function formatDuration (seconds) {
+function formatDuration(seconds) {
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = seconds % 60
   return `${minutes}m ${remainingSeconds}s`
+}
+
+function parseCommandLineArgs() {
+  const args = process.argv.slice(2)
+  const options = {
+    dryRun: process.env.DRY_RUN === 'true' || false
+  }
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--dry-run') {
+      options.dryRun = true
+    }
+  }
+
+  return options
 }
 
 module.exports = {
@@ -462,7 +517,9 @@ module.exports = {
 
 // Allow direct execution
 if (require.main === module) {
-  uploadToDev()
+  const { dryRun } = parseCommandLineArgs()
+  
+  uploadToDev(dryRun)
     .then(success => process.exit(success ? 0 : 1))
     .catch(error => {
       logError(`Upload process failed: ${error}`)

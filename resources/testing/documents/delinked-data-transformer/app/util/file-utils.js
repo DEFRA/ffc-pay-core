@@ -2,7 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const { logInfo } = require('./logger')
 
-function findSqlDumpFiles (baseDir = '../../dumps/', pattern = '_full.sql') {
+function findSqlDumpFiles (baseDir = '../dumps/', pattern = '_full.sql') {
   const dumpsDir = path.resolve(process.cwd(), baseDir)
   logInfo(`Looking for SQL dump files in: ${dumpsDir}`)
 
