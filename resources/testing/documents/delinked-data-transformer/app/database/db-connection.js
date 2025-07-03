@@ -1,12 +1,6 @@
 const { Pool } = require('pg')
 const { DefaultAzureCredential } = require('@azure/identity')
 
-/**
- * Creates an enhanced database connection with the broadest possible permissions
- * @param {string} database - Database name to connect to
- * @param {Object} options - Additional connection options
- * @returns {Promise<Object>} Database connection object
- */
 async function createConnection (database = 'postgres', options = {}) {
   console.log(`---- CONNECTION ATTEMPT STARTED [${new Date().toISOString()}] ----`)
   console.log(`Attempting to connect to database: ${database}`)
@@ -17,7 +11,6 @@ async function createConnection (database = 'postgres', options = {}) {
   }
 
   console.log('Starting Azure token acquisition...')
-  // Get an enhanced Azure credential with broader permissions
   const tokenStartTime = Date.now()
   let token
   try {
@@ -92,14 +85,11 @@ async function createConnection (database = 'postgres', options = {}) {
   }
 }
 
-  // Get an Azure token enhanced for broader permissions
-
 async function getEnhancedAzureToken () {
   try {
     console.log('Attempting enhanced Azure authentication (Strategy 1)...')
     console.log(`Using tenant ID: ${process.env.DEV_TENANT_ID || 'Not specified'}`)
 
-    // Strategy 1: Enhanced DefaultAzureCredential with broader scope
     const credential = new DefaultAzureCredential({
       tenantId: process.env.DEV_TENANT_ID,
       managedIdentityClientId: process.env.AZURE_CLIENT_ID,
@@ -110,7 +100,6 @@ async function getEnhancedAzureToken () {
 
     console.log('DefaultAzureCredential instance created, requesting token...')
 
-    // Request token with broader database scope
     const startTime = Date.now()
     const token = await credential.getToken('https://ossrdbms-aad.database.windows.net/.default')
     console.log(`Token acquired in ${Date.now() - startTime}ms`)
@@ -120,7 +109,6 @@ async function getEnhancedAzureToken () {
     console.error('Error getting enhanced Azure token:', error.message)
     console.error('Token error details:', JSON.stringify(error, null, 2))
 
-    // Strategy 2: Default credential with basic scope
     try {
       console.log('Falling back to basic Azure authentication (Strategy 2)...')
       const credential = new DefaultAzureCredential({
@@ -167,19 +155,16 @@ async function listDatabases (patterns = null) {
 
 async function getDatabaseStats (connection) {
   try {
-    // Get total database size
     const sizeResult = await connection.query(`
       SELECT pg_database_size($1) AS size
     `, [connection.database])
 
-    // Get table count
     const tableCountResult = await connection.query(`
       SELECT count(*) AS table_count 
       FROM information_schema.tables 
       WHERE table_schema = 'public'
     `)
 
-    // Get top 5 largest tables for reporting
     const largeTablesResult = await connection.query(`
       SELECT 
         table_name, 

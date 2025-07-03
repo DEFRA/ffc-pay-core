@@ -5,31 +5,39 @@ const path = require('path')
 const { logInfo, logProgress } = require('../util/logger')
 const { EXCLUDE_ETL_TABLES, ETL_DATABASES, PROTECTED_TABLES } = require('../constants/etl-protection')
 
-async function processForAzure(inputFile, sourceDb, targetDb, dataOnlyMode = false) {
-  const tempSqlFile = path.join(os.tmpdir(), `processed_${path.basename(inputFile)}`)
+async function processForAzure(filePath, sourceDbName, targetDbName, dataOnlyMode = false, dryRun = false) {
+  if (dryRun) {
+    logInfo(`[DRY RUN] Would process SQL file ${filePath} for Azure compatibility`)
+    
+    return {
+      processedFilePath: `${filePath}.processed.sql`,
+      stats: { 
+        copyBlocksConverted: 'X (dry run)',
+        copyRowsConverted: 'X (dry run)'
+      }
+    }
+  }
+  const tempSqlFile = path.join(os.tmpdir(), `processed_${path.basename(filePath)}`)
   const outputStream = fs.createWriteStream(tempSqlFile)
 
-  logInfo(`Processing SQL file for Azure compatibility: ${inputFile}`)
+  logInfo(`Processing SQL file for Azure compatibility: ${filePath}`)
   if (dataOnlyMode) {
     logInfo('🔄 DATA-ONLY MODE: Schema statements will be filtered out')
   }
 
   try {
-    // Add SQL to disable constraints before and enable after the data import
     outputStream.write('-- Disable triggers and constraints for faster import\n')
     outputStream.write('SET session_replication_role = replica;\n\n')
     outputStream.write('-- Processing dump file for better insertion\n\n')
 
-    const stats = await processLargeFile(inputFile, outputStream, sourceDb, targetDb, dataOnlyMode)
+    const stats = await processLargeFile(filePath, outputStream, sourceDbName, targetDbName, dataOnlyMode)
 
-    // Add SQL to re-enable constraints after import
     outputStream.write('\n-- Re-enable triggers and constraints\n')
     outputStream.write('SET session_replication_role = DEFAULT\n')
 
     logInfo(`Processed SQL written to ${tempSqlFile}`)
 
-    // Final verification - SAFEGUARD 4
-    if (EXCLUDE_ETL_TABLES && ETL_DATABASES.some(db => sourceDb.toLowerCase() === db.toLowerCase())) {
+    if (EXCLUDE_ETL_TABLES && ETL_DATABASES.some(db => sourceDbName.toLowerCase() === db.toLowerCase())) {
       logInfo('🔍 ETL VERIFICATION: Performing final ETL protection verification...')
       const etlVerification = await verifyNoOperationsOnProtectedTables(tempSqlFile, 'etl')
       if (!etlVerification.safe) {
@@ -38,7 +46,6 @@ async function processForAzure(inputFile, sourceDb, targetDb, dataOnlyMode = fal
       logInfo('✅ ETL VERIFICATION: No ETL operations found in processed SQL')
     }
     
-    // Liquibase verification
     logInfo('🔍 LIQUIBASE VERIFICATION: Performing final Liquibase protection verification...')
     const liquibaseVerification = await verifyNoOperationsOnProtectedTables(tempSqlFile, 'liquibase')
     if (!liquibaseVerification.safe) {
@@ -68,12 +75,10 @@ async function verifyNoOperationsOnProtectedTables(sqlFile, protectionType) {
     let count = 0
     const dangerousLines = []
     
-    // Choose the appropriate pattern based on protection type
     let pattern
     if (protectionType === 'etl') {
       pattern = /(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i
     } else if (protectionType === 'liquibase') {
-      // Create regex pattern for Liquibase tables
       const liquibaseTables = PROTECTED_TABLES.join('|')
       pattern = new RegExp(`(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)\\s+(?:public\\.)?("?(${liquibaseTables})"?|(${liquibaseTables})[\\s,);])`, 'i')
     }
@@ -117,7 +122,6 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
       crlfDelay: Infinity
     })
 
-    // Stats for reporting
     const stats = {
       lines: 0,
       originalInserts: 0,
@@ -138,26 +142,21 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
     let skipCurrentStatement = false
     let currentStatement = ''
 
-    // ETL protection
     const isEtlDatabase = ETL_DATABASES.some(db => sourceDb.toLowerCase() === db.toLowerCase())
     const etlTablePattern = /^(?:public\.)?(["']?etl[^"']*["']?|etl[^\s(]*)/i
     
-    // Liquibase protection
     const liquibaseTablePattern = new RegExp(`^(?:public\\.)?(?:["']?(${PROTECTED_TABLES.join('|')})["']?|(${PROTECTED_TABLES.join('|')})[\\s,);])`, 'i')
 
     rl.on('line', (line) => {
       stats.lines++
 
-      // Skip comment lines
       if (line.trim().startsWith('--')) {
         stats.commentLines++
         outputStream.write(line + '\n')
         return
       }
 
-      // Handle schema-related statements in data-only mode
       if (dataOnlyMode && !inCopy) {
-        // If we're building a schema statement
         if (!skipCurrentStatement) {
           if (line.trim().match(/^(CREATE|ALTER|DROP|COMMENT ON)/i)) {
             skipCurrentStatement = true
@@ -166,10 +165,8 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
             return
           }
         } else {
-          // Already skipping a schema statement
           currentStatement += line
           
-          // Check if the statement ends here
           if (line.trim().endsWith(';')) {
             skipCurrentStatement = false
             outputStream.write(`-- DATA-ONLY MODE: Skipped schema statement: ${currentStatement.substring(0, 50)}...\n`)
@@ -178,7 +175,6 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
         }
       }
 
-      // ETL protection - skip operations on ETL tables
       if (EXCLUDE_ETL_TABLES && isEtlDatabase) {
         const match = line.match(etlTablePattern)
         if (match && !line.trim().startsWith('--')) {
@@ -191,7 +187,6 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
         }
       }
       
-      // Liquibase protection - skip operations on Liquibase tables
       const liquibaseMatch = line.match(liquibaseTablePattern)
       if (liquibaseMatch && !line.trim().startsWith('--')) {
         if (line.match(/(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)/i)) {
@@ -202,19 +197,16 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
         }
       }
 
-      // Process COPY blocks and convert to INSERT VALUES
       if (line.startsWith('COPY ') && line.includes(' FROM stdin;')) {
         inCopy = true
         collectingCopyData = true
         copyBuffer = []
         
-        // Extract table name and columns from COPY statement
         const copyMatch = line.match(/COPY\s+([\w."]+)\s*\((.*?)\)\s+FROM\s+stdin;/)
         if (copyMatch) {
           currentCopyTable = copyMatch[1]
           currentCopyColumns = copyMatch[2].split(',').map(col => col.trim())
           
-          // Skip COPY for Liquibase tables
           const tableName = currentCopyTable.replace(/^public\./, '').replace(/"/g, '')
           if (PROTECTED_TABLES.some(t => t.toLowerCase() === tableName.toLowerCase())) {
             logInfo(`⚠️ LIQUIBASE PROTECTION: Skipping COPY block for ${currentCopyTable}`)
@@ -222,30 +214,24 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
             return
           }
           
-          // Output a comment about the conversion
           outputStream.write(`-- Converting COPY to INSERTs for table ${currentCopyTable}\n`)
           stats.copyBlocksConverted++
         } else {
           logInfo(`Warning: Could not parse COPY statement: ${line}`)
-          // Fall back to just outputting the line
           outputStream.write(line + '\n')
         }
         return
       }
 
-      // Process the contents of a COPY block
       if (inCopy) {
         if (line === '\\.') {
-          // End of COPY block
           inCopy = false
           
-          // Skip if this is a protected table
           if (skipLine) {
             skipLine = false
             return
           }
           
-          // Generate INSERT statements for the collected data
           let currentInsert = `INSERT INTO ${currentCopyTable} (${currentCopyColumns.join(', ')}) VALUES\n`
           const VALUES_PER_INSERT = 500 // Adjust based on performance needs
           let valueCount = 0
@@ -253,7 +239,6 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
           copyBuffer.forEach((row, index) => {
             const formattedRow = formatCopyRowAsValues(row)
             
-            // Add comma if not the first row in this INSERT
             if (valueCount > 0) {
               currentInsert += ',\n'
             }
@@ -261,21 +246,18 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
             currentInsert += formattedRow
             valueCount++
             
-            // Start a new INSERT statement every VALUES_PER_INSERT rows
             if (valueCount >= VALUES_PER_INSERT && index < copyBuffer.length - 1) {
               currentInsert += ';\n'
               outputStream.write(currentInsert)
               currentInsert = `INSERT INTO ${currentCopyTable} (${currentCopyColumns.join(', ')}) VALUES\n`
               valueCount = 0
               
-              // Report progress on large tables
               if (copyBuffer.length >= 10000 && index % 10000 === 0) {
                 logInfo(`Converted ${index} COPY rows for ${currentCopyTable} (partial batch)`)
               }
             }
           })
           
-          // Write the last INSERT statement if there's any data
           if (valueCount > 0) {
             currentInsert += ';'
             outputStream.write(currentInsert + '\n')
@@ -292,11 +274,9 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
         return
       }
 
-      // If not in a COPY block or skip mode, just write the line
       if (!skipLine) {
         outputStream.write(line + '\n')
         
-        // Count original INSERT statements
         if (line.trim().startsWith('INSERT INTO')) {
           stats.originalInserts++
         }
@@ -325,12 +305,10 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
 function formatCopyRowAsValues(row) {
   const cells = row.split('\t')
   const formattedCells = cells.map(cell => {
-    // Handle NULL values
     if (cell === '\\N') {
       return 'NULL'
     }
     
-    // Handle strings safely for SQL
     const needsQuoting = !/^-?\d+(\.\d+)?$/.test(cell) && 
                        cell !== 'true' && 
                        cell !== 'false' &&
@@ -339,7 +317,6 @@ function formatCopyRowAsValues(row) {
                        !cell.endsWith('\'')
     
     if (needsQuoting) {
-      // Escape single quotes by doubling them
       const escaped = cell.replace(/'/g, "''")
       return `'${escaped}'`
     }

@@ -13,11 +13,16 @@ const MAX_CONCURRENT_DATABASES = Math.min(os.cpus().length, 3) // Reduced from 4
  * RESTORE INSTRUCTIONS for plain SQL dumps:
  * psql --dbname=<target_db> --file=<filename.sql>
  */
-async function dumpAllTestTables () {
+async function dumpAllTestTables (dryRun = false) {
   console.log(`Running with concurrency: Up to ${MAX_CONCURRENT_DATABASES} databases in parallel`)
+  if (dryRun) {
+    console.log('*** DRY RUN MODE ENABLED: No actual dumps will be performed. ***')
+  }
 
-  const dumpDir = path.resolve(process.cwd(), '../../dumps')
-  fs.mkdirSync(dumpDir, { recursive: true })
+  const dumpDir = path.resolve(process.cwd(), '../dumps')
+  if (!dryRun) {
+    fs.mkdirSync(dumpDir, { recursive: true })
+  }
 
   try {
     console.log('--- Database Discovery Diagnostics ---')
@@ -52,7 +57,7 @@ async function dumpAllTestTables () {
       const results = []
       for (const database of batch) {
         try {
-          const result = await processDatabase(database, dumpDir)
+          const result = await processDatabase(database, dumpDir, dryRun)
           results.push(result)
         } catch (error) {
           console.error(`Batch processing error on database ${database}:`, error)
@@ -74,9 +79,6 @@ async function dumpAllTestTables () {
   }
 }
 
-/**
- * Gets a list of tables with the ETL prefix in the specified database
- */
 async function getEtlTables (dbConnection) {
   try {
     console.log(`Identifying ETL tables in ${dbConnection.database}...`)
@@ -98,27 +100,29 @@ async function getEtlTables (dbConnection) {
     return tables
   } catch (error) {
     console.error(`Error identifying ETL tables: ${error.message}`)
-    // Return empty array but don't fail - safer to continue with extra caution
     return []
   }
 }
 
-/**
- * Process a single database dump
- */
-async function processDatabase (database, dumpDir) {
+async function processDatabase (database, dumpDir, dryRun = false) {
   console.log(`\nProcessing database: ${database}`)
   const dbConnection = await createConnection(database)
 
   try {
     const dbDumpDir = path.join(dumpDir, database)
-    fs.mkdirSync(dbDumpDir, { recursive: true })
+    if (!dryRun) {
+      fs.mkdirSync(dbDumpDir, { recursive: true })
+    }
 
     const fullDumpPath = path.join(dbDumpDir, `${database}_full.sql`)
-    await performFullDump(dbConnection, fullDumpPath)
-    console.log(`Completed full dump of ${database} to ${fullDumpPath}`)
-
-    return { database, success: true }
+    if (dryRun) {
+      console.log(`[DRY RUN] Would perform full dump of ${database} to ${fullDumpPath}`)
+      return { database, success: true, dryRun: true }
+    } else {
+      await performFullDump(dbConnection, fullDumpPath)
+      console.log(`Completed full dump of ${database} to ${fullDumpPath}`)
+      return { database, success: true }
+    }
   } catch (error) {
     console.error(`Error processing database ${database}:`, error)
     return { database, success: false, error }
@@ -139,7 +143,6 @@ async function performFullDump (dbConnection, outputPath) {
         const dbStats = await getDatabaseStats(dbConnection)
         console.log(`Database ${dbConnection.database} stats: ${(dbStats.totalSizeMB).toFixed(2)} MB, ${dbStats.tableCount} tables`)
 
-        // Add ETL tables protection - SAFEGUARD 1
         let etlTables = []
         let isEtlDatabase = false
 
@@ -169,7 +172,6 @@ async function performFullDump (dbConnection, outputPath) {
           fs.mkdirSync(outputDir, { recursive: true })
         }
 
-        // Configure arguments for pg_dump with plain format
         const args = [
           '-h', config.host,
           '-p', config.port,
@@ -185,42 +187,35 @@ async function performFullDump (dbConnection, outputPath) {
         ]
         console.log(`Database check: '${dbConnection.database}' is in ETL_DATABASES: ${ETL_DATABASES.some(db => dbConnection.database.toLowerCase() === db.toLowerCase())}`)
 
-        // Add ETL table exclusions - SAFEGUARD 2
         if (isEtlDatabase && etlTables.length > 0) {
           console.log(`⚠️ ETL PROTECTION: Adding pg_dump exclusions for ${etlTables.length} ETL tables`)
           etlTables.forEach(table => {
-            // Use double quotes for identifiers with mixed case
             args.push('--exclude-table', `public."${table}"`)
             args.push('--exclude-table-data', `public."${table}"`)
           })
         }
         
-        // Add ETL sequences exclusion
         if (isEtlDatabase) {
           console.log(`⚠️ ETL SEQUENCE PROTECTION: Excluding ETL-related sequences`)
           
-          // Use a pattern-based approach to catch all ETL-related sequences
           args.push('--exclude-table-data', `public."etl*_seq*"`)
           args.push('--exclude-table', `public."etl*_seq*"`)
           
-          // Also catch uppercase ETL sequences
           args.push('--exclude-table-data', `public."ETL*_seq*"`)
           args.push('--exclude-table', `public."ETL*_seq*"`)
           
-          // Match the specific naming pattern in your dump
           args.push('--exclude-table-data', `public."etlStage*_seq*"`)
           args.push('--exclude-table', `public."etlStage*_seq*"`)
         }
 
-        // Add Liquibase table exclusions
         console.log(`⚠️ LIQUIBASE PROTECTION: Adding pg_dump exclusions for Liquibase tracking tables`)
         PROTECTED_TABLES.forEach(table => {
           args.push('--exclude-table', `public."${table}"`)
           args.push('--exclude-table-data', `public."${table}"`)
       })
 
-        if (dbStats.totalSizeMB > 500) { // For databases over 500MB
-          args.push('--data-only') // Only dump data, schema already created
+        if (dbStats.totalSizeMB > 500) {
+          args.push('--data-only')
         }
 
         const pgDump = spawn('pg_dump', args, { env })
@@ -332,7 +327,6 @@ async function performFullDump (dbConnection, outputPath) {
           reject(new Error(`pg_dump process error for ${config.database}: ${error.message}`))
         })
 
-        // Add a timeout for the entire operation
         const dumpTimeout = setTimeout(() => {
           if (pgDump && !pgDump.killed) {
             console.error(`[${new Date().toISOString()}] ERROR: Dump operation timeout after 60 minutes for ${config.database}`)
@@ -354,8 +348,9 @@ module.exports = { dumpAllTestTables }
 
 // Run the script directly when called directly
 if (require.main === module) {
+  const dryRun = process.argv.includes('--dry-run') || process.env.DRY_RUN === 'true'
   console.log('Starting database dump operation...')
-  dumpAllTestTables()
+  dumpAllTestTables(dryRun)
     .then(() => {
       console.log('Database dump completed successfully')
     })
