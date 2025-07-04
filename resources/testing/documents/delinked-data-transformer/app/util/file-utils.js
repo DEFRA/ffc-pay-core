@@ -3,8 +3,13 @@ const path = require('path')
 const { logInfo } = require('./logger')
 
 function findSqlDumpFiles (baseDir = '../../test-dumps/', pattern = '_full.sql') {
-const dumpsDir = path.resolve(__dirname, baseDir)
+  const dumpsDir = path.resolve(__dirname, baseDir)
   logInfo(`Looking for SQL dump files in: ${dumpsDir}`)
+
+  if (!fs.existsSync(dumpsDir)) {
+    logInfo(`SQL dump directory does not exist: ${dumpsDir}`)
+    return []
+  }
 
   const directories = fs.readdirSync(dumpsDir, { withFileTypes: true })
     .filter(d => d.isDirectory())
