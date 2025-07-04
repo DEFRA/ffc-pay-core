@@ -106,5 +106,11 @@ function generateSqlStatements (totalRecords, separateFiles) {
   }
 }
 
-const { recordCount, separate } = validateArgs()
-generateSqlStatements(recordCount, separate)
+if (require.main === module) {
+  const { recordCount, separate } = validateArgs()
+  generateSqlStatements(recordCount, separate)
+}
+
+module.exports = {
+  generateSqlStatements
+}
