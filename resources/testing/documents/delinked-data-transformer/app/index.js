@@ -1,6 +1,7 @@
 const dumpFiles = require('./database/dump-all-test-tables')
 const transformFiles = require('./transform/transform-all')
 const upload = require('./upload/upload-to-dev')
+const dummyData = require('../dummy-data-creation/create-dummy-file')
 const readline = require('readline')
 
 function promptContinue(message = 'Continue to next step? (y/n): ') {
@@ -9,6 +10,16 @@ function promptContinue(message = 'Continue to next step? (y/n): ') {
     rl.question(message, (answer) => {
       rl.close()
       resolve(answer.trim().toLowerCase() === 'y')
+    })
+  })
+}
+
+function promptInput(message, defaultValue) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    rl.question(`${message} (default: ${defaultValue}): `, (answer) => {
+      rl.close()
+      resolve(answer.trim() === '' ? defaultValue : answer.trim())
     })
   })
 }
@@ -60,6 +71,20 @@ async function safeRun(fn, description) {
 const delinkedDataTransformer = async () => {
   try {
     console.log('Starting delinked data transformer process...')
+
+    // DUMMY DATA CREATION
+    if (await promptContinue('Create dummy records file? (y/n): ')) {
+      const recordCountInput = await promptInput('How many records to create?', '25000')
+      const recordCount = parseInt(recordCountInput, 10)
+      if (isNaN(recordCount) || recordCount <= 0) {
+        console.log('Invalid record count, skipping dummy data creation.')
+      } else {
+        const separateFiles = false
+        await safeRun(() => dummyData.generateSqlStatements(recordCount, separateFiles), `creating ${recordCount} dummy records`)
+      }
+    } else {
+      console.log('Skipping dummy data creation.')
+    }
 
     // DUMP
     if (await promptContinue('Run dump step? (y/n): ')) {
