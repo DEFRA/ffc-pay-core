@@ -71,6 +71,13 @@ async function safeRun(fn, description) {
 const delinkedDataTransformer = async () => {
   try {
     console.log('Starting delinked data transformer process...')
+    console.log('This process will run through the following steps:\n' +
+      '1. Create dummy data file if required\n' +
+      '2. Backup TEST database\n' +
+      '3. Create dummy data records\n' +
+      '4. Dump test tables\n' +
+      '5. Transform files\n' +
+      '6. Upload to DEV environment\n')
 
     // DUMMY DATA CREATION
     if (await promptContinue('Create dummy records file? (y/n): ')) {
