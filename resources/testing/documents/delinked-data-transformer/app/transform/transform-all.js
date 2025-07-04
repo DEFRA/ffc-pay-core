@@ -68,7 +68,7 @@ function formatAsCopyStatement (tableInfo, transformedRows) {
 
 function transformAll () {
   console.log('===== SQL Data Transformation Process =====')
-  const dumpDir = path.resolve(process.cwd(), '../dumps')
+  const dumpDir = path.resolve(process.cwd(), '../test-dumps')
   console.log(`Looking for dump files in: ${dumpDir}`)
 
   /*

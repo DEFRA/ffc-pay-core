@@ -19,7 +19,7 @@ async function dumpAllTestTables (dryRun = false) {
     console.log('*** DRY RUN MODE ENABLED: No actual dumps will be performed. ***')
   }
 
-  const dumpDir = path.resolve(process.cwd(), '../dumps')
+  const dumpDir = path.resolve(__dirname, '../test-dumps')
   if (!dryRun) {
     fs.mkdirSync(dumpDir, { recursive: true })
   }

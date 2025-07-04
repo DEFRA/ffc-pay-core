@@ -3,13 +3,42 @@ const transformFiles = require('./transform/transform-all')
 const upload = require('./upload/upload-to-dev')
 const readline = require('readline')
 
-const args = process.argv.slice(2)
-const dryRun = args.includes('--dry-run') || process.env.DRY_RUN === 'true'
-
 function promptContinue(message = 'Continue to next step? (y/n): ') {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
     rl.question(message, (answer) => {
+      rl.close()
+      resolve(answer.trim().toLowerCase() === 'y')
+    })
+  })
+}
+
+function promptSelectUploadType() {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    rl.question(
+      '\nWhich upload would you like to run?\n' +
+      '1. ffc-pay only\n' +
+      '2. ffc-doc only\n' +
+      '3. all (both)\n' +
+      '4. none (finish)\n' +
+      'Enter choice (1/2/3/4): ',
+      (answer) => {
+        rl.close()
+        const choice = answer.trim()
+        if (choice === '1') resolve('ffc-pay')
+        else if (choice === '2') resolve('ffc-doc')
+        else if (choice === '3') resolve('all')
+        else resolve('none')
+      }
+    )
+  })
+}
+
+function promptDryRun() {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    rl.question('Run as dry-run first? (y/n): ', (answer) => {
       rl.close()
       resolve(answer.trim().toLowerCase() === 'y')
     })
@@ -28,20 +57,59 @@ async function safeRun(fn, description) {
   }
 }
 
-const delinkedDataTransformer = async (dryRun = false) => {
+const delinkedDataTransformer = async () => {
   try {
     console.log('Starting delinked data transformer process...')
-    if (dryRun) console.log('🔍 DRY RUN MODE ENABLED')
 
-    if (!await safeRun(() => dumpFiles.dumpAllTestTables(dryRun), 'dumping test tables')) return
-    if (!(await promptContinue('Dump complete. Continue to transform? (y/n): '))) return
+    // DUMP
+    if (await promptContinue('Run dump step? (y/n): ')) {
+      if (!await safeRun(() => dumpFiles.dumpAllTestTables(false), 'dumping test tables')) return
+    } else {
+      console.log('Skipping dump step.')
+    }
 
-    if (!await safeRun(() => transformFiles.transformAll(dryRun), 'transforming files')) return
-    if (!(await promptContinue('Transform complete. Continue to upload? (y/n): '))) return
+    // TRANSFORM
+    if (await promptContinue('Run transform step? (y/n): ')) {
+      if (!await safeRun(() => transformFiles.transformAll(false), 'transforming files')) return
+    } else {
+      console.log('Skipping transform step.')
+    }
 
-    if (!await safeRun(() => upload.uploadToDev(dryRun), 'uploading to DEV')) return
+    // UPLOAD
+    let done = false
+    while (!done) {
+      const uploadType = await promptSelectUploadType()
+      if (uploadType === 'none') {
+        console.log('No upload selected. Process complete.')
+        break
+      }
 
-    console.log('Delinked data transformer process completed successfully.')
+      // Ask if user wants a dry run first
+      const doDryRun = await promptDryRun()
+      let uploadFn
+      if (uploadType === 'ffc-pay') uploadFn = upload.uploadFfcPayToDev
+      else if (uploadType === 'ffc-doc') uploadFn = upload.uploadFfcDocToDev
+      else uploadFn = upload.uploadToDev
+
+      if (doDryRun) {
+        console.log(`\n--- DRY RUN: ${uploadType.toUpperCase()} ---`)
+        await safeRun(() => uploadFn(true), `dry-run uploading ${uploadType.toUpperCase()} to DEV`)
+        const liveRun = await promptContinue('Would you like to run a LIVE upload now? (y/n): ')
+        if (liveRun) {
+          console.log(`\n--- LIVE RUN: ${uploadType.toUpperCase()} ---`)
+          await safeRun(() => uploadFn(false), `uploading ${uploadType.toUpperCase()} to DEV`)
+        }
+      } else {
+        await safeRun(() => uploadFn(false), `uploading ${uploadType.toUpperCase()} to DEV`)
+      }
+
+      // Ask if they want to upload another type
+      const again = await promptContinue('Would you like to run another upload? (y/n): ')
+      if (!again) {
+        console.log('Process complete.')
+        done = true
+      }
+    }
   } catch (error) {
     console.error('Error during delinked data transformation:', error)
   }
@@ -53,10 +121,10 @@ module.exports = {
 
 // Allow direct execution
 if (require.main === module) {
-  delinkedDataTransformer(dryRun)
+  delinkedDataTransformer()
     .then(success => process.exit(success ? 0 : 1))
     .catch(error => {
-      logError(`ETL process failed: ${error}`)
+      console.error(`ETL process failed: ${error}`)
       process.exit(1)
     })
 }

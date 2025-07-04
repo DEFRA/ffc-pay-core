@@ -9,18 +9,24 @@ const { backupDatabase } = require('../database/backup-and-restore')
 const fs = require('fs')
 const os = require('os')
 
-async function uploadToDev(dryRun = false) {
+async function uploadToDev(type = 'all', dryRun = false) {
   if (dryRun) {
     logInfo('🔍 DRY RUN MODE: All operations will be simulated without making actual changes')
   }
   
-  logInfo('Starting database restoration process (data-only approach)...')
+  logInfo(`Starting database restoration process for type: ${type} (data-only approach)...`)
   logInfo(`Running on ${os.hostname()} with Node.js ${process.version}`)
   logInfo(`System resources: ${os.cpus().length} CPUs, ${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB RAM`)
 
+  let dbPatterns = []
+  if (type === 'ffc-pay') dbPatterns = ['ffc-pay-%-dev', 'ffc-pay-%-test']
+  else if (type === 'ffc-doc') dbPatterns = ['ffc-doc-%-dev', 'ffc-doc-%-test']
+  else dbPatterns = ['ffc-doc-%-dev', 'ffc-pay-%-dev', 'ffc-doc-%-test', 'ffc-pay-%-test']
+
+  let targetDatabases = []
   try {
     logInfo('--- Database Discovery ---')
-    const targetDatabases = await listDatabases(['ffc-doc-%-dev', 'ffc-pay-%-dev', 'ffc-doc-%-test', 'ffc-pay-%-test'])
+    targetDatabases = await listDatabases(dbPatterns)
     logInfo(`Found ${targetDatabases.length} available target databases:`)
     logInfo(targetDatabases)
     logInfo('------------------------')
@@ -28,8 +34,12 @@ async function uploadToDev(dryRun = false) {
     logError(`Database discovery failed: ${err.message}`)
   }
 
-  const databaseFiles = findSqlDumpFiles()
-  logInfo(`Found ${databaseFiles.length} database files to process`)
+  const databaseFiles = findSqlDumpFiles().filter(({ sourceDbName }) => {
+    if (type === 'ffc-pay') return sourceDbName.startsWith('ffc-pay')
+    if (type === 'ffc-doc') return sourceDbName.startsWith('ffc-doc')
+    return true
+  })
+  logInfo(`Found ${databaseFiles.length} database files to process for type: ${type}`)
 
   let successCount = 0
   let errorCount = 0
@@ -203,6 +213,10 @@ async function uploadToDev(dryRun = false) {
 
   return errorCount === 0
 }
+
+const uploadFfcPayToDev = (dryRun = false) => uploadToDev('ffc-pay', dryRun)
+const uploadFfcDocToDev = (dryRun = false) => uploadToDev('ffc-doc', dryRun)
+
 
 async function withStallDetection(fn, operationName, stallThresholdSec = 120) {
   let lastActivityTime = Date.now()
@@ -510,6 +524,8 @@ function parseCommandLineArgs() {
 
 module.exports = {
   uploadToDev,
+  uploadFfcPayToDev,
+  uploadFfcDocToDev,
   extractSchemaOnly,
   applySchema,
   clearDatabaseSimple
@@ -518,8 +534,9 @@ module.exports = {
 // Allow direct execution
 if (require.main === module) {
   const { dryRun } = parseCommandLineArgs()
-  
-  uploadToDev(dryRun)
+  // Default to 'all' if not specified
+  const type = process.argv[2] || 'all'
+  uploadToDev(type, dryRun)
     .then(success => process.exit(success ? 0 : 1))
     .catch(error => {
       logError(`Upload process failed: ${error}`)
