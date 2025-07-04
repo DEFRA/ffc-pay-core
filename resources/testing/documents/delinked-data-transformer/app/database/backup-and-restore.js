@@ -9,9 +9,10 @@ async function backupDatabase(dbName, backupDir, dryRun = false) {
     return { success: true, backupPath: `${backupDir}/${dbName}_${new Date().toISOString().replace(/:/g, '-')}.sql` }
   }
   
-  if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true })
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-  const backupFile = path.join(backupDir, `${dbName}_backup_${timestamp}.dump`)
+const resolvedBackupDir = path.resolve(__dirname, backupDir)
+if (!fs.existsSync(resolvedBackupDir)) fs.mkdirSync(resolvedBackupDir, { recursive: true })
+const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+const backupFile = path.join(resolvedBackupDir, `${dbName}_backup_${timestamp}.dump`)
 
   const connection = await createConnection(dbName)
   const { host, port, username } = connection.config

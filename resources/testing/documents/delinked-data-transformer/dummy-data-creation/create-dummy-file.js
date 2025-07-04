@@ -1,4 +1,5 @@
 const fs = require('fs')
+const path = require('path')
 
 const SQL_TEMPLATES = {
   organisations: 'INSERT INTO public.organisations (sbi, "addressLine1", "addressLine2", "addressLine3", city, county, postcode, "emailAddress", frn, name, updated) VALUES\n',
@@ -19,15 +20,15 @@ function validateArgs () {
   return { recordCount, separate }
 }
 
-function writeFile (filename, content, isAppend = false) {
+function writeFile (filePath, content, isAppend = false) {
   try {
     if (isAppend) {
-      fs.appendFileSync(filename, content)
+      fs.appendFileSync(filePath, content)
     } else {
-      fs.writeFileSync(filename, content)
+      fs.writeFileSync(filePath, content)
     }
   } catch (error) {
-    console.error(`Error writing to ${filename}:`, error)
+    console.error(`Error writing to ${filePath}:`, error)
     throw error
   }
 }
@@ -35,13 +36,18 @@ function writeFile (filename, content, isAppend = false) {
 function generateSqlStatements (totalRecords, separateFiles) {
   console.log(`Generating ${totalRecords} records. Separate files: ${separateFiles}`)
 
+  const dumpDir = path.resolve(process.cwd(), '../dummy-inserts')
+  if (!fs.existsSync(dumpDir)) {
+    fs.mkdirSync(dumpDir, { recursive: true })
+  }
+
   try {
     if (separateFiles) {
-      writeFile('organisations.sql', '')
-      writeFile('delinkedCalculations.sql', '')
-      writeFile('d365.sql', '')
+      writeFile(path.join(dumpDir, 'organisations.sql'), '')
+      writeFile(path.join(dumpDir, 'delinkedCalculations.sql'), '')
+      writeFile(path.join(dumpDir, 'd365.sql'), '')
     } else {
-      writeFile('combined_inserts.sql', '')
+      writeFile(path.join(dumpDir, 'combined_inserts.sql'), '')
     }
 
     const batchSize = 10000
@@ -82,11 +88,11 @@ function generateSqlStatements (totalRecords, separateFiles) {
       d365Sql += ';\n\n'
 
       if (separateFiles) {
-        writeFile('organisations.sql', organisationsSql, true)
-        writeFile('delinkedCalculations.sql', delinkedCalcSql, true)
-        writeFile('d365.sql', d365Sql, true)
+        writeFile(path.join(dumpDir, 'organisations.sql'), organisationsSql, true)
+        writeFile(path.join(dumpDir, 'delinkedCalculations.sql'), delinkedCalcSql, true)
+        writeFile(path.join(dumpDir, 'd365.sql'), d365Sql, true)
       } else {
-        writeFile('combined_inserts.sql', organisationsSql + delinkedCalcSql + d365Sql, true)
+        writeFile(path.join(dumpDir, 'combined_inserts.sql'), organisationsSql + delinkedCalcSql + d365Sql, true)
       }
 
       recordsProcessed = batchEnd

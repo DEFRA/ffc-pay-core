@@ -2,8 +2,8 @@ const fs = require('fs')
 const path = require('path')
 const { logInfo } = require('./logger')
 
-function findSqlDumpFiles (baseDir = '../dumps/', pattern = '_full.sql') {
-  const dumpsDir = path.resolve(process.cwd(), baseDir)
+function findSqlDumpFiles (baseDir = '../../test-dumps/', pattern = '_full.sql') {
+const dumpsDir = path.resolve(__dirname, baseDir)
   logInfo(`Looking for SQL dump files in: ${dumpsDir}`)
 
   const directories = fs.readdirSync(dumpsDir, { withFileTypes: true })
