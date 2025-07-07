@@ -19,7 +19,7 @@ async function dumpAllTestTables (dryRun = false) {
     console.log('*** DRY RUN MODE ENABLED: No actual dumps will be performed. ***')
   }
 
-  const dumpDir = path.resolve(__dirname, '../test-dumps')
+  const dumpDir = path.resolve(__dirname, '../../test-dumps')
   if (!dryRun) {
     fs.mkdirSync(dumpDir, { recursive: true })
   }
@@ -218,7 +218,8 @@ async function performFullDump (dbConnection, outputPath) {
           args.push('--data-only')
         }
 
-        const pgDump = spawn('pg_dump', args, { env })
+        const PG_DUMP_PATH = process.env.PG_DUMP_PATH || 'pg_dump'
+        const pgDump = spawn(PG_DUMP_PATH, args, { env })
 
         let stderrOutput = ''
         let lastProgressTime = Date.now()
