@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@azure/identity": "^4.9.1",
+    "joi": "^17.13.3"
+  }
+}
