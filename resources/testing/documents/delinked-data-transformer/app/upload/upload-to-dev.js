@@ -2,18 +2,31 @@ const { createConnection, listDatabases } = require('../database/db-connection')
 const { findSqlDumpFiles, safeRemoveFile } = require('../util/file-utils')
 const { logInfo, logError, logWarning } = require('../util/logger')
 const { processForAzure } = require('../transform/sql-processor')
-const { parseAndProcessSqlFile } = require('./execute-sql')
+const { streamAndExecuteSqlFile } = require('./execute-sql') // <-- use streaming batch execution
 const { ETL_TABLE_PREFIX, PROTECTED_TABLES } = require('../constants/etl-protection')
 const { loadInDependencyOrder } = require('./dependency-loader')
 const { backupDatabase } = require('../database/backup-and-restore')
 const fs = require('fs')
 const os = require('os')
 
-async function uploadToDev(type = 'all', dryRun = false) {
+async function uploadToDev (type = 'all', dryRun = false) {
   if (dryRun) {
     logInfo('🔍 DRY RUN MODE: All operations will be simulated without making actual changes')
   }
-  
+
+  // OOM and error catch-all
+  const failedUploads = []
+  process.on('uncaughtException', (err) => {
+    if (err && err.message && err.message.includes('JavaScript heap out of memory')) {
+      logError('❌ Out of memory error detected. Skipping current upload and moving to next.')
+    } else {
+      logError(`❌ Uncaught Exception: ${err.message}`)
+    }
+  })
+  process.on('unhandledRejection', (reason) => {
+    logError(`❌ Unhandled Rejection: ${reason}`)
+  })
+
   logInfo(`Starting database restoration process for type: ${type} (data-only approach)...`)
   logInfo(`Running on ${os.hostname()} with Node.js ${process.version}`)
   logInfo(`System resources: ${os.cpus().length} CPUs, ${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB RAM`)
@@ -84,7 +97,7 @@ async function uploadToDev(type = 'all', dryRun = false) {
       } else {
         logInfo(`[DRY RUN] Would backup database ${targetDbName} to 'dev-backups'`)
       }
-      
+
       if (!dryRun) {
         await clearDatabaseSimple(client, dryRun)
       } else {
@@ -107,10 +120,10 @@ async function uploadToDev(type = 'all', dryRun = false) {
         )
       } else {
         logInfo('[DRY RUN] Would process SQL file for Azure compatibility')
-        processingResult = { 
+        processingResult = {
           processedFilePath: `${filePath}.processed`,
-          stats: { 
-            copyBlocksConverted: 'X', 
+          stats: {
+            copyBlocksConverted: 'X',
             copyRowsConverted: 1000 // Mock value for dry run
           }
         }
@@ -126,56 +139,41 @@ async function uploadToDev(type = 'all', dryRun = false) {
       }
 
       const MAX_ROWS_PER_TRANSACTION = 50000
-      if (stats.copyRowsConverted > MAX_ROWS_PER_TRANSACTION) {
-        logInfo(`Large dataset detected (${stats.copyRowsConverted} rows), implementing batched processing`)
+      const isLargeFile = stats.copyRowsConverted > MAX_ROWS_PER_TRANSACTION
+      if (isLargeFile) {
+        logInfo(`Large dataset detected (${stats.copyRowsConverted} rows), implementing streaming batched processing`)
       }
 
-      let statements = []
+if (!dryRun) {
+  logInfo('Streaming and executing SQL file in dependency order...')
+  const errorLogFile = `${processedFilePath}.errors.log`
+  const errorStream = fs.createWriteStream(errorLogFile)
+  let currentPosition = 0
+  const progressCallback = (position) => {
+    currentPosition = position
+  }
+  const batchSize = isLargeFile ? 50 : 200
 
-      if (!dryRun) {
-        logInfo('Parsing SQL file into executable statements...')
-        const errorLogFile = `${processedFilePath}.errors.log`
-        const errorStream = fs.createWriteStream(errorLogFile)
+  // Read SQL statements from processedFilePath
+  const sqlStatements = fs.readFileSync(processedFilePath, 'utf8')
+    .split(/;\s*\n/) // Split by semicolon followed by newline
+    .map(stmt => stmt.trim())
+    .filter(stmt => stmt.length > 0)
 
-        let currentPosition = 0
-        const progressCallback = (position) => {
-          currentPosition = position
-        }
+  // Use dependency-ordered batch execution
+  const results = await loadInDependencyOrder(
+    client,
+    sqlStatements,
+    dryRun,
+    batchSize
+  )
 
-        statements = await withStallDetection(
-          () => parseAndProcessSqlFile(
-            processedFilePath,
-            progressCallback,
-            errorStream,
-            stats.copyRowsConverted > MAX_ROWS_PER_TRANSACTION
-          ),
-          'SQL parsing',
-          120 // 2 minute stall threshold
-        )
+  errorStream.end()
 
-        logInfo(`Successfully parsed ${statements.length} SQL statements from file`)
-      } else {
-        logInfo('[DRY RUN] Would parse SQL file into executable statements')
-      }
-
-      let results = { rowsInserted: 0, success: 0, errors: 0 }
-      if (!dryRun) {
-        logInfo('Using dependency-aware loading to handle foreign key constraints...')
-        results = await withStallDetection(
-          () => loadInDependencyOrder(client, statements, dryRun),
-          'SQL execution with dependency ordering',
-          180 // 3 minute stall threshold
-        )
-      } else {
-        logInfo('[DRY RUN] Would execute SQL statements using dependency-aware loading')
-        results = { rowsInserted: 'X', success: 'X', errors: 0 }
-      }
-
-      const insertCount = results.rowsInserted
-
-      const dbDuration = Math.round((Date.now() - dbStartTime) / 1000)
-      logInfo(`${dryRun ? '[DRY RUN] Would complete restoration of' : '✅ Successfully restored'} ${sourceDbName} to ${targetDbName}`)
-      logInfo(`📊 ${dryRun ? 'Estimated' : 'Actual'} Results: ${insertCount} rows inserted (${results.success} successful operations, ${results.errors} errors) in ${formatDuration(dbDuration)}`)
+  logInfo(`Dependency-ordered execution complete: ${results.rowsInserted} rows, ${results.success} successes, ${results.errors} errors`)
+} else {
+  logInfo('[DRY RUN] Would stream and execute SQL file in dependency order')
+}
 
       if (!dryRun) {
         safeRemoveFile(processedFilePath)
@@ -187,6 +185,9 @@ async function uploadToDev(type = 'all', dryRun = false) {
       logError(`❌ Error ${dryRun ? 'simulating' : 'processing'} ${sourceDbName}: ${error.message}`)
       logError(error.stack)
       errorCount++
+      failedUploads.push({ sourceDbName, targetDbName, filePath, error: error.message })
+      global.gc && global.gc()
+      continue
     } finally {
       if (client && !dryRun) {
         try {
@@ -201,7 +202,15 @@ async function uploadToDev(type = 'all', dryRun = false) {
           logError(`Error disconnecting: ${e.message}`)
         }
       }
+      client = null
+      global.gc && global.gc()
     }
+  }
+
+  if (failedUploads.length > 0) {
+    const failedLogPath = `failed-uploads-${Date.now()}.json`
+    fs.writeFileSync(failedLogPath, JSON.stringify(failedUploads, null, 2))
+    logWarning(`Some uploads failed. See details in ${failedLogPath}`)
   }
 
   const totalDuration = Math.round((Date.now() - startTime) / 1000)
@@ -217,8 +226,7 @@ async function uploadToDev(type = 'all', dryRun = false) {
 const uploadFfcPayToDev = (dryRun = false) => uploadToDev('ffc-pay', dryRun)
 const uploadFfcDocToDev = (dryRun = false) => uploadToDev('ffc-doc', dryRun)
 
-
-async function withStallDetection(fn, operationName, stallThresholdSec = 120) {
+async function withStallDetection (fn, operationName, stallThresholdSec = 120) {
   let lastActivityTime = Date.now()
   let isComplete = false
 
@@ -252,7 +260,7 @@ async function withStallDetection(fn, operationName, stallThresholdSec = 120) {
   }
 }
 
-async function verifySchema(client, dbName) {
+async function verifySchema (client, dbName) {
   const { rows } = await client.query(`
     SELECT COUNT(*) as table_count
     FROM pg_tables
@@ -265,14 +273,14 @@ async function verifySchema(client, dbName) {
   return tableCount > 0
 }
 
-async function extractSchemaOnly(sqlFile, targetDb, dryRun = false) {
+async function extractSchemaOnly (sqlFile, targetDb, dryRun = false) {
   const outputFile = `/tmp/schema_only_${targetDb}_${Date.now()}.sql`
-  
+
   if (dryRun) {
     logInfo(`[DRY RUN] Would extract schema from ${sqlFile} to ${outputFile}`)
     return outputFile
   }
-  
+
   const writeStream = fs.createWriteStream(outputFile)
 
   return new Promise((resolve, reject) => {
@@ -323,7 +331,7 @@ async function extractSchemaOnly(sqlFile, targetDb, dryRun = false) {
   })
 }
 
-async function applySchema(client, schemaFile, dryRun = false) {
+async function applySchema (client, schemaFile, dryRun = false) {
   logInfo('Applying schema to target database')
 
   if (dryRun) {
@@ -362,13 +370,15 @@ async function applySchema(client, schemaFile, dryRun = false) {
 
   await client.query('COMMIT')
   logInfo(`Schema applied: ${successCount} statements executed, ${errorCount} errors (warnings)`)
-  
+
   return { success: successCount, errors: errorCount }
 }
 
-async function clearDatabaseSimple(client, dryRun = false) {
+async function clearDatabaseSimple (client, dryRun = false) {
   try {
-    const { rows } = dryRun ? { rows: [] } : await client.query(`
+    const { rows } = dryRun
+      ? { rows: [] }
+      : await client.query(`
       SELECT tablename 
       FROM pg_tables 
       WHERE schemaname = 'public'
@@ -383,23 +393,25 @@ async function clearDatabaseSimple(client, dryRun = false) {
       logInfo(`Found ${rows.length} tables in database`)
     }
 
-    const tablesToClear = dryRun ? [] : rows.filter(row => {
-      const isEtlTable = row.tablename.toLowerCase().startsWith(ETL_TABLE_PREFIX) ||
+    const tablesToClear = dryRun
+      ? []
+      : rows.filter(row => {
+        const isEtlTable = row.tablename.toLowerCase().startsWith(ETL_TABLE_PREFIX) ||
                          row.tablename.startsWith(ETL_TABLE_PREFIX.toUpperCase())
-      const isLiquibaseTable = PROTECTED_TABLES.includes(row.tablename.toLowerCase())
+        const isLiquibaseTable = PROTECTED_TABLES.includes(row.tablename.toLowerCase())
 
-      if (isEtlTable) {
-        logInfo(`⚠️ ETL PROTECTION: Skipping ETL table: ${row.tablename}`)
-        return false
-      }
+        if (isEtlTable) {
+          logInfo(`⚠️ ETL PROTECTION: Skipping ETL table: ${row.tablename}`)
+          return false
+        }
 
-      if (isLiquibaseTable) {
-        logInfo(`⚠️ LIQUIBASE PROTECTION: Skipping Liquibase table: ${row.tablename}`)
-        return false
-      }
+        if (isLiquibaseTable) {
+          logInfo(`⚠️ LIQUIBASE PROTECTION: Skipping Liquibase table: ${row.tablename}`)
+          return false
+        }
 
-      return true
-    })
+        return true
+      })
 
     if (dryRun) {
       logInfo('[DRY RUN] Would filter tables based on ETL and Liquibase protection rules')
@@ -494,20 +506,20 @@ async function clearDatabaseSimple(client, dryRun = false) {
   }
 }
 
-function formatFileSize(bytes) {
+function formatFileSize (bytes) {
   if (bytes < 1024) return bytes + ' bytes'
   else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
   else if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB'
   else return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB'
 }
 
-function formatDuration(seconds) {
+function formatDuration (seconds) {
   const minutes = Math.floor(seconds / 60)
   const remainingSeconds = seconds % 60
   return `${minutes}m ${remainingSeconds}s`
 }
 
-function parseCommandLineArgs() {
+function parseCommandLineArgs () {
   const args = process.argv.slice(2)
   const options = {
     dryRun: process.env.DRY_RUN === 'true' || false
