@@ -1,22 +1,128 @@
 const fs = require('fs')
 const readline = require('readline')
 const { logInfo, logError } = require('../util/logger')
+const { getSchemaInfo } = require('./schema-validator')
 const { EXCLUDE_ETL_TABLES, ETL_TABLE_PREFIX, PROTECTED_TABLES } = require('../constants/etl-protection')
 const path = require('path')
 
 /**
- * Execute an SQL file using batch processing with Azure-optimized error handling
- * @param {Object} client - Database client
- * @param {string} sqlFile - Path to SQL file
+ * Async generator: yields SQL statements from a file, streaming and batching-friendly.
  */
+async function * streamSqlStatements (sqlFile, progressCallback, isLargeFile = false) {
+  const fileStream = fs.createReadStream(sqlFile, {
+    encoding: 'utf8',
+    highWaterMark: isLargeFile ? 1024 * 1024 : 256 * 1024
+  })
+
+  let currentStatement = ''
+  let inComment = false
+  let inSingleQuote = false
+  let inDoubleQuote = false
+  let escapeNext = false
+  let currentPosition = 0
+  let lastReportedPosition = 0
+  const reportingThreshold = isLargeFile ? 2 * 1024 * 1024 : 512 * 1024
+
+  const rl = readline.createInterface({
+    input: fileStream,
+    crlfDelay: Infinity
+  })
+
+  for await (const line of rl) {
+    currentPosition += line.length + 1
+    if (progressCallback && currentPosition - lastReportedPosition > reportingThreshold) {
+      progressCallback(currentPosition)
+      lastReportedPosition = currentPosition
+    }
+    if (line.trim() === '' || line.trim().startsWith('--')) continue
+    currentStatement += line + '\n'
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]
+      const nextChar = i < line.length - 1 ? line[i + 1] : null
+      if (escapeNext) { escapeNext = false; continue }
+      if (char === '\\') { escapeNext = true; continue }
+      if (!inSingleQuote && !inDoubleQuote) {
+        if (char === '/' && nextChar === '*') { inComment = true; i++; continue }
+        if (inComment && char === '*' && nextChar === '/') { inComment = false; i++; continue }
+        if (char === '-' && nextChar === '-') break
+      }
+      if (inComment) continue
+      if (char === '\'' && !inDoubleQuote && !escapeNext) { inSingleQuote = !inSingleQuote; continue }
+      if (char === '"' && !inSingleQuote && !escapeNext) { inDoubleQuote = !inDoubleQuote; continue }
+      if (char === ';' && !inSingleQuote && !inDoubleQuote) {
+        const statement = currentStatement.trim()
+        if (statement && statement !== ';') yield statement
+        currentStatement = ''
+      }
+    }
+  }
+  if (currentStatement.trim() !== '') {
+    if (!currentStatement.trim().endsWith(';')) currentStatement = currentStatement.trim() + ';'
+    yield currentStatement.trim()
+  }
+}
+
+/**
+ * Stream and execute SQL file in batches, never holding all statements in memory.
+ */
+async function streamAndExecuteSqlFile (
+  client,
+  sqlFile,
+  errorStream,
+  batchSize = 200,
+  isLargeFile = false,
+  progressCallback
+) {
+  let batch = []
+  const totalStats = {
+    rowCount: 0,
+    errorCount: 0,
+    successCount: 0,
+    insertCount: 0,
+    updateCount: 0,
+    deleteCount: 0,
+    skippedCount: 0,
+    protectedSkipped: 0
+  }
+  let statementCount = 0
+  let batchIndex = 0
+
+  for await (const statement of streamSqlStatements(sqlFile, progressCallback, isLargeFile)) {
+    batch.push(statement)
+    statementCount++
+    if (batch.length >= batchSize) {
+      const batchResults = await executeBatch(client, batch, errorStream, batchIndex)
+      Object.keys(totalStats).forEach(k => totalStats[k] += batchResults[k] || 0)
+      logInfo(
+        `Batch ${batchIndex + 1}: ${batch.length} statements processed. Successes: ${batchResults.successCount}, Errors: ${batchResults.errorCount}, Skipped: ${batchResults.skippedCount}, Protected Skipped: ${batchResults.protectedSkipped}`
+      )
+      batchIndex++
+      batch = []
+    }
+  }
+  // Final batch
+  if (batch.length > 0) {
+    const batchResults = await executeBatch(client, batch, errorStream, batchIndex)
+    Object.keys(totalStats).forEach(k => totalStats[k] += batchResults[k] || 0)
+    logInfo(
+      `Batch ${batchIndex + 1} (final): ${batch.length} statements processed. Successes: ${batchResults.successCount}, Errors: ${batchResults.errorCount}, Skipped: ${batchResults.skippedCount}, Protected Skipped: ${batchResults.protectedSkipped}`
+    )
+  }
+  totalStats.statementCount = statementCount
+
+  // Summary logging
+  logInfo(
+    `SQL streaming execution complete: ${totalStats.statementCount} statements, ${totalStats.rowCount} rows, ${totalStats.successCount} successes, ${totalStats.errorCount} errors, ${totalStats.skippedCount} skipped, ${totalStats.protectedSkipped} protected skipped`
+  )
+
+  return totalStats
+}
+
 async function executeSqlFile (client, sqlFile) {
   logInfo(`Executing SQL file: ${sqlFile}`)
   return loadDataInBatchesWithErrorTracking(client, sqlFile)
 }
 
-/**
- * Format file size in human readable format
- */
 function formatFileSize (bytes) {
   if (bytes === 0) return '0 Bytes'
   const k = 1024
@@ -25,11 +131,6 @@ function formatFileSize (bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
-/**
- * Process SQL file in batches with Azure-optimized error handling
- * @param {Object} client - Database client
- * @param {string} sqlFile - Path to SQL file
- */
 async function loadDataInBatchesWithErrorTracking (client, sqlFile) {
   // Validate input
   if (!fs.existsSync(sqlFile)) {
@@ -43,17 +144,14 @@ async function loadDataInBatchesWithErrorTracking (client, sqlFile) {
 
   logInfo(`Starting SQL processing: ${formatFileSize(totalFileSize)} total file size for ${fileName}`)
 
-  // Detect large files and use optimized processing strategy
   const isLargeFile = totalFileSize > 10 * 1024 * 1024 // 10MB
   if (isLargeFile) {
     logInfo(`Large SQL file detected (${formatFileSize(totalFileSize)}), using optimized processing`)
   }
 
-  // Create error log
   const errorLogFile = `${sqlFile}.errors.log`
   const errorStream = fs.createWriteStream(errorLogFile)
 
-  // Processing statistics
   const stats = {
     statementCount: 0,
     rowCount: 0,
@@ -68,7 +166,6 @@ async function loadDataInBatchesWithErrorTracking (client, sqlFile) {
     successCount: 0
   }
 
-  // Timing variables
   const startTime = Date.now()
   let lastProgressTime = Date.now()
   let lastRowCount = 0
@@ -76,13 +173,11 @@ async function loadDataInBatchesWithErrorTracking (client, sqlFile) {
   let phaseStartTime = Date.now()
   let currentPhase = 'Initialization'
 
-  // Set up heartbeat timer - runs every 10 seconds
   const heartbeatTimer = setInterval(() => {
     const currentTime = Date.now()
     const elapsedSec = Math.round((currentTime - lastProgressTime) / 1000)
     const totalElapsed = Math.round((currentTime - startTime) / 1000)
 
-    // Only log if 30 seconds have passed without progress
     if (elapsedSec >= 30) {
       // Create detailed progress message based on current phase
       const phaseElapsed = Math.round((currentTime - phaseStartTime) / 1000)
@@ -90,12 +185,10 @@ async function loadDataInBatchesWithErrorTracking (client, sqlFile) {
       const heapUsed = Math.round(memoryUsage.heapUsed / 1024 / 1024)
       const totalMemory = Math.round(memoryUsage.rss / 1024 / 1024)
 
-      // Get phase-specific details
       let phaseDetails = ''
       let progressMetric = ''
 
       if (!parsingCompleted) {
-        // File parsing phase
         const percentComplete = currentFilePosition > 0
           ? `${((currentFilePosition / totalFileSize) * 100).toFixed(1)}%`
           : 'initializing'
@@ -103,17 +196,14 @@ async function loadDataInBatchesWithErrorTracking (client, sqlFile) {
         phaseDetails = `SQL parsing at ${percentComplete}`
         progressMetric = `${formatFileSize(currentFilePosition)} of ${formatFileSize(totalFileSize)}`
       } else {
-        // Execution phase
         phaseDetails = `Statement execution (${stats.statementCount} parsed)`
         progressMetric = `${stats.rowCount} rows, ${stats.insertCount} inserts, ${stats.errorCount} errors`
       }
 
-      // Log comprehensive status
       logInfo(`⏳ PROGRESS REPORT [${currentPhase}]: ${phaseDetails}`)
       logInfo(`📊 File: ${fileName} | Progress: ${progressMetric} | Time: ${phaseElapsed}s in phase, ${totalElapsed}s total`)
       logInfo(`🔧 Memory: ${heapUsed}MB/${totalMemory}MB | Phase: ${currentPhase}`)
 
-      // Reset timer only if actual progress was made since last check
       if (stats.rowCount > lastRowCount || currentFilePosition > 0) {
         lastProgressTime = currentTime
         lastRowCount = stats.rowCount
@@ -145,14 +235,14 @@ async function loadDataInBatchesWithErrorTracking (client, sqlFile) {
     for (let batchIndex = 0; batchIndex < batchCount; batchIndex++) {
       const batchStart = batchIndex * BATCH_SIZE
       const batchEnd = Math.min((batchIndex + 1) * BATCH_SIZE, statements.length)
-      const currentBatch = statements.slice(batchStart, batchEnd)
+      const batch = statements.slice(batchStart, batchEnd)
 
       if (batchIndex % 5 === 0 || batchIndex === batchCount - 1) {
-        logInfo(`Executing batch ${batchIndex + 1}/${batchCount} (${currentBatch.length} statements)`)
+        logInfo(`Executing batch ${batchIndex + 1}/${batchCount} (${batch.length} statements)`)
       }
 
       // Execute each statement in the batch
-      const batchResults = await executeBatch(client, currentBatch, errorStream)
+      const batchResults = await executeBatch(client, batch, errorStream)
 
       // Update statistics
       stats.rowCount += batchResults.rowCount
@@ -197,14 +287,6 @@ async function loadDataInBatchesWithErrorTracking (client, sqlFile) {
   }
 }
 
-/**
- * Parse SQL file into discrete executable statements with efficient streaming
- * @param {string} sqlFile Path to SQL file
- * @param {function} progressCallback Callback with current position
- * @param {WriteStream} errorStream Error log stream
- * @param {boolean} isLargeFile Flag for large file optimizations
- * @returns {Promise<string[]>} Array of SQL statements
- */
 async function parseAndProcessSqlFile (sqlFile, progressCallback, errorStream, isLargeFile = false) {
   return new Promise((resolve, reject) => {
     // Streaming setup
@@ -247,8 +329,6 @@ async function parseAndProcessSqlFile (sqlFile, progressCallback, errorStream, i
       // Add line to current statement
       currentStatement += line + '\n'
 
-      // Check for statement termination (properly handling quotes and comments)
-      // This is a simplified version, a full SQL parser would be more robust
       for (let i = 0; i < line.length; i++) {
         const char = line[i]
         const nextChar = i < line.length - 1 ? line[i + 1] : null
@@ -338,15 +418,7 @@ async function parseAndProcessSqlFile (sqlFile, progressCallback, errorStream, i
   })
 }
 
-/**
- * Execute a batch of SQL statements
- * @param {Object} client PostgreSQL client
- * @param {string[]} statements Array of SQL statements
- * @param {WriteStream} errorStream Error log stream
- * @returns {Object} Batch execution results
- */
-async function executeBatch (client, statements, errorStream) {
-  // Results tracking
+async function executeBatch (client, statements, errorStream, batchIndex = '?') {
   const results = {
     rowCount: 0,
     errorCount: 0,
@@ -358,64 +430,62 @@ async function executeBatch (client, statements, errorStream) {
     protectedSkipped: 0
   }
 
-  // Process each statement in sequence (not in parallel to maintain order)
   for (const statement of statements) {
     try {
-      // Check for protected tables (ETL or Liquibase)
+      // Optional: validate statement before execution
+      if (typeof validateAndTransformSqlStatement === 'function') {
+        const validationResult = await validateAndTransformSqlStatement(statement, client)
+        if (validationResult && !validationResult.isValid) {
+          results.skippedCount++
+          errorStream.write(`SKIPPED: ${validationResult.reason}\nStatement: ${truncateString(statement, 1000)}\n`)
+          logInfo(`Skipped statement: ${validationResult.reason}`)
+          continue
+        }
+      }
+
       if (isProtectedTableStatement(statement)) {
         results.protectedSkipped++
         continue
       }
 
-      // Skip DDL in data-only mode (if enabled)
       const stmtType = getStatementType(statement)
       if (isSchemaStatement(stmtType)) {
         results.skippedCount++
         continue
       }
 
-      // Execute the statement
       const result = await client.query(statement)
-
-      // Update statistics based on statement type
       results.successCount++
-
-      // Count rows affected
       const rowCount = result.rowCount || 0
       results.rowCount += rowCount
 
-      // Track statement types
       switch (stmtType) {
-        case 'INSERT':
-          results.insertCount++
-          break
-        case 'UPDATE':
-          results.updateCount++
-          break
-        case 'DELETE':
-          results.deleteCount++
-          break
+        case 'INSERT': results.insertCount++; break
+        case 'UPDATE': results.updateCount++; break
+        case 'DELETE': results.deleteCount++; break
       }
     } catch (error) {
       results.errorCount++
-
-      // Log error details
-      const errorMessage = `ERROR in SQL statement: ${error.message}\nStatement: ${truncateString(statement, 500)}`
+      let extraDetails = ''
+      if (error.message.includes('value too long for type character varying')) {
+        extraDetails = ' [Possible column length violation]'
+      }
+      if (error.message.includes('violates foreign key constraint')) {
+        extraDetails = ' [Foreign key violation]'
+      }
+      // Extract table name for logging
+      let tableName = ''
+      const match = statement.match(/(INSERT INTO|UPDATE|DELETE FROM)\s+["']?([a-zA-Z0-9_]+)["']?/i)
+      if (match && match[2]) tableName = match[2]
+      const errorMessage = `Batch ${batchIndex}${tableName ? ', Table: ' + tableName : ''}, Error: ${error.message}${extraDetails}\nStatement: ${truncateString(statement, 1000)}`
       errorStream.write(errorMessage + '\n')
-
-      // Don't fail on individual statement errors to allow best-effort completion
-      logError(`SQL error (continuing): ${error.message.substring(0, 100)}${error.message.length > 100 ? '...' : ''}`)
+      logError(errorMessage)
     }
   }
 
   return results
 }
 
-/**
- * Check if statement operates on protected tables (ETL or Liquibase)
- * @param {string} statement SQL statement
- * @returns {boolean} True if statement accesses protected tables
- */
 function isProtectedTableStatement (statement) {
   // Unified check for ETL tables
   const etlPattern = new RegExp(
@@ -432,11 +502,6 @@ function isProtectedTableStatement (statement) {
   return etlPattern.test(statement) || liquibaseTablesPattern.test(statement)
 }
 
-/**
- * Get the type of SQL statement
- * @param {string} statement SQL statement
- * @returns {string} Statement type (INSERT, UPDATE, etc)
- */
 function getStatementType (statement) {
   const trimmed = statement.trim().toUpperCase()
 
@@ -455,21 +520,10 @@ function getStatementType (statement) {
   return 'OTHER'
 }
 
-/**
- * Check if a statement is schema-related
- * @param {string} type Statement type
- * @returns {boolean} True if statement modifies schema
- */
 function isSchemaStatement (type) {
   return ['CREATE_TABLE', 'DROP_TABLE', 'ALTER_TABLE', 'CREATE_INDEX', 'DROP_INDEX'].includes(type)
 }
 
-/**
- * Truncate a string to a maximum length
- * @param {string} str String to truncate
- * @param {number} maxLength Maximum length
- * @returns {string} Truncated string
- */
 function truncateString (str, maxLength) {
   if (str.length <= maxLength) return str
   return str.substring(0, maxLength) + '...'
@@ -483,5 +537,7 @@ module.exports = {
   getStatementType,
   isSchemaStatement,
   truncateString,
-  formatFileSize
+  formatFileSize,
+  streamAndExecuteSqlFile,
+  streamSqlStatements
 }

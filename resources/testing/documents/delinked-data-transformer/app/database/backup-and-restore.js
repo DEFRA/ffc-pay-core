@@ -3,16 +3,16 @@ const { spawn } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 
-async function backupDatabase(dbName, backupDir, dryRun = false) {
+async function backupDatabase (dbName, backupDir, dryRun = false) {
   if (dryRun) {
     logInfo(`[DRY RUN] Would backup database ${dbName} to directory ${backupDir}`)
     return { success: true, backupPath: `${backupDir}/${dbName}_${new Date().toISOString().replace(/:/g, '-')}.sql` }
   }
-  
-const resolvedBackupDir = path.resolve(__dirname, backupDir)
-if (!fs.existsSync(resolvedBackupDir)) fs.mkdirSync(resolvedBackupDir, { recursive: true })
-const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-const backupFile = path.join(resolvedBackupDir, `${dbName}_backup_${timestamp}.dump`)
+
+  const resolvedBackupDir = path.resolve(__dirname, backupDir)
+  if (!fs.existsSync(resolvedBackupDir)) fs.mkdirSync(resolvedBackupDir, { recursive: true })
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const backupFile = path.join(resolvedBackupDir, `${dbName}_backup_${timestamp}.dump`)
 
   const connection = await createConnection(dbName)
   const { host, port, username } = connection.config
@@ -44,7 +44,7 @@ const backupFile = path.join(resolvedBackupDir, `${dbName}_backup_${timestamp}.d
   })
 }
 
-async function restoreDatabase(dbName, backupFile) {
+async function restoreDatabase (dbName, backupFile) {
   const connection = await createConnection(dbName)
   const { host, port, username } = connection.config
   const env = { ...process.env, PGPASSWORD: connection.token }

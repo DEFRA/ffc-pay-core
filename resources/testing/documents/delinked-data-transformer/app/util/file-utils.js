@@ -2,8 +2,9 @@ const fs = require('fs')
 const path = require('path')
 const { logInfo } = require('./logger')
 
-function findSqlDumpFiles (baseDir = '../../test-dumps/', pattern = '_full.sql') {
-  const dumpsDir = path.resolve(__dirname, baseDir)
+// Use the dump directory inside the app folder, consistent with other utilities
+function findSqlDumpFiles (baseDir = path.resolve(__dirname, '../test-dumps'), pattern = '_full.sql') {
+  const dumpsDir = baseDir
   logInfo(`Looking for SQL dump files in: ${dumpsDir}`)
 
   if (!fs.existsSync(dumpsDir)) {

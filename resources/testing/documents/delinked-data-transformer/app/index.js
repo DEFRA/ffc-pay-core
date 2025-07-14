@@ -4,17 +4,22 @@ const upload = require('./upload/upload-to-dev')
 const dummyData = require('../dummy-data-creation/create-dummy-file')
 const readline = require('readline')
 
-function promptContinue(message = 'Continue to next step? (y/n): ') {
+function promptContinue (message = 'Continue to next step? (y/n): ', defaultValue = 'y') {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-    rl.question(message, (answer) => {
+    rl.question(`${message} (default: ${defaultValue}): `, (answer) => {
       rl.close()
-      resolve(answer.trim().toLowerCase() === 'y')
+      const response = answer.trim().toLowerCase()
+      if (response === '') {
+        resolve(defaultValue.toLowerCase() === 'y')
+      } else {
+        resolve(response === 'y')
+      }
     })
   })
 }
 
-function promptInput(message, defaultValue) {
+function promptInput (message, defaultValue) {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
     rl.question(`${message} (default: ${defaultValue}): `, (answer) => {
@@ -24,7 +29,7 @@ function promptInput(message, defaultValue) {
   })
 }
 
-function promptSelectUploadType() {
+function promptSelectUploadType () {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
     rl.question(
@@ -46,7 +51,7 @@ function promptSelectUploadType() {
   })
 }
 
-function promptDryRun() {
+function promptDryRun () {
   return new Promise((resolve) => {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
     rl.question('Run as dry-run first? (y/n): ', (answer) => {
@@ -56,7 +61,7 @@ function promptDryRun() {
   })
 }
 
-async function safeRun(fn, description) {
+async function safeRun (fn, description) {
   try {
     await fn()
     return true

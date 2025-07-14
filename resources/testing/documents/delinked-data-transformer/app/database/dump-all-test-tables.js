@@ -194,25 +194,25 @@ async function performFullDump (dbConnection, outputPath) {
             args.push('--exclude-table-data', `public."${table}"`)
           })
         }
-        
+
         if (isEtlDatabase) {
-          console.log(`⚠️ ETL SEQUENCE PROTECTION: Excluding ETL-related sequences`)
-          
-          args.push('--exclude-table-data', `public."etl*_seq*"`)
-          args.push('--exclude-table', `public."etl*_seq*"`)
-          
-          args.push('--exclude-table-data', `public."ETL*_seq*"`)
-          args.push('--exclude-table', `public."ETL*_seq*"`)
-          
-          args.push('--exclude-table-data', `public."etlStage*_seq*"`)
-          args.push('--exclude-table', `public."etlStage*_seq*"`)
+          console.log('⚠️ ETL SEQUENCE PROTECTION: Excluding ETL-related sequences')
+
+          args.push('--exclude-table-data', 'public."etl*_seq*"')
+          args.push('--exclude-table', 'public."etl*_seq*"')
+
+          args.push('--exclude-table-data', 'public."ETL*_seq*"')
+          args.push('--exclude-table', 'public."ETL*_seq*"')
+
+          args.push('--exclude-table-data', 'public."etlStage*_seq*"')
+          args.push('--exclude-table', 'public."etlStage*_seq*"')
         }
 
-        console.log(`⚠️ LIQUIBASE PROTECTION: Adding pg_dump exclusions for Liquibase tracking tables`)
+        console.log('⚠️ LIQUIBASE PROTECTION: Adding pg_dump exclusions for Liquibase tracking tables')
         PROTECTED_TABLES.forEach(table => {
           args.push('--exclude-table', `public."${table}"`)
           args.push('--exclude-table-data', `public."${table}"`)
-      })
+        })
 
         if (dbStats.totalSizeMB > 500) {
           args.push('--data-only')

@@ -5,13 +5,13 @@ const path = require('path')
 const { logInfo, logProgress } = require('../util/logger')
 const { EXCLUDE_ETL_TABLES, ETL_DATABASES, PROTECTED_TABLES } = require('../constants/etl-protection')
 
-async function processForAzure(filePath, sourceDbName, targetDbName, dataOnlyMode = false, dryRun = false) {
+async function processForAzure (filePath, sourceDbName, targetDbName, dataOnlyMode = false, dryRun = false) {
   if (dryRun) {
     logInfo(`[DRY RUN] Would process SQL file ${filePath} for Azure compatibility`)
-    
+
     return {
       processedFilePath: `${filePath}.processed.sql`,
-      stats: { 
+      stats: {
         copyBlocksConverted: 'X (dry run)',
         copyRowsConverted: 'X (dry run)'
       }
@@ -45,7 +45,7 @@ async function processForAzure(filePath, sourceDbName, targetDbName, dataOnlyMod
       }
       logInfo('✅ ETL VERIFICATION: No ETL operations found in processed SQL')
     }
-    
+
     logInfo('🔍 LIQUIBASE VERIFICATION: Performing final Liquibase protection verification...')
     const liquibaseVerification = await verifyNoOperationsOnProtectedTables(tempSqlFile, 'liquibase')
     if (!liquibaseVerification.safe) {
@@ -63,7 +63,7 @@ async function processForAzure(filePath, sourceDbName, targetDbName, dataOnlyMod
   }
 }
 
-async function verifyNoOperationsOnProtectedTables(sqlFile, protectionType) {
+async function verifyNoOperationsOnProtectedTables (sqlFile, protectionType) {
   return new Promise((resolve, reject) => {
     const fileStream = fs.createReadStream(sqlFile, { encoding: 'utf8' })
     const rl = readline.createInterface({
@@ -74,7 +74,7 @@ async function verifyNoOperationsOnProtectedTables(sqlFile, protectionType) {
     let dangerous = false
     let count = 0
     const dangerousLines = []
-    
+
     let pattern
     if (protectionType === 'etl') {
       pattern = /(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)\s+(?:public\.)?("?etl[^"]*"?|etl[^\s(]*)/i
@@ -103,7 +103,7 @@ async function verifyNoOperationsOnProtectedTables(sqlFile, protectionType) {
       }
       resolve({
         safe: !dangerous,
-        count: count,
+        count,
         lines: dangerous ? dangerousLines : []
       })
     })
@@ -114,7 +114,7 @@ async function verifyNoOperationsOnProtectedTables(sqlFile, protectionType) {
   })
 }
 
-async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dataOnlyMode = false) {
+async function processLargeFile (inputFile, outputStream, sourceDb, targetDb, dataOnlyMode = false) {
   return new Promise((resolve, reject) => {
     const fileStream = fs.createReadStream(inputFile, { encoding: 'utf8' })
     const rl = readline.createInterface({
@@ -138,13 +138,13 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
     let copyBuffer = []
     let skipLine = false
     let collectingCopyData = false
-    let lineBuffer = ''
+    const lineBuffer = ''
     let skipCurrentStatement = false
     let currentStatement = ''
 
     const isEtlDatabase = ETL_DATABASES.some(db => sourceDb.toLowerCase() === db.toLowerCase())
     const etlTablePattern = /^(?:public\.)?(["']?etl[^"']*["']?|etl[^\s(]*)/i
-    
+
     const liquibaseTablePattern = new RegExp(`^(?:public\\.)?(?:["']?(${PROTECTED_TABLES.join('|')})["']?|(${PROTECTED_TABLES.join('|')})[\\s,);])`, 'i')
 
     rl.on('line', (line) => {
@@ -166,7 +166,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
           }
         } else {
           currentStatement += line
-          
+
           if (line.trim().endsWith(';')) {
             skipCurrentStatement = false
             outputStream.write(`-- DATA-ONLY MODE: Skipped schema statement: ${currentStatement.substring(0, 50)}...\n`)
@@ -186,7 +186,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
           }
         }
       }
-      
+
       const liquibaseMatch = line.match(liquibaseTablePattern)
       if (liquibaseMatch && !line.trim().startsWith('--')) {
         if (line.match(/(INSERT INTO|UPDATE|DELETE FROM|TRUNCATE|ALTER TABLE|DROP TABLE|CREATE TABLE|COPY)/i)) {
@@ -201,19 +201,19 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
         inCopy = true
         collectingCopyData = true
         copyBuffer = []
-        
+
         const copyMatch = line.match(/COPY\s+([\w."]+)\s*\((.*?)\)\s+FROM\s+stdin;/)
         if (copyMatch) {
           currentCopyTable = copyMatch[1]
           currentCopyColumns = copyMatch[2].split(',').map(col => col.trim())
-          
+
           const tableName = currentCopyTable.replace(/^public\./, '').replace(/"/g, '')
           if (PROTECTED_TABLES.some(t => t.toLowerCase() === tableName.toLowerCase())) {
             logInfo(`⚠️ LIQUIBASE PROTECTION: Skipping COPY block for ${currentCopyTable}`)
             skipLine = true
             return
           }
-          
+
           outputStream.write(`-- Converting COPY to INSERTs for table ${currentCopyTable}\n`)
           stats.copyBlocksConverted++
         } else {
@@ -226,48 +226,48 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
       if (inCopy) {
         if (line === '\\.') {
           inCopy = false
-          
+
           if (skipLine) {
             skipLine = false
             return
           }
-          
+
           let currentInsert = `INSERT INTO ${currentCopyTable} (${currentCopyColumns.join(', ')}) VALUES\n`
           const VALUES_PER_INSERT = 500 // Adjust based on performance needs
           let valueCount = 0
-          
+
           copyBuffer.forEach((row, index) => {
             const formattedRow = formatCopyRowAsValues(row)
-            
+
             if (valueCount > 0) {
               currentInsert += ',\n'
             }
-            
+
             currentInsert += formattedRow
             valueCount++
-            
+
             if (valueCount >= VALUES_PER_INSERT && index < copyBuffer.length - 1) {
               currentInsert += ';\n'
               outputStream.write(currentInsert)
               currentInsert = `INSERT INTO ${currentCopyTable} (${currentCopyColumns.join(', ')}) VALUES\n`
               valueCount = 0
-              
+
               if (copyBuffer.length >= 10000 && index % 10000 === 0) {
                 logInfo(`Converted ${index} COPY rows for ${currentCopyTable} (partial batch)`)
               }
             }
           })
-          
+
           if (valueCount > 0) {
             currentInsert += ';'
             outputStream.write(currentInsert + '\n')
           }
-          
+
           stats.copyRowsConverted += copyBuffer.length
           collectingCopyData = false
           return
         }
-        
+
         if (collectingCopyData && line.trim() !== '' && !skipLine) {
           copyBuffer.push(line)
         }
@@ -276,7 +276,7 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
 
       if (!skipLine) {
         outputStream.write(line + '\n')
-        
+
         if (line.trim().startsWith('INSERT INTO')) {
           stats.originalInserts++
         }
@@ -302,32 +302,32 @@ async function processLargeFile(inputFile, outputStream, sourceDb, targetDb, dat
   })
 }
 
-function formatCopyRowAsValues(row) {
+function formatCopyRowAsValues (row) {
   const cells = row.split('\t')
   const formattedCells = cells.map(cell => {
     if (cell === '\\N') {
       return 'NULL'
     }
-    
-    const needsQuoting = !/^-?\d+(\.\d+)?$/.test(cell) && 
-                       cell !== 'true' && 
+
+    const needsQuoting = !/^-?\d+(\.\d+)?$/.test(cell) &&
+                       cell !== 'true' &&
                        cell !== 'false' &&
-                       cell !== 'NULL' && 
-                       !cell.startsWith('\'') && 
+                       cell !== 'NULL' &&
+                       !cell.startsWith('\'') &&
                        !cell.endsWith('\'')
-    
+
     if (needsQuoting) {
       const escaped = cell.replace(/'/g, "''")
       return `'${escaped}'`
     }
-    
+
     return cell
   })
 
   return `(${formattedCells.join(', ')})`
 }
 
-function getProcessedSqlPath(sourceDbName) {
+function getProcessedSqlPath (sourceDbName) {
   const tempSqlFile = path.join(os.tmpdir(), `processed_${sourceDbName}_full.sql`)
   return fs.existsSync(tempSqlFile) ? tempSqlFile : null
 }
