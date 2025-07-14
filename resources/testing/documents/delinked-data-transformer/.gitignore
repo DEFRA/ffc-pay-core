@@ -1,6 +1,6 @@
 # Dependencies
 node_modules/
-/app/test-dumps/
+test-dumps/
 original-dumps-save/
 npm-debug.log*
 yarn-debug.log*
