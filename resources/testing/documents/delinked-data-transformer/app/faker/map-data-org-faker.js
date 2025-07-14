@@ -1,6 +1,5 @@
 const { faker } = require('@faker-js/faker')
 const { seedFakerWithPriority } = require('./faker-seed-entity')
-const docsTest = 'DT- '
 
 faker.locale = 'en_GB'
 
@@ -44,7 +43,7 @@ const anonymizeOrganisation = (organisation) => {
     addressLine3: faker.helpers.maybe(() => faker.location.street(), { probability: 0.3 }),
     city: faker.location.city(),
     county: faker.location.county(),
-    postcode: `${docsTest}${faker.location.zipCode('??# #??').toUpperCase()}`,
+    postcode: `${faker.location.zipCode('??# #??').toUpperCase()}`,
     emailAddress: faker.internet.email(),
     frn: organisation.frn,
     name: faker.company.name(),

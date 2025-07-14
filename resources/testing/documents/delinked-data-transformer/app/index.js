@@ -124,9 +124,9 @@ const delinkedDataTransformer = async () => {
       // Ask if user wants a dry run first
       const doDryRun = await promptDryRun()
       let uploadFn
-      if (uploadType === 'ffc-pay') uploadFn = upload.uploadFfcPayToDev
-      else if (uploadType === 'ffc-doc') uploadFn = upload.uploadFfcDocToDev
-      else uploadFn = upload.uploadToDev
+      if (uploadType === 'ffc-pay') uploadFn = (dryRun) => upload.uploadToDev('ffc-pay', dryRun)
+      else if (uploadType === 'ffc-doc') uploadFn = (dryRun) => upload.uploadToDev('ffc-doc', dryRun)
+      else uploadFn = (dryRun) => upload.uploadToDev('all', dryRun)
 
       if (doDryRun) {
         console.log(`\n--- DRY RUN: ${uploadType.toUpperCase()} ---`)
