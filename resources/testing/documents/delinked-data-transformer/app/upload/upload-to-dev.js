@@ -3,18 +3,25 @@ const { findSqlDumpFiles } = require('../util/file-utils')
 const { logInfo, logError } = require('../util/logger')
 const path = require('path')
 const fs = require('fs')
+const readline = require('readline')
 const { backupDatabase, restoreDatabase, truncateTable } = require('../database/backup-and-restore')
 
-// Utility to extract table names from COPY statements in a .sql file
-function getTablesFromSqlDump(filePath) {
-  const sql = fs.readFileSync(filePath, 'utf8')
-  const regex = /^COPY\s+([^\s(]+)\s*\(/gm
-  const tables = new Set()
-  let match
-  while ((match = regex.exec(sql)) !== null) {
-    tables.add(match[1])
-  }
-  return Array.from(tables)
+// Utility to extract table names from COPY statements in a .sql file (streaming, memory-efficient)
+async function getTablesFromSqlDump(filePath) {
+  return new Promise((resolve, reject) => {
+    const tables = new Set()
+    const regex = /^COPY\s+([^\s(]+)\s*\(/i
+    const stream = fs.createReadStream(filePath, { encoding: 'utf8' })
+    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity })
+
+    rl.on('line', (line) => {
+      const match = regex.exec(line)
+      if (match) tables.add(match[1])
+    })
+
+    rl.on('error', reject)
+    rl.on('close', () => resolve(Array.from(tables)))
+  })
 }
 
 async function uploadToDev(type = 'all', dryRun = false) {
@@ -45,10 +52,14 @@ async function uploadToDev(type = 'all', dryRun = false) {
     try {
       // Backup database (returns backup file path)
       await backupDatabase(targetDbName, backupDir, dryRun)
-      // Automatically find all tables to truncate
-      const tablesToTruncate = getTablesFromSqlDump(filePath)
+      // Efficiently find all tables to truncate
+      const tablesToTruncate = await getTablesFromSqlDump(filePath)
       for (const tableName of tablesToTruncate) {
-        await truncateTable(targetDbName, tableName)
+        try {
+          await truncateTable(targetDbName, tableName)
+        } catch (truncateErr) {
+          logError(`❌ Truncate failed for ${tableName} in ${targetDbName}: ${truncateErr.message}`)
+        }
       }
       // Restore anonymized dump file
       await restoreDatabase(targetDbName, filePath, dryRun)
@@ -71,5 +82,5 @@ if (require.main === module) {
     .catch(err => {
       logError('Upload process failed:', err)
       process.exit(1)
-   })
-} 
+    })
+}
