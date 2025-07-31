@@ -85,17 +85,37 @@ const delinkedDataTransformer = async () => {
       '6. Upload to DEV environment\n')
 
     // DUMMY DATA CREATION
-    if (await promptContinue('Create dummy records file? (y/n): ')) {
-      const recordCountInput = await promptInput('How many records to create?', '25000')
-      const recordCount = parseInt(recordCountInput, 10)
-      if (isNaN(recordCount) || recordCount <= 0) {
-        console.log('Invalid record count, skipping dummy data creation.')
+    let dummyDataDone = false
+    while (!dummyDataDone) {
+      if (await promptContinue('Create dummy records file? (y/n): ')) {
+        const recordCountInput = await promptInput('How many records to create?', '250000')
+        const recordCount = parseInt(recordCountInput, 10)
+        if (isNaN(recordCount) || recordCount <= 0) {
+          console.log('Invalid record count, skipping dummy data creation.')
+          break
+        }
+        const separateFilesInput = await promptInput('Create separate files? (y/n): ', 'n')
+        const separateFiles = separateFilesInput.trim().toLowerCase() === 'y'
+
+        // Confirm before creating
+        const confirm = await promptContinue(
+          `Continue to create ${recordCount} dummy records${separateFiles ? ' in separate files' : ''}? (y/n): `
+        )
+        if (confirm) {
+          await safeRun(() => dummyData.generateSqlStatements(recordCount, separateFiles), `creating ${recordCount} dummy records`)
+          dummyDataDone = true
+        } else {
+          // Offer to restart input or skip
+          const restart = await promptContinue('Restart dummy data input? (y/n): ')
+          if (!restart) {
+            console.log('Skipping dummy data creation.')
+            dummyDataDone = true
+          }
+        }
       } else {
-        const separateFiles = false
-        await safeRun(() => dummyData.generateSqlStatements(recordCount, separateFiles), `creating ${recordCount} dummy records`)
+        console.log('Skipping dummy data creation.')
+        dummyDataDone = true
       }
-    } else {
-      console.log('Skipping dummy data creation.')
     }
 
     // DUMP
