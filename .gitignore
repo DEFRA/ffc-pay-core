@@ -6,7 +6,7 @@ resources/oracle-to-psql-converters/data-files/*
 resources/testing/documents/delinked-data-transformer/node_modules/
 node_modules/
 resources/testing/documents/delinked-data-transformer/test-dumps*
-resources/testing/documents/delinked-data-transformer/app/dev-backups*
+resources/testing/documents/delinked-data-transformer/dev-backups*
 resources/testing/documents/delinked-data-transformer/app/failed-uploads*
 resources/testing/documents/delinked-data-transformer/transformed/*
 resources/testing/documents/delinked-data-transformer/dummy-inserts/*
