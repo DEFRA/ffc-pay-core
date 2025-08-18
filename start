@@ -1,4 +1,33 @@
 #!/usr/bin/env sh
+
+notify_api_key="${NOTIFY_API_KEY:-}"
+if [ -n "$notify_api_key" ] && (echo "$notify_api_key" | grep -q 'live\|prod\|statement-key'); then
+  echo "⚠️  WARNING: You appear to be using a live Notify API key!"
+  printf "Are you sure you want to continue? (Y/N) "
+  read -r REPLY
+  echo
+  case $REPLY in
+    [Yy]) ;;
+    *) echo "Aborting... Update your API key to a smoke test or local key and then run exec bash before restarting this service."
+       exit 1
+       ;;
+  esac
+fi
+
+notify_api_key_letter="${NOTIFY_API_KEY_LETTER:-}"
+if [ -n "$notify_api_key_letter" ] && (echo "$notify_api_key_letter" | grep -q 'live'); then
+  echo "⚠️  WARNING: You appear to be using a live Notify Letter API key!"
+  printf "Are you sure you want to continue? (Y/N) "
+  read -r REPLY
+  echo
+  case $REPLY in
+    [Yy]) ;;
+    *) echo "Aborting... Update your API key to a smoke test or local key and then run exec bash before restarting this service."
+       exit 1
+       ;;
+  esac
+fi
+
 if [ -z "$(docker network ls --filter name=^ffc-pay$ --format={{.Name}})" ]; then
   echo "Creating ffc-pay Docker network"
   docker network create ffc-pay
