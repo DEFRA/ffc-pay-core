@@ -117,6 +117,7 @@ const D365 = sequelize.define('d365', {
   paymentPeriod: DataTypes.STRING,
   paymentAmount: DataTypes.DECIMAL,
   transactionDate: DataTypes.DATE,
+  marketingYear: DataTypes.STRING,
   datePublished: DataTypes.DATE
 }, {
   tableName: 'd365',
@@ -191,6 +192,7 @@ async function generateData () {
           paymentPeriod: '2024',
           paymentReference,
           paymentAmount: 37500,
+          marketingYear: '2024',
           transactionDate: new Date()
         })
       }

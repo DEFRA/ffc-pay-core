@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "sequelize": "^6.x",
-    "pg": "^8.x",
-    "pg-hstore": "^2.x"
-  }
-}
