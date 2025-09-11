@@ -183,10 +183,12 @@ export D365_UNSETTLED_EMAILS=___EMAIL_PLACEHOLDER__
 export BPS_EMAILS=__EMAIL_PLACEHOLDER__
 export CS_EMAILS=__EMAIL_PLACEHOLDER__
 export PDS_TEAM_EMAILS=__EMAIL_PLACEHOLDER__
+export DWH_EMAILS=__EMAIL_PLACEHOLDER__
 
 # -------------------- Miscellaneous -------------------- #
 export statementReceiverApiVersion=V1
 export statementReceiverEndpoint=https://ffc-doc-statement-receiver
+export PUBLISHING_FREQUENCY=60000
 
 # -------------------- Debugging -------------------- #
 #? Enable Postgres debugging if needed
