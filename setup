@@ -87,6 +87,30 @@ msg_with_spinner() {
 
 trap 'fail_and_restore' ERR
 
+# ----------------- Azure Login Check ----------------- #
+check_azure_login() {
+  # Attempt to get the current account name
+  account_name=$(az account show --query "name" -o tsv 2>/dev/null) || {
+    echo "❌ You are not logged into Azure. Please login to the Defra Dev Tenant."
+    exit 1
+  }
+
+  required_account_name="DEV"  # Change to the exact account name you expect
+
+  # Check if the account name contains "DEV"
+  if [[ "$account_name" != *"$required_account_name"* ]]; then
+    echo "❌ You are logged into the wrong Azure account ($account_name)."
+    echo "   Please login to the Defra Dev Tenant."
+    exit 1
+  fi
+
+  echo "✅ Azure login check passed."
+}
+
+
+msg_with_spinner "🔎 Checking Azure login..." check_azure_login
+
+
 # ----------------- Begin Setup ----------------- #
 echo "📦 Backing up existing .bashrc (if any)..."
 if [[ -f "$bashrc" ]]; then
