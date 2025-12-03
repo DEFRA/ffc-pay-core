@@ -33,9 +33,13 @@ if [ -z "$(docker network ls --filter name=^ffc-pay$ --format={{.Name}})" ]; the
   docker network create ffc-pay
 fi
 
-set -e
 projectRoot="$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pwd)"
+
+# Default: run both payments and documents
 payments="true"
+documents="true"
+failed_services=""
+retry_services=""
 
 show_help() {
   echo "
@@ -43,22 +47,116 @@ show_help() {
     Run payment services.
 
     Options:
-      -s, --statements  include statement services
-      -S, --statements-only  include only statement services, do not run payments services
-      -h, --help       display this help text
+      -p, --Payments-only    run only payment services
+      -d, --Documents-only  run only statement services
+      -h, --help             display this help text
+      
+    Default (no flags): runs both payment and document services
     "
+}
+
+start_service() {
+  service_path="$1"
+  service_name=$(basename "$service_path")
+  is_retry="${2:-false}"
+  
+  if [ ! -d "$service_path" ]; then
+    echo "⚠️  Warning: $service_name directory not found at $service_path"
+    failed_services="${failed_services}${service_name} (not found)\n"
+    return 1
+  fi
+  
+  if [ ! -f "$service_path/scripts/start" ]; then
+    echo "⚠️  Warning: $service_name start script not found"
+    failed_services="${failed_services}${service_name} (no start script)\n"
+    return 1
+  fi
+  
+  if [ "$is_retry" = "true" ]; then
+    echo "Retrying $service_name..."
+  else
+    echo "Starting $service_name..."
+  fi
+  
+  # Capture output to check for errors but don't fail the script
+  if ! "$service_path/scripts/start" -d 2>&1; then
+    echo "⚠️  $service_name start script returned error"
+    if [ "$is_retry" = "false" ]; then
+      retry_services="${retry_services}${service_path}|"
+    else
+      failed_services="${failed_services}${service_name} (start failed)\n"
+    fi
+    return 1
+  fi
+  
+  # Brief pause to allow container to initialize
+  sleep 1
+  
+  # Check if container is running
+  container_name=$(echo "$service_name" | tr '[:upper:]' '[:lower:]')
+  if ! docker ps --filter "name=$container_name" --format "{{.Names}}" | grep -q "$container_name"; then
+    echo "⚠️  Container for $service_name not running"
+    if [ "$is_retry" = "false" ]; then
+      retry_services="${retry_services}${service_path}|"
+    else
+      failed_services="${failed_services}${service_name} (container not running)\n"
+    fi
+    return 1
+  fi
+  
+  echo "✓ $service_name started successfully"
+  return 0
+}
+
+start_services_batch() {
+  service_type="$1"
+  shift
+  services_list="$*"
+  
+  echo "=== Starting $service_type Services ==="
+  
+  # First pass: attempt to start all services
+  for service in $services_list; do
+    start_service "$service" "false" || true
+  done
+  
+  echo
+}
+
+retry_failed_services() {
+  if [ -z "$retry_services" ]; then
+    return 0
+  fi
+  
+  echo "=========================================="
+  echo "Retrying Failed Services"
+  echo "=========================================="
+  echo
+  
+  # Convert pipe-separated list to space-separated
+  services_to_retry=$(echo "$retry_services" | tr '|' ' ')
+  temp_retry=""
+  
+  for service in $services_to_retry; do
+    if [ -n "$service" ]; then
+      start_service "$service" "true" || temp_retry="${temp_retry}${service}|"
+    fi
+  done
+  
+  retry_services="$temp_retry"
+  echo
 }
 
 while :; do
   case $1 in
-    -s|--statements)
-      statements="true"
+    -p|--Payments-only)
+      documents="false"
       ;;
-    -S|--statements-only)
+    -d|--Dcouments-only)
       payments="false"
-      statements="true"
+      documents="true"
       ;;    
-    -h|--help)   # Call a "show_help" function to display a synopsis, then exit.
+    -h|--help)
       show_help
       exit
       ;;
@@ -71,39 +169,53 @@ done
 
 cd "${projectRoot}"
 
+echo "=========================================="
+echo "Starting FFC Pay Services"
+echo "Payments: $payments | Documents: $documents"
+echo "=========================================="
+echo
+
 if [ "${payments}" = "true" ]; then
-  ./ffc-pay-batch-verifier/scripts/start -d;
-  ./ffc-pay-batch-processor/scripts/start -d;
-  ./ffc-pay-enrichment/scripts/start -d;
-  ./ffc-pay-processing/scripts/start -d;
-  ./ffc-pay-submission/scripts/start -d;
-  ./ffc-pay-file-publisher/scripts/start -d;
-  ./ffc-pay-file-receiver/scripts/start -d;
-  ./ffc-pay-responses/scripts/start -d;
-  ./ffc-pay-tracking/scripts/start -d;
-  ./ffc-pay-web/scripts/start -d;
-  ./ffc-pay-request-editor/scripts/start -d;
-  ./ffc-pay-event-hub/scripts/start -d;
-  ./ffc-pay-data-hub/scripts/start -d;
-  ./ffc-pay-report-generator/scripts/start -d;
-  ./ffc-pay-alerting/scripts/start -d;
-  ./ffc-pay-gateway/scripts/start -d;
-  ./ffc-pay-injection/scripts/start -d;
-  ./ffc-pay-xb/scripts/start -d;
-  ./ffc-pay-dps/scripts/start -d;
-  ./ffc-pay-demographics/scripts/start -d;
-  ./ffc-pay-fdmr/scripts/start -d;
+  payment_services="./ffc-pay-batch-verifier ./ffc-pay-batch-processor ./ffc-pay-enrichment ./ffc-pay-processing ./ffc-pay-submission ./ffc-pay-file-publisher ./ffc-pay-file-receiver ./ffc-pay-responses ./ffc-pay-tracking ./ffc-pay-web ./ffc-pay-request-editor ./ffc-pay-event-hub ./ffc-pay-data-hub ./ffc-pay-report-generator ./ffc-pay-alerting ./ffc-pay-gateway ./ffc-pay-injection ./ffc-pay-xb ./ffc-pay-dps ./ffc-pay-demographics ./ffc-pay-fdmr"
+  start_services_batch "Payment" $payment_services
 fi
 
-if [ "${statements}" = "true" ]; then
-  ./ffc-doc-statement-data/scripts/start -d;
-  ./ffc-doc-statement-constructor/scripts/start -d;
-  ./ffc-doc-statement-generator/scripts/start -d;
-  ./ffc-doc-statement-publisher/scripts/start -d;
-  ./ffc-doc-statement-receiver/scripts/start -d;
-  ./ffc-doc-alerting/scripts/start -d;
+if [ "${documents}" = "true" ]; then
+  document_services="./ffc-doc-statement-data ./ffc-doc-statement-constructor ./ffc-doc-statement-generator ./ffc-doc-statement-publisher ./ffc-doc-statement-receiver ./ffc-doc-alerting"
+  start_services_batch "Document" $document_services
+fi
+
+# Retry any failed services once
+if [ -n "$retry_services" ]; then
+  echo "Some services failed to start. Waiting 3 seconds before retry..."
+  sleep 3
+  retry_failed_services
 fi
 
 if [ "${payments}" = "true" ]; then
-  ffc-pay-core/seed
+  echo "=== Running Seed Data ==="
+  if [ -f "ffc-pay-core/seed" ]; then
+    ffc-pay-core/seed
+  else
+    echo "⚠️  Warning: seed script not found"
+  fi
+  echo
+fi
+
+echo "=========================================="
+echo "Startup Complete"
+echo "=========================================="
+
+if [ -n "$failed_services" ]; then
+  echo
+  echo "❌ The following services failed to start after retry:"
+  echo "=========================================="
+  printf "%b" "$failed_services"
+  echo "=========================================="
+  echo
+  echo "Please check the logs for more details."
+  exit 1
+else
+  echo "✓ All services started successfully"
+  exit 0
 fi
