@@ -152,7 +152,7 @@ while :; do
     -p|--Payments-only)
       documents="false"
       ;;
-    -d|--Dcouments-only)
+    -d|--Documents-only)
       payments="false"
       documents="true"
       ;;    
