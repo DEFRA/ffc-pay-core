@@ -44,11 +44,11 @@ retry_services=""
 show_help() {
   echo "
     Usage: path/to/ffc-pay-core [OPTION...]
-    Run payment services.
+    Run payment and document services.
 
     Options:
       -p, --Payments-only    run only payment services
-      -d, --Documents-only  run only statement services
+      -d, --Documents-only  run only document services
       -h, --help             display this help text
       
     Default (no flags): runs both payment and document services
@@ -170,7 +170,7 @@ done
 cd "${projectRoot}"
 
 echo "=========================================="
-echo "Starting FFC Pay Services"
+echo "Starting FFC Payment and Document Services"
 echo "Payments: $payments | Documents: $documents"
 echo "=========================================="
 echo
