@@ -48,6 +48,7 @@ show_help() {
     Run payment and document services.
 
     Options:
+      no flag : ./start      run both payment and document services
       -p, --payments-only    run only payment services
       -d, --documents-only   run only document services
       -h, --help             display this help text
