@@ -40,6 +40,7 @@ payments="true"
 documents="true"
 failed_services=""
 retry_services=""
+flag_count=0
 
 show_help() {
   echo "
@@ -47,8 +48,8 @@ show_help() {
     Run payment and document services.
 
     Options:
-      -p, --Payments-only    run only payment services
-      -d, --Documents-only  run only document services
+      -p, --payments-only    run only payment services
+      -d, --documents-only   run only document services
       -h, --help             display this help text
       
     Default (no flags): runs both payment and document services
@@ -149,16 +150,36 @@ retry_failed_services() {
 
 while :; do
   case $1 in
-    -p|--Payments-only)
+    -p|--payments-only)
+      if [ "$flag_count" -gt 0 ]; then
+        echo "Error: Cannot combine multiple service flags"
+        echo
+        show_help
+        exit 1
+      fi
       documents="false"
+      flag_count=$((flag_count + 1))
       ;;
-    -d|--Documents-only)
+    -d|--documents-only)
+      if [ "$flag_count" -gt 0 ]; then
+        echo "Error: Cannot combine multiple service flags"
+        echo
+        show_help
+        exit 1
+      fi
       payments="false"
       documents="true"
+      flag_count=$((flag_count + 1))
       ;;    
     -h|--help)
       show_help
-      exit
+      exit 0
+      ;;
+    -*)
+      echo "Error: Unknown option: $1"
+      echo
+      show_help
+      exit 1
       ;;
     *)
       break
@@ -166,6 +187,14 @@ while :; do
 
   shift
 done
+
+# Check if there are any remaining arguments
+if [ "$#" -gt 0 ]; then
+  echo "Error: Unexpected argument(s): $*"
+  echo
+  show_help
+  exit 1
+fi
 
 cd "${projectRoot}"
 
