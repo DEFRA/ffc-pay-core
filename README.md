@@ -28,7 +28,6 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 - [ffc-pay-xb](https://github.com/defra/ffc-pay-xb)
 - [ffc-pay-dps](https://github.com/defra/ffc-pay-dps)
 - [ffc-pay-demographics](https://github.com/defra/ffc-pay-demographics)
-- [ffc-pay-fdmr](https://github.com/defra/ffc-pay-fdmr)
 
 #### Monitoring
 
