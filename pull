@@ -83,9 +83,6 @@ cd "${projectRoot}"
 cd ./ffc-pay-dps && \
   git pull
 cd "${projectRoot}"
-cd ./ffc-pay-fdmr && \
-  git pull
-cd "${projectRoot}"
 cd ./ffc-pay-demographics && \
   git pull
 cd "${projectRoot}"
