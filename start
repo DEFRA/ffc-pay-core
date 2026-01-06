@@ -206,7 +206,7 @@ echo "=========================================="
 echo
 
 if [ "${payments}" = "true" ]; then
-  payment_services="./ffc-pay-batch-verifier ./ffc-pay-batch-processor ./ffc-pay-enrichment ./ffc-pay-processing ./ffc-pay-submission ./ffc-pay-file-publisher ./ffc-pay-file-receiver ./ffc-pay-responses ./ffc-pay-tracking ./ffc-pay-web ./ffc-pay-request-editor ./ffc-pay-event-hub ./ffc-pay-data-hub ./ffc-pay-report-generator ./ffc-pay-alerting ./ffc-pay-gateway ./ffc-pay-injection ./ffc-pay-xb ./ffc-pay-dps ./ffc-pay-demographics ./ffc-pay-fdmr"
+  payment_services="./ffc-pay-batch-verifier ./ffc-pay-batch-processor ./ffc-pay-enrichment ./ffc-pay-processing ./ffc-pay-submission ./ffc-pay-file-publisher ./ffc-pay-file-receiver ./ffc-pay-responses ./ffc-pay-tracking ./ffc-pay-web ./ffc-pay-request-editor ./ffc-pay-event-hub ./ffc-pay-data-hub ./ffc-pay-report-generator ./ffc-pay-alerting ./ffc-pay-gateway ./ffc-pay-injection ./ffc-pay-xb ./ffc-pay-dps ./ffc-pay-demographics"
   start_services_batch "Payment" $payment_services
 fi
 
