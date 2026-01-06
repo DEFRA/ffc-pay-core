@@ -80,9 +80,6 @@ cd "${projectRoot}"
 cd ./ffc-pay-dps && \
   docker compose build
 cd "${projectRoot}"
-cd ./ffc-pay-fdmr && \
-  docker compose build
-cd "${projectRoot}"
 cd ./ffc-pay-alerting && \
   docker compose build
 cd "${projectRoot}"
