@@ -32,7 +32,6 @@ Ensure you have satisfied the prerequisites of all individual repositories.
 #### Monitoring
 
 - [ffc-pay-event-hub](https://github.com/defra/ffc-pay-event-hub)
-- [ffc-pay-data-hub](https://github.com/defra/ffc-pay-data-hub)
 - [ffc-pay-alerting](https://github.com/defra/ffc-pay-alerting)
 - [ffc-pay-report-generator](https://github.com/defra/ffc-pay-report-generator)
 
@@ -135,7 +134,6 @@ ffc-pay-request-editor(Kubernetes - ffc-pay-request-editor)
 ffc-pay-web(Kubernetes - ffc-pay-web)
 
 ffc-pay-event-hub(Kubernetes - ffc-pay-event-hub)
-ffc-pay-data-hub(Kubernetes - ffc-pay-data-hub)
 ffc-pay-alerting(Kubernetes - ffc-pay-alerting)
 ffc-pay-report-generator(Kubernetes - ffc-pay-report-generator)
 
@@ -166,7 +164,7 @@ storageTablePayments --> ffc-pay-report-generator
 ffc-pay-report-generator --> storageReports
 
 ffc-pay-web --> storageReport
-ffc-pay-web --> ffc-pay-data-hub
+ffc-pay-web --> ffc-pay-event-hub
 ```
 
 ### Statements
