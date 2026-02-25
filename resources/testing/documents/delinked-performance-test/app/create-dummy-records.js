@@ -55,10 +55,7 @@ const dbConfig = {
   },
   dialectOptions: {
     connectTimeout: 60000,
-    ssl: {
-      require: true,
-      rejectUnauthorised: false
-    }
+  ssl: false
   }
 }
 
@@ -112,9 +109,11 @@ const DelinkedCalculation = sequelize.define('delinkedCalculation', {
 })
 
 const D365 = sequelize.define('d365', {
-  paymentReference: { type: DataTypes.STRING, primaryKey: true },
+  d365Id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true, allowNull: false },
+  paymentReference: { type: DataTypes.STRING(30), allowNull: false },
+  marketingYear: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 2024 },
   calculationId: DataTypes.INTEGER,
-  paymentPeriod: DataTypes.STRING,
+  paymentPeriod: DataTypes.STRING(200),
   paymentAmount: DataTypes.DECIMAL,
   transactionDate: DataTypes.DATE,
   datePublished: DataTypes.DATE
@@ -186,12 +185,14 @@ async function generateData () {
           ...getTimestamps('delinkedCalculation')
         })
 
-        d365Entries.push({
+         d365Entries.push({
           calculationId,
-          paymentPeriod: '2024',
+          paymentPeriod: 'Q4-24',
           paymentReference,
+          marketingYear: 2024,
           paymentAmount: 37500,
-          transactionDate: new Date()
+          transactionDate: new Date(),
+          ...getTimestamps('d365')
         })
       }
 
