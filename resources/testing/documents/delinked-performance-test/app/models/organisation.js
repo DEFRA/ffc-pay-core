@@ -1,6 +1,3 @@
-const config = require('../../config')
-const dbConfig = config.dbConfig[config.env]
-
 module.exports = (sequelize, DataTypes) => {
   const organisation = sequelize.define('organisation', {
     sbi: { type: DataTypes.INTEGER, primaryKey: true, comment: 'Example Output: 200820241 Source: RPS | Demographics. Used to show customer identifier on statement Used on Statement? Yes Customer details at top of statement' },
@@ -20,7 +17,6 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'organisations',
     freezeTableName: true,
     timestamps: false,
-    schema: dbConfig.schema
   })
   return organisation
 }

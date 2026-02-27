@@ -13,17 +13,18 @@ if (isNaN(recordCount) || recordCount <= 0) {
 
 const getTimestamps = (type) => {
   const now = new Date()
+  now.setDate(now.getDate() - 3) // Set date to 1 day ago to unblock constructors lt: today
   const base = {
-    updated: now
+    updated: new Date(now.toISOString())
   }
 
   switch (type) {
     case 'organisation':
       return base
     case 'delinkedCalculation':
-      return {
+            return {
         ...base,
-        datePublished: new Date(now.getTime() - 60000)
+        datePublished: new Date(now.getTime() - 60000) // 1 minute earlier
       }
     case 'd365':
       return {
@@ -125,6 +126,8 @@ const D365 = sequelize.define('d365', {
 
 async function generateData () {
   const batchSize = 10000
+  const now = new Date()
+  now.setDate(now.getDate() - 3)
   console.log(`Starting data generation for ${recordCount} records`)
 
   try {
@@ -143,7 +146,7 @@ async function generateData () {
         const calculationId = 987000000 + index
         const paymentReference = `PY${String(index).padStart(7, '0')}`
         const name = `Performance farm${index}`
-        const emailAddress = 'documents.performance.test@gmail.com'
+        const emailAddress = 'leigh.godson@atos.net'
         const applicationId = 1234567 + index
 
         organisations.push({
@@ -169,30 +172,29 @@ async function generateData () {
           paymentBand2: '50000',
           paymentBand3: '150000',
           paymentBand4: '99999999.99',
-          percentageReduction1: '50',
-          percentageReduction2: '55',
-          percentageReduction3: '65',
-          percentageReduction4: '70',
-          progressiveReductions1: '15000',
-          progressiveReductions2: '11000',
-          progressiveReductions3: '65000',
-          progressiveReductions4: '35000',
-          totalProgressiveReduction: '126000',
-          referenceAmount: '2000000',
-          totalDelinkedPayment: '75000',
-          paymentAmountCalculated: '37500',
+          percentageReduction1: '50.00',
+          percentageReduction2: '55.00',
+          percentageReduction3: '65.00',
+          percentageReduction4: '70.00',
+          progressiveReductions1: '15000.00',
+          progressiveReductions2: '11000.00',
+          progressiveReductions3: '65000.00',
+          progressiveReductions4: '35000.00',
+          totalProgressiveReduction: '126000.00',
+          referenceAmount: '2000000.00',
+          totalDelinkedPayment: '75000.00',
+          paymentAmountCalculated: '37500.00',
           datePublished: new Date(),
           ...getTimestamps('delinkedCalculation')
         })
 
-         d365Entries.push({
-          calculationId,
-          paymentPeriod: 'Q4-24',
-          paymentReference,
-          marketingYear: 2024,
-          paymentAmount: 37500,
-          transactionDate: new Date(),
-          ...getTimestamps('d365')
+        d365Entries.push({
+        calculationId,
+        paymentPeriod: 'Q4-24',
+        paymentReference,
+        marketingYear: 2024,
+        paymentAmount: Number.parseFloat(37500.00).toFixed(2),
+        transactionDate: now
         })
       }
 

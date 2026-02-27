@@ -1,6 +1,3 @@
-const config = require('../../config')
-const dbConfig = config.dbConfig[config.env]
-
 module.exports = (sequelize, DataTypes) => {
   const FRN_LENGTH = 16
 
@@ -32,7 +29,6 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'delinkedCalculation',
     freezeTableName: true,
     timestamps: false,
-    schema: dbConfig.schema
   })
 
   delinkedCalculation.associate = function (models) {

@@ -1,6 +1,3 @@
-const config = require('../../config')
-const dbConfig = config.dbConfig[config.env]
-
 module.exports = (sequelize, DataTypes) => {
   const PAYMENT_REFERENCE_LENGTH = 30
   const PAYMENT_PERIOD_LENGTH = 200
@@ -21,7 +18,6 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'd365',
     freezeTableName: true,
     timestamps: false,
-    schema: dbConfig.schema
   })
   d365.associate = function (models) {
     d365.belongsTo(models.delinkedCalculation, {
