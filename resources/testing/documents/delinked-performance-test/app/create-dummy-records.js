@@ -146,7 +146,7 @@ async function generateData () {
         const calculationId = 987000000 + index
         const paymentReference = `PY${String(index).padStart(7, '0')}`
         const name = `Performance farm${index}`
-        const emailAddress = 'leigh.godson@atos.net'
+        const emailAddress = 'documents.performance.test@gmail.com'
         const applicationId = 1234567 + index
 
         organisations.push({
