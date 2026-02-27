@@ -4,6 +4,8 @@ const args = process.argv.slice(2)
 console.log('Command line arguments:', args)
 
 const recordCount = parseInt(args[0]) || 250000
+const oneMinuteInMS = 60000
+const statementDelayDays = 3
 console.log('Parsed record count:', recordCount)
 
 if (isNaN(recordCount) || recordCount <= 0) {
@@ -13,7 +15,7 @@ if (isNaN(recordCount) || recordCount <= 0) {
 
 const getTimestamps = (type) => {
   const now = new Date()
-  now.setDate(now.getDate() - 3) // Set date to 1 day ago to unblock constructors lt: today
+  now.setDate(now.getDate() - statementDelayDays) // Set date to 1 day ago to unblock constructors lt: today
   const base = {
     updated: new Date(now.toISOString())
   }
@@ -22,14 +24,14 @@ const getTimestamps = (type) => {
     case 'organisation':
       return base
     case 'delinkedCalculation':
-            return {
+      return {
         ...base,
-        datePublished: new Date(now.getTime() - 60000) // 1 minute earlier
+        datePublished: new Date(now.getTime() - oneMinuteInMS)
       }
     case 'd365':
       return {
         ...base,
-        datePublished: new Date(now.getTime() - 60000)
+        datePublished: new Date(now.getTime() - oneMinuteInMS)
       }
     default:
       return base
@@ -56,7 +58,7 @@ const dbConfig = {
   },
   dialectOptions: {
     connectTimeout: 60000,
-  ssl: false
+    ssl: false
   }
 }
 
@@ -127,7 +129,7 @@ const D365 = sequelize.define('d365', {
 async function generateData () {
   const batchSize = 10000
   const now = new Date()
-  now.setDate(now.getDate() - 3)
+  now.setDate(now.getDate() - statementDelayDays)
   console.log(`Starting data generation for ${recordCount} records`)
 
   try {
@@ -189,12 +191,12 @@ async function generateData () {
         })
 
         d365Entries.push({
-        calculationId,
-        paymentPeriod: 'Q4-24',
-        paymentReference,
-        marketingYear: 2024,
-        paymentAmount: Number.parseFloat(37500.00).toFixed(2),
-        transactionDate: now
+          calculationId,
+          paymentPeriod: 'Q4-24',
+          paymentReference,
+          marketingYear: 2024,
+          paymentAmount: Number.parseFloat(37500.00).toFixed(2),
+          transactionDate: now
         })
       }
 

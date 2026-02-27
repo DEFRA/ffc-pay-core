@@ -6,6 +6,9 @@ const SQL_TEMPLATES = {
   d365: 'INSERT INTO public.d365 ("calculationId", "paymentPeriod", "paymentReference", "marketingYear", "paymentAmount", "transactionDate", "datePublished") VALUES\n'
 }
 
+const oneMinuteInMS = 60000
+const statementDelayInDays = 3
+
 function validateArgs () {
   const args = process.argv.slice(2)
   const recordCount = parseInt(args[0])
@@ -34,9 +37,9 @@ function writeFile (filename, content, isAppend = false) {
 
 function getTimestampsForSql () {
   const now = new Date()
-  now.setDate(now.getDate() - 3)
+  now.setDate(now.getDate() - statementDelayInDays)
   const updatedIso = now.toISOString()
-  const datePublishedIso = new Date(now.getTime() - 60000).toISOString() // 1 minute earlier
+  const datePublishedIso = new Date(now.getTime() - oneMinuteInMS).toISOString()
   return { updatedIso, datePublishedIso, transactionDateIso: updatedIso }
 }
 

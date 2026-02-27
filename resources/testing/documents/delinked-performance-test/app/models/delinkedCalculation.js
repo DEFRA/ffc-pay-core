@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
   {
     tableName: 'delinkedCalculation',
     freezeTableName: true,
-    timestamps: false,
+    timestamps: false
   })
 
   delinkedCalculation.associate = function (models) {

@@ -17,7 +17,7 @@ module.exports = (sequelize, DataTypes) => {
   {
     tableName: 'd365',
     freezeTableName: true,
-    timestamps: false,
+    timestamps: false
   })
   d365.associate = function (models) {
     d365.belongsTo(models.delinkedCalculation, {
