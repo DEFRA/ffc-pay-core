@@ -1,10 +1,13 @@
 const fs = require('fs')
 
 const SQL_TEMPLATES = {
-  organisations: 'INSERT INTO public.organisations (sbi, "addressLine1", "addressLine2", "addressLine3", city, county, postcode, "emailAddress", frn, name, updated) VALUES\n',
-  delinkedCalc: 'INSERT INTO public."delinkedCalculation" ("applicationId", "calculationId", sbi, frn, "paymentBand1", "paymentBand2", "paymentBand3", "paymentBand4", "percentageReduction1", "percentageReduction2", "percentageReduction3", "percentageReduction4", "progressiveReductions1", "progressiveReductions2", "progressiveReductions3", "progressiveReductions4", "totalProgressiveReduction", "referenceAmount", "totalDelinkedPayment", "paymentAmountCalculated", "datePublished", updated) VALUES\n',
-  d365: 'INSERT INTO public.d365 ("calculationId", "paymentPeriod", "paymentReference", "paymentAmount", "transactionDate") VALUES\n'
+  organisations: 'INSERT INTO public.organisations (sbi, "addressLine1", "addressLine2", "addressLine3", city, county, postcode, "emailAddress", frn, name, updated, published) VALUES\n',
+  delinkedCalc: 'INSERT INTO public."delinkedCalculation" ("applicationId", "calculationId", sbi, frn, "paymentBand1", "paymentBand2", "paymentBand3", "paymentBand4", "percentageReduction1", "percentageReduction2", "percentageReduction3", "percentageReduction4", "progressiveReductions1", "progressiveReductions2", "progressiveReductions3", "progressiveReductions4", "totalProgressiveReduction", "referenceAmount", "totalDelinkedPayment", "paymentAmountCalculated", "datePublished", "updated") VALUES\n',
+  d365: 'INSERT INTO public.d365 ("calculationId", "paymentPeriod", "paymentReference", "marketingYear", "paymentAmount", "transactionDate", "datePublished") VALUES\n'
 }
+
+const oneMinuteInMS = 60000
+const statementDelayInDays = 3
 
 function validateArgs () {
   const args = process.argv.slice(2)
@@ -32,6 +35,14 @@ function writeFile (filename, content, isAppend = false) {
   }
 }
 
+function getTimestampsForSql () {
+  const now = new Date()
+  now.setDate(now.getDate() - statementDelayInDays)
+  const updatedIso = now.toISOString()
+  const datePublishedIso = new Date(now.getTime() - oneMinuteInMS).toISOString()
+  return { updatedIso, datePublishedIso, transactionDateIso: updatedIso }
+}
+
 function generateSqlStatements (totalRecords, separateFiles) {
   console.log(`Generating ${totalRecords} records. Separate files: ${separateFiles}`)
 
@@ -53,22 +64,22 @@ function generateSqlStatements (totalRecords, separateFiles) {
       let d365Sql = SQL_TEMPLATES.d365
 
       const batchEnd = Math.min(recordsProcessed + batchSize, totalRecords)
+      const timestamps = getTimestampsForSql()
 
       for (let i = recordsProcessed + 1; i <= batchEnd; i++) {
         const sbi = 123000000 + i
         const frn = (1234000000 + i).toString()
         const calculationId = 987000000 + i
         const paymentReference = `PY${String(i).padStart(7, '0')}`
-        const name = `Performance farm${i}`
+        const name = `Performance farm${i}`.replace(/'/g, "''")
         const emailAddress = 'documents.performance.test@gmail.com'
         const applicationId = 1234567 + i
-        const now = new Date()
-        const currentDate = now.toISOString()
-        const updatedDate = new Date(now.getTime() + 60000).toISOString()
 
-        organisationsSql += `(${sbi}, 'Street', 'Area', 'District', 'City', 'County', 'AA1 1BB', '${emailAddress}', ${frn}, '${name}', '${currentDate}')`
-        delinkedCalcSql += `(${applicationId}, ${calculationId}, ${sbi}, '${frn}', '30000', '50000', '150000', '99999999.99', '50', '55', '65', '70', '15000', '11000', '65000', '35000', '126000', '2000000', '75000', '37500', '${currentDate}', '${updatedDate}')`
-        d365Sql += `(${calculationId}, '2024', '${paymentReference}', 37500, '${currentDate}')`
+        organisationsSql += `(${sbi}, 'Street', 'Area', 'District', 'City', 'County', 'AA1 1BB', '${emailAddress}', ${frn}, '${name}', '${timestamps.updatedIso}', NULL)`
+
+        delinkedCalcSql += `(${applicationId}, ${calculationId}, ${sbi}, '${frn}', '30000', '50000', '150000', '99999999.99', '50.00', '55.00', '65.00', '70.00', '15000.00', '11000.00', '65000.00', '35000.00', '126000.00', '2000000.00', '75000.00', '37500.00', '${timestamps.datePublishedIso}', '${timestamps.updatedIso}')`
+
+        d365Sql += `(${calculationId}, 'Q4-24', '${paymentReference}', 2024, '37500.00', '${timestamps.transactionDateIso}', null)`
 
         if (i < batchEnd) {
           organisationsSql += ',\n'

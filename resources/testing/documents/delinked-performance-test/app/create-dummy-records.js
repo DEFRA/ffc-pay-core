@@ -4,6 +4,8 @@ const args = process.argv.slice(2)
 console.log('Command line arguments:', args)
 
 const recordCount = parseInt(args[0]) || 250000
+const oneMinuteInMS = 60000
+const statementDelayDays = 3
 console.log('Parsed record count:', recordCount)
 
 if (isNaN(recordCount) || recordCount <= 0) {
@@ -13,8 +15,9 @@ if (isNaN(recordCount) || recordCount <= 0) {
 
 const getTimestamps = (type) => {
   const now = new Date()
+  now.setDate(now.getDate() - statementDelayDays) // Set date to 1 day ago to unblock constructors lt: today
   const base = {
-    updated: now
+    updated: new Date(now.toISOString())
   }
 
   switch (type) {
@@ -23,12 +26,12 @@ const getTimestamps = (type) => {
     case 'delinkedCalculation':
       return {
         ...base,
-        datePublished: new Date(now.getTime() - 60000)
+        datePublished: new Date(now.getTime() - oneMinuteInMS)
       }
     case 'd365':
       return {
         ...base,
-        datePublished: new Date(now.getTime() - 60000)
+        datePublished: new Date(now.getTime() - oneMinuteInMS)
       }
     default:
       return base
@@ -55,10 +58,7 @@ const dbConfig = {
   },
   dialectOptions: {
     connectTimeout: 60000,
-    ssl: {
-      require: true,
-      rejectUnauthorised: false
-    }
+    ssl: false
   }
 }
 
@@ -112,9 +112,11 @@ const DelinkedCalculation = sequelize.define('delinkedCalculation', {
 })
 
 const D365 = sequelize.define('d365', {
-  paymentReference: { type: DataTypes.STRING, primaryKey: true },
+  d365Id: { type: DataTypes.BIGINT, primaryKey: true, autoIncrement: true, allowNull: false },
+  paymentReference: { type: DataTypes.STRING(30), allowNull: false },
+  marketingYear: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 2024 },
   calculationId: DataTypes.INTEGER,
-  paymentPeriod: DataTypes.STRING,
+  paymentPeriod: DataTypes.STRING(200),
   paymentAmount: DataTypes.DECIMAL,
   transactionDate: DataTypes.DATE,
   datePublished: DataTypes.DATE
@@ -126,6 +128,8 @@ const D365 = sequelize.define('d365', {
 
 async function generateData () {
   const batchSize = 10000
+  const now = new Date()
+  now.setDate(now.getDate() - statementDelayDays)
   console.log(`Starting data generation for ${recordCount} records`)
 
   try {
@@ -170,28 +174,29 @@ async function generateData () {
           paymentBand2: '50000',
           paymentBand3: '150000',
           paymentBand4: '99999999.99',
-          percentageReduction1: '50',
-          percentageReduction2: '55',
-          percentageReduction3: '65',
-          percentageReduction4: '70',
-          progressiveReductions1: '15000',
-          progressiveReductions2: '11000',
-          progressiveReductions3: '65000',
-          progressiveReductions4: '35000',
-          totalProgressiveReduction: '126000',
-          referenceAmount: '2000000',
-          totalDelinkedPayment: '75000',
-          paymentAmountCalculated: '37500',
+          percentageReduction1: '50.00',
+          percentageReduction2: '55.00',
+          percentageReduction3: '65.00',
+          percentageReduction4: '70.00',
+          progressiveReductions1: '15000.00',
+          progressiveReductions2: '11000.00',
+          progressiveReductions3: '65000.00',
+          progressiveReductions4: '35000.00',
+          totalProgressiveReduction: '126000.00',
+          referenceAmount: '2000000.00',
+          totalDelinkedPayment: '75000.00',
+          paymentAmountCalculated: '37500.00',
           datePublished: new Date(),
           ...getTimestamps('delinkedCalculation')
         })
 
         d365Entries.push({
           calculationId,
-          paymentPeriod: '2024',
+          paymentPeriod: 'Q4-24',
           paymentReference,
-          paymentAmount: 37500,
-          transactionDate: new Date()
+          marketingYear: 2024,
+          paymentAmount: Number.parseFloat(37500.00).toFixed(2),
+          transactionDate: now
         })
       }
 
