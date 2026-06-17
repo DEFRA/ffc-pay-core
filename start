@@ -1,5 +1,3 @@
-#!/usr/bin/env sh
-
 notify_api_key="${NOTIFY_API_KEY:-}"
 if [ -n "$notify_api_key" ] && (echo "$notify_api_key" | grep -q 'live\|prod\|statement-key'); then
   echo "⚠️  WARNING: You appear to be using a live Notify API key!"
@@ -206,7 +204,7 @@ echo "=========================================="
 echo
 
 if [ "${payments}" = "true" ]; then
-  payment_services="./ffc-pay-batch-verifier ./ffc-pay-batch-processor ./ffc-pay-enrichment ./ffc-pay-processing ./ffc-pay-submission ./ffc-pay-file-publisher ./ffc-pay-file-receiver ./ffc-pay-responses ./ffc-pay-tracking ./ffc-pay-web ./ffc-pay-request-editor ./ffc-pay-event-hub ./ffc-pay-report-generator ./ffc-pay-alerting ./ffc-pay-gateway ./ffc-pay-injection ./ffc-pay-xb ./ffc-pay-dps ./ffc-pay-demographics"
+  payment_services="./ffc-pay-batch-verifier ./ffc-pay-batch-processor ./ffc-pay-enrichment ./ffc-pay-processing ./ffc-pay-submission ./ffc-pay-file-publisher ./ffc-pay-file-receiver ./ffc-pay-responses ./ffc-pay-tracking ./ffc-pay-web ./ffc-pay-request-editor ./ffc-pay-event-hub ./ffc-pay-report-generator ./ffc-pay-alerting ./ffc-pay-gateway ./ffc-pay-injection ./ffc-pay-xb ./ffc-pay-dps ./ffc-pay-demographics ./fcp-pds-web"
   start_services_batch "Payment" $payment_services
 fi
 
