@@ -104,6 +104,9 @@ echo
 echo 'ffc-pay-demographics: ' &&
   kubectl get deployment ffc-pay-demographics -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
+echo 'fcp-pds-web: ' &&
+  kubectl get deployment fcp-pds-web -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
+echo
 echo 'ffc-doc-statement-data: ' &&
   kubectl get cronjob ffc-doc-statement-data -o jsonpath='{.metadata.labels.app\.kubernetes\.io\/version}';
 echo
