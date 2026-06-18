@@ -106,6 +106,10 @@ cd ./ffc-pay-demographics && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
+cd ./fcp-pds-web && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-doc-statement-data && \
   git checkout main && \
   git pull
