@@ -24,6 +24,7 @@ arr=(
   "ffc-pay-xb"
   "ffc-pay-dps"
   "ffc-pay-demographics"
+  "fcp-pds-web"
   "ffc-doc-statement-data"
   "ffc-doc-statement-constructor"
   "ffc-doc-statement-generator"

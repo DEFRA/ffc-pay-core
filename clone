@@ -66,6 +66,9 @@ projectRoot=$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/.." || return; pw
   test -d ffc-pay-demographics\
     && >&2 echo "The 'ffc-pay-demographics' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-pay-demographics.git
+  test -d fcp-pds-web\
+    && >&2 echo "The 'fcp-pds-web' repository already exists. Skipping." \
+    || git clone https://github.com/DEFRA/fcp-pds-web.git
   test -d ffc-doc-statement-data\
     && >&2 echo "The 'ffc-doc-statement-data' repository already exists. Skipping." \
     || git clone https://github.com/DEFRA/ffc-doc-statement-data.git

@@ -56,6 +56,8 @@ if [ "${payments}" = "true" ]; then
   code ./ffc-pay-xb;
   code ./ffc-pay-dps;
   code ./ffc-pay-demographics;
+  code ./fcp-pds-web;
+
 fi
 
 if [ "${statements}" = "true" ]; then

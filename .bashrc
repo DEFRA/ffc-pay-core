@@ -154,6 +154,8 @@ export SCHEDULE_ENABLED=true
 export SEND_CRM_MESSAGE_ENABLED=true
 export SAVE_LOG_ENABLED=true
 export PROCESSING_ACTIVE=true
+export AHWR_SERVICE_BUS_ACTIVE=true
+export FPTT_SERVICE_BUS_ACTIVE=true 
 
 # -------------------- Postgres ETL Configuration -------------------- #
 export POSTGRES_USERNAME=__POSTGRES_USERNAME_PLACEHOLDER__
