@@ -24,5 +24,11 @@ WITH (
 )
 TABLESPACE pg_default;
 
+CREATE INDEX IF NOT EXISTS "idx_invoiceLines_paymentRequestId"
+    ON public."invoiceLines" USING btree
+    ("paymentRequestId" ASC NULLS LAST)
+    WITH (fillfactor=100)
+    TABLESPACE pg_default;
+
 ALTER TABLE IF EXISTS public."invoiceLines"
     OWNER to postgres;
