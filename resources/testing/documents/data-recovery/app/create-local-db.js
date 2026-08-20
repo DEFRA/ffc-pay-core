@@ -1,72 +1,13 @@
 const fs = require('fs')
 const path = require('path')
 const { execSync } = require('child_process')
-const { Client } = require('pg')
+const { createLocalConnection } = require('./database/local-db-connection')
+const { parseCsvIds } = require('./util/parse-csv-ids')
 
-// Keep the DB host near the top so it is easy to switch between localhost and
-// a Docker host alias. Most local setups, including Docker Desktop mapped ports,
-// expose the database on localhost. Use LOCAL_DB_HOST=host.docker.internal when
-// you need the Docker Desktop WSL host alias instead.
-//
-// Only LOCAL_DB_* variables are used here. Service-level POSTGRES_* env vars are
-// intentionally ignored because they are tied to other microservice databases
-// and would break connection to this dedicated local recovery container.
-const LOCAL_DB_HOST = process.env.LOCAL_DB_HOST || 'localhost'
-const LOCAL_DB_PORT = Number(process.env.LOCAL_DB_PORT || 5467)
-const LOCAL_DB_USER = process.env.LOCAL_DB_USER || 'postgres'
-const LOCAL_DB_PASSWORD = process.env.LOCAL_DB_PASSWORD || 'ppp'
-const LOCAL_DB_NAME = process.env.LOCAL_DB_NAME || 'ffc_pay_local_recovery'
 const DATA_RECOVERY_DIR = path.resolve(__dirname, '..')
 const COMPOSE_FILE = path.join(DATA_RECOVERY_DIR, 'docker-compose.yaml')
 const SCHEMA_DIR = path.resolve(__dirname, 'schemas')
 const PAYMENT_REQUEST_IDS_FILE = path.resolve(__dirname, 'pr-id.csv')
-
-function parsePaymentRequestIds (filePath) {
-  if (!fs.existsSync(filePath)) {
-    return []
-  }
-
-  const rawText = fs.readFileSync(filePath, 'utf8')
-  const matches = rawText.match(/\d+/g) || []
-  return [...new Set(matches.map(Number))]
-}
-
-async function runAdminQuery (adminConfig, queryText, params = []) {
-  const client = new Client(adminConfig)
-  await client.connect()
-  try {
-    return await client.query(queryText, params)
-  } finally {
-    await client.end()
-  }
-}
-
-async function ensureDatabaseExists (config) {
-  const adminConfig = {
-    host: config.host,
-    port: config.port,
-    user: config.user,
-    password: config.password,
-    database: 'postgres'
-  }
-
-  const existsResult = await runAdminQuery(
-    adminConfig,
-    'SELECT 1 FROM pg_database WHERE datname = $1',
-    [config.database]
-  )
-
-  if (existsResult.rows.length > 0) {
-    console.log(`Database already exists: ${config.database}`)
-    return
-  }
-
-  console.log(`Creating database: ${config.database}`)
-  await runAdminQuery(
-    adminConfig,
-    `CREATE DATABASE "${config.database.replace(/"/g, '""')}" OWNER "${config.user.replace(/"/g, '""')}"`
-  )
-}
 
 function splitSqlStatements (sqlText) {
   return sqlText
@@ -76,7 +17,30 @@ function splitSqlStatements (sqlText) {
     .filter(statement => statement.length > 0)
 }
 
-async function applySchemaFiles (config, schemaDir) {
+async function ensureDatabaseExists (localDbName) {
+  const adminConnection = await createLocalConnection({ database: 'postgres', applicationName: 'ffc_pay_local_recovery_admin' })
+
+  try {
+    const existsResult = await adminConnection.query(
+      'SELECT 1 FROM pg_database WHERE datname = $1',
+      [localDbName]
+    )
+
+    if (existsResult.rows.length > 0) {
+      console.log(`Database already exists: ${localDbName}`)
+      return
+    }
+
+    console.log(`Creating database: ${localDbName}`)
+    await adminConnection.query(
+      `CREATE DATABASE "${localDbName.replace(/"/g, '""')}"`
+    )
+  } finally {
+    await adminConnection.close()
+  }
+}
+
+async function applySchemaFiles (connection, schemaDir) {
   const schemaFiles = fs.readdirSync(schemaDir)
     .filter(file => file.endsWith('.sql'))
     .sort()
@@ -85,34 +49,34 @@ async function applySchemaFiles (config, schemaDir) {
     throw new Error(`No schema files were found in ${schemaDir}`)
   }
 
-  const client = new Client(config)
-  await client.connect()
+  for (const fileName of schemaFiles) {
+    const filePath = path.join(schemaDir, fileName)
+    const sqlText = fs.readFileSync(filePath, 'utf8')
+    const statements = splitSqlStatements(sqlText)
 
-  try {
-    for (const fileName of schemaFiles) {
-      const filePath = path.join(schemaDir, fileName)
-      const sqlText = fs.readFileSync(filePath, 'utf8')
-      const statements = splitSqlStatements(sqlText)
-
-      for (const statement of statements) {
-        await client.query(statement)
-      }
-
-      console.log(`Applied schema file: ${fileName}`)
+    for (const statement of statements) {
+      await connection.query(statement)
     }
-  } finally {
-    await client.end()
+
+    console.log(`Applied schema file: ${fileName}`)
   }
 }
 
-async function importPaymentRequestIds (config, paymentRequestIds) {
+async function importPaymentRequestIds (connection, paymentRequestIds) {
   if (paymentRequestIds.length === 0) {
     console.log('No payment request IDs to import.')
     return
   }
 
-  const client = new Client(config)
-  await client.connect()
+  const existingResult = await connection.query('SELECT COUNT(*)::int AS count FROM public."paymentRequestIds"')
+  const existingCount = existingResult.rows[0].count
+
+  if (existingCount >= paymentRequestIds.length) {
+    console.log(`paymentRequestIds table already contains ${existingCount} rows; skipping CSV import.`)
+    return
+  }
+
+  const client = await connection.pool.connect()
 
   try {
     await client.query('BEGIN')
@@ -135,10 +99,10 @@ async function importPaymentRequestIds (config, paymentRequestIds) {
     const countResult = await client.query('SELECT COUNT(*) FROM public."paymentRequestIds"')
     console.log(`Imported ${insertedCount} new payment request IDs into public."paymentRequestIds" (table total: ${countResult.rows[0].count})`)
   } catch (error) {
-    await client.query('ROLLBACK')
+    await client.query('ROLLBACK').catch(() => {})
     throw error
   } finally {
-    await client.end()
+    client.release()
   }
 }
 
@@ -165,18 +129,16 @@ function ensureDockerRecoveryStack () {
   console.log('Docker recovery database container is running.')
 }
 
-async function waitForPostgres (config, maxAttempts = 30, delayMs = 1000) {
+async function waitForPostgres (maxAttempts = 30, delayMs = 1000) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const client = new Client({ ...config, database: 'postgres' })
     try {
-      await client.connect()
-      await client.end()
+      const connection = await createLocalConnection({ database: 'postgres', applicationName: 'ffc_pay_local_recovery_wait' })
+      await connection.close()
       console.log('Postgres is accepting connections.')
       return
     } catch (error) {
-      await client.end().catch(() => {})
       if (attempt === maxAttempts) {
-        throw new Error(`Postgres did not become available on ${config.host}:${config.port} after ${maxAttempts} attempts: ${error.message}`)
+        throw new Error(`Postgres did not become available after ${maxAttempts} attempts: ${error.message}`)
       }
       console.log(`Waiting for Postgres to accept connections... (${attempt}/${maxAttempts})`)
       await new Promise(resolve => setTimeout(resolve, delayMs))
@@ -184,16 +146,20 @@ async function waitForPostgres (config, maxAttempts = 30, delayMs = 1000) {
   }
 }
 
-async function createLocalRecoveryDb () {
-  const config = {
-    host: LOCAL_DB_HOST,
-    port: LOCAL_DB_PORT,
-    user: LOCAL_DB_USER,
-    password: LOCAL_DB_PASSWORD,
-    database: LOCAL_DB_NAME
+function getLocalDbConfig () {
+  return {
+    host: process.env.LOCAL_DB_HOST || 'localhost',
+    port: Number(process.env.LOCAL_DB_PORT || 5467),
+    user: process.env.LOCAL_DB_USER || 'postgres',
+    password: process.env.LOCAL_DB_PASSWORD || 'ppp',
+    database: process.env.LOCAL_DB_NAME || 'ffc_pay_local_recovery'
   }
+}
 
-  const paymentRequestIds = parsePaymentRequestIds(PAYMENT_REQUEST_IDS_FILE)
+async function createLocalRecoveryDb () {
+  const config = getLocalDbConfig()
+  const paymentRequestIds = parseCsvIds(PAYMENT_REQUEST_IDS_FILE)
+
   console.log(`Host: ${config.host}`)
   console.log(`Port: ${config.port}`)
   console.log(`Database: ${config.database}`)
@@ -207,28 +173,23 @@ async function createLocalRecoveryDb () {
   }
 
   ensureDockerRecoveryStack()
-  await waitForPostgres(config)
-  await ensureDatabaseExists(config)
-  await applySchemaFiles({
-    ...config,
-    database: LOCAL_DB_NAME
-  }, SCHEMA_DIR)
-  await importPaymentRequestIds({
-    ...config,
-    database: LOCAL_DB_NAME
-  }, paymentRequestIds)
+  await waitForPostgres()
+  await ensureDatabaseExists(config.database)
 
-  console.log(`Local database is ready: ${LOCAL_DB_NAME}`)
+  const connection = await createLocalConnection({ applicationName: 'ffc_pay_local_recovery_setup' })
+  try {
+    await applySchemaFiles(connection, SCHEMA_DIR)
+    await importPaymentRequestIds(connection, paymentRequestIds)
+    console.log(`Local database is ready: ${config.database}`)
+  } finally {
+    await connection.close()
+  }
+
   return config
 }
 
 module.exports = {
-  LOCAL_DB_HOST,
-  LOCAL_DB_PORT,
-  LOCAL_DB_USER,
-  LOCAL_DB_PASSWORD,
-  LOCAL_DB_NAME,
-  parsePaymentRequestIds,
+  parseCsvIds,
   ensureDatabaseExists,
   applySchemaFiles,
   importPaymentRequestIds,
