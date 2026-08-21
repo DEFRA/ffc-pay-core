@@ -209,7 +209,7 @@ async function ensureLocalTable (localConnection, hostedConnection, tableName) {
 
 async function getLocalCompletedPaymentRequestIds (localConnection) {
   const { rows } = await localConnection.query(
-    `SELECT DISTINCT "completedPaymentRequestId" FROM public."completedPaymentRequests" ORDER BY "completedPaymentRequestId"`
+    'SELECT DISTINCT "completedPaymentRequestId" FROM public."completedPaymentRequests" ORDER BY "completedPaymentRequestId"'
   )
   return rows.map(row => row.completedPaymentRequestId)
 }
