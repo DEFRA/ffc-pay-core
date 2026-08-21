@@ -1,5 +1,5 @@
-//This only needs to run if you have partly populated data for paymentRequestIds but need to pull the dependent tables (completedInvoiceLines and outbox) from the hosted recovery database. 
-//It will create the local tables if they don't exist, and will not delete any existing data.
+// This only needs to run if you have partly populated data for paymentRequestIds but need to pull the dependent tables (completedInvoiceLines and outbox) from the hosted recovery database.
+// It will create the local tables if they don't exist, and will not delete any existing data.
 
 const { createRecoveryConnection } = require('../database/recovery-db-connection')
 const { createLocalConnection } = require('../database/local-db-connection')
@@ -92,7 +92,7 @@ async function ensureLocalTable (localConnection, hostedConnection, tableName) {
 
 async function getLocalCompletedPaymentRequestIds (localConnection) {
   const { rows } = await localConnection.query(
-    `SELECT DISTINCT "completedPaymentRequestId" FROM public."completedPaymentRequests" ORDER BY "completedPaymentRequestId"`
+    'SELECT DISTINCT "completedPaymentRequestId" FROM public."completedPaymentRequests" ORDER BY "completedPaymentRequestId"'
   )
   return rows.map(row => row.completedPaymentRequestId)
 }

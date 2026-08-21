@@ -1,14 +1,21 @@
 {
+  "name": "ffc-pay-data-recovery",
+  "version": "1.0.0",
+  "description": "Local tooling to pull, inspect, and package payment-request recovery data from a hosted read-only recovery database.",
+  "scripts": {
+    "recovery:create-local-db": "node app/create-local-db.js",
+    "recovery:flag": "node app/tools/flag-csv-matches-for-verification.js",
+    "recovery:pull": "node app/tools/pull-recovery-data.js",
+    "recovery:pull-dependent": "node app/tools/pull-dependent-recovery-data.js",
+    "recovery:test-connection": "node app/tools/test-recovery-connection.js",
+    "recovery:create-staging-dump": "bash app/tools/create-staging-dump.sh",
+    "lint": "standard",
+    "lint:fix": "standard --fix"
+  },
   "dependencies": {
-    "@azure/identity": "4.10.0",
-    "faker": "5.5.3",
-    "pg-hstore": "2.x",
-    "sequelize": "6.x"
+    "pg": "^8.16.0"
   },
   "devDependencies": {
-    "@faker-js/faker": "^9.8.0",
-    "cli-progress": "^3.12.0",
-    "pg": "^8.16.0",
     "standard": "^17.1.2"
   }
 }
