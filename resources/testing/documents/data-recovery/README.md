@@ -3,19 +3,21 @@
 A small local toolkit that helps developers and testers safely pull payment-request data from the **hosted read-only recovery database** into a **local PostgreSQL database** so it can be inspected, verified, and packaged into dumps for further investigation.
 
 > **What problem does this solve?**  
-> Sometimes a payment run needs to be re-investigated. The recovery database holds the historical truth, but it is read-only and shared. This tool copies only the payment request IDs you care about onto your own machine, where you can query freely and generate staging dumps without affecting anyone else.
+> In the event that data is removed from a table or tables. The recovery database holds the historical truth, but it is read-only and shared. This tool copies only the payment request IDs you care about onto your own machine, where you can query freely and generate staging dumps without affecting anyone else.
 
 ---
 
 ## What the tool does
 
-The recovery workflow is made up of four small steps:
+The recovery workflow is made up of five small steps:
 
 1. **Prepare a CSV** of payment request IDs you want to investigate.
 2. **Create a local recovery database** from scratch (Docker PostgreSQL).
 3. **Flag** which IDs exist in the hosted recovery tables.
 4. **Pull** the matching rows into your local database.
 5. **Create a staging dump** that can be restored elsewhere for analysis.
+
+Steps 2 and 3 are now orchestrated: the flag script will start the local database automatically if it is not already running. If you prefer, you can still run each step manually.
 
 The local database is entirely separate from the hosted environment, so you cannot accidentally change production or recovery data.
 
@@ -50,6 +52,30 @@ cp pr-id.example.csv app/pr-id.csv
 ```
 
 Then edit `app/pr-id.csv` and replace the example IDs with the real IDs. Any format with numbers in it works (one per line is easiest).
+
+---
+
+## Simple orchestrated run
+
+Once `app/pr-id.csv` and `.env` are in place, the whole process is just two commands:
+
+```bash
+npm run recovery:flag
+npm run recovery:pull
+npm run recovery:create-staging-dump
+```
+
+The `recovery:flag` script will:
+
+- start the local PostgreSQL container if it is not running;
+- create the local database and apply the schema files;
+- import the payment request IDs from `app/pr-id.csv`;
+- compare the IDs against the hosted recovery tables;
+- store the results in the local `manualVerificationQueue` table.
+
+The `recovery:pull` script copies the matched rows into your local database. The optional `recovery:create-staging-dump` step produces dump files in `dumps/`.
+
+If you want to inspect or rerun individual steps, see the sections below.
 
 ---
 
@@ -91,7 +117,9 @@ npm run recovery:test-connection
 
 You should see a list of public tables from the recovery database. If this fails, check your `.env` values and network access.
 
-### 2. Create the local recovery database
+### 2. Create the local recovery database (individual step)
+
+You normally do not need to run this on its own because `npm run recovery:flag` will do it automatically. Use this step if you want to set up the local database manually before flagging.
 
 ```bash
 npm run recovery:create-local-db
@@ -113,6 +141,8 @@ npm run recovery:flag
 ```
 
 This compares your CSV against the hosted `invoiceLines`, `completedPaymentRequests`, and `schedule` tables. It stores the results in a local `manualVerificationQueue` table and prints a summary.
+
+> If the local database is not running, this script starts it automatically by calling `create-local-db.js` first.
 
 ### 4. Pull the matched rows into your local database
 
@@ -193,7 +223,7 @@ To remove the container **and** its data volume:
 docker compose -f docker-compose.yaml down -v
 ```
 
-> **Warning:** the `-v` flag deletes the local database permanently. You can recreate it by running `npm run recovery:create-local-db` again.
+> **Warning:** the `-v` flag deletes the local database permanently. You can recreate it by running `npm run recovery:create-local-db`, or simply run `npm run recovery:flag` and the database will be created automatically.
 
 ---
 

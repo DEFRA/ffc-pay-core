@@ -2,6 +2,7 @@ const path = require('path')
 const { createRecoveryConnection } = require('../database/recovery-db-connection')
 const { createLocalConnection } = require('../database/local-db-connection')
 const { parseCsvIds } = require('../util/parse-csv-ids')
+const { createLocalRecoveryDb } = require('../create-local-db')
 
 const CSV_FILE = path.resolve(__dirname, '..', 'pr-id.csv')
 const BATCH_SIZE = 5000
@@ -130,7 +131,20 @@ async function getSummary (client) {
   return rows[0]
 }
 
+async function ensureLocalRecoveryDb () {
+  try {
+    const connection = await createLocalConnection({ applicationName: 'ffc_pay_recovery_flag_probe' })
+    await connection.close()
+    console.log('Local recovery database is already running.')
+  } catch (error) {
+    console.log('Local recovery database is not available; running create-local-db.js first...')
+    await createLocalRecoveryDb()
+  }
+}
+
 async function run () {
+  await ensureLocalRecoveryDb()
+
   let hostedConnection
   let localConnection
   let localClient

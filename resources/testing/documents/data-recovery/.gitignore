@@ -6,10 +6,8 @@ dumps/
 logs/
 *.log
 
-# User data (payment request IDs come from operational CSVs)
+# Operational data
 app/pr-id.csv
-pr-id*.csv
-!pr-id.example.csv
 
 # Environment variables
 .env
