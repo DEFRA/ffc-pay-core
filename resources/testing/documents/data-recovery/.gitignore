@@ -8,6 +8,7 @@ logs/
 
 # Operational data
 app/pr-id.csv
+app/agreements.csv
 
 # Environment variables
 .env

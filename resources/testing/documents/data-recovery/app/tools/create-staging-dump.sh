@@ -11,18 +11,25 @@ USER="${LOCAL_DB_USER:-postgres}"
 DATABASE="${LOCAL_DB_NAME:-ffc_pay_local_recovery}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 
-TABLES=(
-  '"invoiceLines"'
-  '"completedPaymentRequests"'
-  '"schedule"'
-  '"completedInvoiceLines"'
-  '"outbox"'
-)
-
 mkdir -p "${DUMP_DIR}"
 
 STAGING_DUMP="${DUMP_DIR}/recovery-staging-${TIMESTAMP}.dump"
 DELTA_SQL="${DUMP_DIR}/recovery-delta-${TIMESTAMP}.sql"
+
+echo "Discovering recovered tables in ${DATABASE}..."
+
+TABLES=$(PGPASSWORD="${LOCAL_DB_PASSWORD:-ppp}" psql \
+  -h "${HOST}" \
+  -p "${PORT}" \
+  -U "${USER}" \
+  -d "${DATABASE}" \
+  -t -A \
+  -c "SELECT quote_ident(table_name) FROM information_schema.tables WHERE table_schema = 'public' AND (table_name = 'paymentRequestIds' OR table_name LIKE 'processing_%' OR table_name LIKE 'eventHub_%') ORDER BY table_name")
+
+if [ -z "${TABLES}" ]; then
+  echo "No recovered tables found to dump."
+  exit 0
+fi
 
 echo "Creating staging restore dump: ${STAGING_DUMP}"
 
@@ -34,7 +41,7 @@ PGPASSWORD="${LOCAL_DB_PASSWORD:-ppp}" pg_dump \
   -Fc \
   --no-owner \
   --no-privileges \
-  $(for table in "${TABLES[@]}"; do echo "--table public.${table}"; done) \
+  $(for table in ${TABLES}; do echo "--table public.${table}"; done) \
   > "${STAGING_DUMP}"
 
 echo "Creating delta insert script: ${DELTA_SQL}"
@@ -50,7 +57,7 @@ PGPASSWORD="${LOCAL_DB_PASSWORD:-ppp}" pg_dump \
   --inserts \
   --no-owner \
   --no-privileges \
-  $(for table in "${TABLES[@]}"; do echo "--table public.${table}"; done) \
+  $(for table in ${TABLES}; do echo "--table public.${table}"; done) \
   > "${DELTA_SQL}"
 
 echo ""

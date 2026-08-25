@@ -47,7 +47,6 @@ function maskConfig (config) {
     host: config.host,
     port: config.port,
     database: config.database,
-    user: config.user,
     ssl: config.ssl
   }
 }

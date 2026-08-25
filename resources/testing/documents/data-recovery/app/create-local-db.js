@@ -6,7 +6,6 @@ const { parseCsvIds } = require('./util/parse-csv-ids')
 
 const DATA_RECOVERY_DIR = path.resolve(__dirname, '..')
 const COMPOSE_FILE = path.join(DATA_RECOVERY_DIR, 'docker-compose.yaml')
-const SCHEMA_DIR = path.resolve(__dirname, 'schemas')
 const PAYMENT_REQUEST_IDS_FILE = path.resolve(__dirname, 'pr-id.csv')
 
 function splitSqlStatements (sqlText) {
@@ -15,6 +14,17 @@ function splitSqlStatements (sqlText) {
     .split(/;\s*(?:\r?\n|$)/)
     .map(statement => statement.trim())
     .filter(statement => statement.length > 0)
+}
+
+async function applyStaticSchemaFile (connection, filePath) {
+  const sqlText = fs.readFileSync(filePath, 'utf8')
+  const statements = splitSqlStatements(sqlText)
+
+  for (const statement of statements) {
+    await connection.query(statement)
+  }
+
+  console.log(`Applied static schema file: ${path.basename(filePath)}`)
 }
 
 async function ensureDatabaseExists (localDbName) {
@@ -37,28 +47,6 @@ async function ensureDatabaseExists (localDbName) {
     )
   } finally {
     await adminConnection.close()
-  }
-}
-
-async function applySchemaFiles (connection, schemaDir) {
-  const schemaFiles = fs.readdirSync(schemaDir)
-    .filter(file => file.endsWith('.sql'))
-    .sort()
-
-  if (schemaFiles.length === 0) {
-    throw new Error(`No schema files were found in ${schemaDir}`)
-  }
-
-  for (const fileName of schemaFiles) {
-    const filePath = path.join(schemaDir, fileName)
-    const sqlText = fs.readFileSync(filePath, 'utf8')
-    const statements = splitSqlStatements(sqlText)
-
-    for (const statement of statements) {
-      await connection.query(statement)
-    }
-
-    console.log(`Applied schema file: ${fileName}`)
   }
 }
 
@@ -166,19 +154,25 @@ async function createLocalRecoveryDb () {
   console.log(`Loaded ${paymentRequestIds.length} payment request IDs from ${PAYMENT_REQUEST_IDS_FILE}`)
 
   if (process.argv.includes('--dry-run')) {
-    console.log('Dry run only: would ensure the database exists and apply the schema files without dropping existing data.')
+    console.log('Dry run only: would ensure the database exists and apply the static paymentRequestIds schema without dropping existing data.')
+    console.log('Data tables are created lazily from the hosted database schema by the flag/pull tools.')
     console.log('To target a different local DB host/port, set LOCAL_DB_HOST and LOCAL_DB_PORT before running.')
     console.log('For Docker Desktop on WSL, use LOCAL_DB_HOST=host.docker.internal.')
     return config
   }
 
   ensureDockerRecoveryStack()
+  console.log('Waiting a few seconds for the container to initialise...')
+  await new Promise(resolve => setTimeout(resolve, 3000))
   await waitForPostgres()
   await ensureDatabaseExists(config.database)
 
   const connection = await createLocalConnection({ applicationName: 'ffc_pay_local_recovery_setup' })
   try {
-    await applySchemaFiles(connection, SCHEMA_DIR)
+    const staticSchemaPath = path.resolve(__dirname, 'schemas', 'paymentRequestIds.sql')
+    if (fs.existsSync(staticSchemaPath)) {
+      await applyStaticSchemaFile(connection, staticSchemaPath)
+    }
     await importPaymentRequestIds(connection, paymentRequestIds)
     console.log(`Local database is ready: ${config.database}`)
   } finally {
@@ -191,7 +185,7 @@ async function createLocalRecoveryDb () {
 module.exports = {
   parseCsvIds,
   ensureDatabaseExists,
-  applySchemaFiles,
+  applyStaticSchemaFile,
   importPaymentRequestIds,
   createLocalRecoveryDb
 }

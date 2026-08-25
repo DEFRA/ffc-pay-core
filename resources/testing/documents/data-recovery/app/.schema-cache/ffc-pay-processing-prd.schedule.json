@@ -1,0 +1,47 @@
+{
+  "tableName": "schedule",
+  "columns": [
+    {
+      "name": "scheduleId",
+      "type": "integer",
+      "nullable": false
+    },
+    {
+      "name": "paymentRequestId",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "planned",
+      "type": "timestamp without time zone",
+      "nullable": true
+    },
+    {
+      "name": "started",
+      "type": "timestamp without time zone",
+      "nullable": true
+    },
+    {
+      "name": "completed",
+      "type": "timestamp without time zone",
+      "nullable": true
+    }
+  ],
+  "primaryKey": [
+    "scheduleId"
+  ],
+  "indexes": [
+    {
+      "index_name": "idx_schedule_payment_completed",
+      "index_type": "btree",
+      "is_unique": false,
+      "is_primary": false,
+      "columns": [
+        "paymentRequestId",
+        "completed"
+      ],
+      "predicate": null,
+      "expression": null
+    }
+  ]
+}

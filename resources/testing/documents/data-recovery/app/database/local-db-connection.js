@@ -29,7 +29,9 @@ function delay (ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-async function connectWithRetry (pool, maxAttempts = 5) {
+async function connectWithRetry (pool, options = {}) {
+  const maxAttempts = options.maxAttempts || 5
+  const fixedDelayMs = options.fixedDelayMs || 2000
   let lastError
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -41,9 +43,8 @@ async function connectWithRetry (pool, maxAttempts = 5) {
       if (attempt === maxAttempts) {
         break
       }
-      const backoffMs = Math.min(1000 * 2 ** (attempt - 1), 10000)
-      console.log(`Local DB connection attempt ${attempt}/${maxAttempts} failed (${error.code || error.message}). Retrying in ${backoffMs}ms...`)
-      await delay(backoffMs)
+      console.log(`Local DB connection attempt ${attempt}/${maxAttempts} failed (${error.code || error.message}). Retrying in ${fixedDelayMs}ms...`)
+      await delay(fixedDelayMs)
     }
   }
 
@@ -72,7 +73,7 @@ async function createLocalConnection (options = {}) {
     console.error(`Unexpected error on local database client for ${config.database}:`, err.message)
   })
 
-  const client = await connectWithRetry(pool, options.maxAttempts || 5)
+  const client = await connectWithRetry(pool, options)
   try {
     const { rows } = await client.query('SELECT version() AS version')
     console.log(`Connected to local recovery database "${config.database}" (${rows[0].version.split(' ')[0]} ${rows[0].version.split(' ')[1]})`)

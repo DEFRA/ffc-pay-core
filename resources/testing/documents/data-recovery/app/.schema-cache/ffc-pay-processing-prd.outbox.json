@@ -1,0 +1,24 @@
+{
+  "tableName": "outbox",
+  "columns": [
+    {
+      "name": "outboxId",
+      "type": "integer",
+      "nullable": false
+    },
+    {
+      "name": "completedPaymentRequestId",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "submitted",
+      "type": "timestamp without time zone",
+      "nullable": true
+    }
+  ],
+  "primaryKey": [
+    "outboxId"
+  ],
+  "indexes": []
+}

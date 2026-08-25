@@ -57,7 +57,7 @@ Then edit `app/pr-id.csv` and replace the example IDs with the real IDs. Any for
 
 ## Simple orchestrated run
 
-Once `app/pr-id.csv` and `.env` are in place, the whole process is just two commands:
+Once `app/pr-id.csv` and `.env` are in place, the whole process is just three commands:
 
 ```bash
 npm run recovery:flag
@@ -98,6 +98,11 @@ LOCAL_DB_HOST=localhost
 LOCAL_DB_NAME=ffc_pay_local_recovery
 LOCAL_DB_USER=postgres
 LOCAL_DB_PASSWORD=ppp
+
+# Target destination for recovered data (optional, defaults to local/public)
+RECOVERY_TARGET_MODE=local        # 'local' or 'hosted'
+RECOVERY_TARGET_SCHEMA=public     # schema to write recovered data into
+RECOVERY_TARGET_DATABASE=         # hosted database name when RECOVERY_TARGET_MODE=hosted
 LOCAL_DB_PORT=5467
 ```
 
@@ -155,7 +160,7 @@ This copies the rows that were flagged in step 3 from the hosted database into y
 If you only want to pull one table, you can run:
 
 ```bash
-node app/tools/pull-recovery-data.js --table invoiceLines
+node app/tools/pull/pull-pay-processing-data.js --table invoiceLines
 ```
 
 Allowed tables: `invoiceLines`, `completedPaymentRequests`, `schedule`.
@@ -163,7 +168,7 @@ Allowed tables: `invoiceLines`, `completedPaymentRequests`, `schedule`.
 To see what would be copied without actually copying, add `--dry-run`:
 
 ```bash
-node app/tools/pull-recovery-data.js --dry-run
+node app/tools/pull/pull-pay-processing-data.js --dry-run
 ```
 
 ### 5. (Optional) Pull dependent tables separately
@@ -185,7 +190,7 @@ This creates two files in the `dumps/` folder:
 - `recovery-staging-<timestamp>.dump` — a compressed PostgreSQL custom-format dump that can be restored with `pg_restore`.
 - `recovery-delta-<timestamp>.sql` — plain `INSERT` statements for the same data.
 
-These files are ignored by Git because they can be very large.
+These files are ignored by Git because they can be very large and we do not want this data to be publicy viewable.
 
 ---
 
@@ -240,20 +245,146 @@ resources/testing/documents/data-recovery/
 │   ├── database/
 │   │   ├── local-db-connection.js         # connects to the local Docker DB
 │   │   └── recovery-db-connection.js      # connects to the hosted recovery DB
-│   ├── schemas/                           # SQL that creates local tables
-│   │   ├── completedPaymentRequests.sql
-│   │   ├── invoiceLines.sql
-│   │   ├── manualVerificationQueue.sql
-│   │   ├── paymentRequestIds.sql
-│   │   └── schedule.sql
-│   ├── tools/
+│   ├── services/                          # shared pull/batch/schema helpers
+│   │   ├── batch-service.js               # PostgreSQL parameter-limit batching
+│   │   ├── pull-service.js                # fetch/insert/filter operations
+│   │   └── schema-service.js              # schema introspection and local table creation
+│   ├── tools/                             # orchestrators and utility scripts
 │   │   ├── create-staging-dump.sh         # creates dump files from local DB
-│   │   ├── flag-csv-matches-for-verification.js
-│   │   ├── pull-dependent-recovery-data.js
-│   │   ├── pull-recovery-data.js
-│   │   └── test-recovery-connection.js
+│   │   ├── flag-all-services.js           # orchestrates flagging across services
+│   │   ├── pull-all-services.js           # orchestrates pulling across services
+│   │   └── test-recovery-connection.js    # tests hosted recovery DB connectivity
+│   ├── tools/flag/                        # per-service flag scripts
+│   │   ├── flag-pay-processing-matches.js
+│   │   ├── flag-pay-injection-matches.js
+│   │   ├── flag-pay-request-editor-matches.js
+│   │   ├── flag-pay-submission-matches.js
+│   │   ├── flag-pay-tracking-matches.js
+│   │   └── flag-event-hub-matches.js
+│   ├── tools/pull/                        # per-service pull scripts
+│   │   ├── pull-pay-processing-data.js
+│   │   ├── pull-pay-processing-dependent-data.js
+│   │   ├── pull-pay-injection-data.js
+│   │   ├── pull-pay-request-editor-data.js
+│   │   ├── pull-pay-submission-data.js
+│   │   ├── pull-pay-tracking-data.js
+│   │   └── pull-event-hub-data.js
+│   ├── config/                            # per-service source/destination config
+│   │   ├── event-hub.js
+│   │   ├── pay-processing.js
+│   │   ├── pay-injection.js
+│   │   ├── pay-request-editor.js
+│   │   ├── pay-submission.js
+│   │   ├── pay-tracking.js
+│   │   └── services.js
 │   └── util/
 │       └── parse-csv-ids.js               # reads payment request IDs from CSV
+```
+
+---
+
+## Quick verification summary
+
+To get the queue flags and local recovered row counts without running the full flag or pull workflows, use the summary script:
+
+```bash
+npm run recovery:summary
+```
+
+This prints:
+
+- Local queue totals and per-table `foundIn*` flags (counts of payment request IDs).
+- Local recovered row counts for each service table that has been pulled.
+
+To restrict the report to one service:
+
+```bash
+npm run recovery:summary:service ffc-pay-submission
+```
+
+The script is read-only against the local recovery database and safe to run at any time.
+
+## Future: writing back to a hosted recovery area
+
+Today the toolkit writes all recovered data to the **local** Docker database. The code is structured so that the destination can later be switched to a **hosted recovery area** without overwriting existing data.
+
+Proposed approach:
+
+1. **Target mode toggle** — set `RECOVERY_TARGET_MODE=hosted` to write to the hosted recovery database instead of the local one. The default remains `local`.
+2. **Dedicated staging schema** — recovered data should land in a separate schema, e.g. `recovery_staging`, rather than `public` where the real source data lives. Configure the schema with `RECOVERY_TARGET_SCHEMA=recovery_staging`.
+3. **Non-destructive writes** — the tooling creates tables in the configured target schema only. It never drops, truncates, or writes to `public` or any other existing schema.
+4. **Validation workflow** — data can be staged in `recovery_staging`, verified, and only copied/promoted to `public` (or consumed by downstream processes) after human or automated approval.
+
+A small abstraction is provided in [`app/config/target-database.js`](app/config/target-database.js). Individual tools can adopt it when the hosted write-back workflow is implemented.
+
+## Current work in progress (as of 2026-08-21)
+
+We are extending the recovery utility from a single pay-processing service to multiple services. Event-hub support was added and a shared-service refactor (`app/services/batch-service.js`, `app/services/pull-service.js`, `app/services/schema-service.js`) was completed. The code is on branch `recovery/delinked-transformer-legacy`.
+
+### Known outstanding bug: `flag-all` / `pull-pay-processing-data` appears to freeze
+
+**Symptom:** Running `npm run recovery:flag-all` starts the pay-processing pull, reports a large number of flagged IDs (e.g. `invoiceLines: 410794 payment request IDs flagged in queue`), and then appears to hang.
+
+**What has already been fixed:**
+
+1. **Parameter-limit assertion bug in `app/services/batch-service.js`** — `runBatched` was asserting the total item count against `maxParams` before splitting into batches. It now only checks per-batch limits.
+2. **Invalid `WHERE` tuple SQL in `app/services/pull-service.js`** — `filterExistingKeys` was using the same comma-separated list for `SELECT` and `WHERE (...)`; the `WHERE` list now uses bare column expressions without `AS` aliases.
+3. **Column-object bug in `app/services/schema-service.js`** — `ensureLocalTable` returned introspection objects for `hostedColumns`; it now returns plain column-name strings so they interpolate correctly into SQL.
+4. **Missing dependent-table bug in `app/tools/pull/pull-pay-processing-data.js`** — `copyDependentTables` now calls `ensureLocalTable` for `completedInvoiceLines` and `outbox` before trying to filter parent IDs against them.
+5. **Progress logging added** — `filterExistingKeys` now emits `checking <table>: <done>/<total>` progress when given an `onProgress` callback.
+
+### Still to verify on Monday
+
+- [ ] Run a small limited pull end-to-end:
+  ```bash
+  cd resources/testing/documents/data-recovery
+  node app/tools/pull/pull-pay-processing-data.js --limit 50
+  ```
+  This should complete quickly and prove the dependent-table fix.
+- [ ] If the limited run works, restart the full run:
+  ```bash
+  npm run recovery:flag-all
+  ```
+  It is expected to take a long time with 410k+ IDs because each ID batch requires a round-trip to Azure. Do not assume it is frozen unless there is no progress output for several minutes.
+- [ ] If it really is frozen, i'll try replacing the ID-list existence check with a single temp staging table so filtering and fetching become set-based SQL operations instead of thousands of parameterised `IN` queries.
+- [ ] Check whether `--force` re-fetches behave correctly when tables already have data.
+- [ ] Validate event-hub flag/pull still works after the shared-service refactor:
+  ```bash
+  node app/tools/flag/flag-event-hub-matches.js
+  node app/tools/pull/pull-event-hub-data.js --limit 50
+  ```
+
+### Quick diagnostic commands
+
+Check whether the local database is running:
+
+```bash
+docker compose -f resources/testing/documents/data-recovery/docker-compose.yaml ps
+```
+
+Watch live logs from a long-running script:
+
+```bash
+cd resources/testing/documents/data-recovery
+node app/tools/pull/pull-pay-processing-data.js --limit 1000 2>&1 | tee logs/pull-$(date +%Y%m%d-%H%M%S).log
+```
+
+Connect to the local database and inspect counts:
+
+```bash
+PGPASSWORD=ppp psql -h localhost -p 5467 -U postgres -d ffc_pay_local_recovery
+```
+
+Useful query:
+
+```sql
+SELECT
+  COUNT(*) AS total,
+  COUNT(*) FILTER (WHERE "foundInInvoiceLines") AS invoice_lines,
+  COUNT(*) FILTER (WHERE "foundInCompletedPaymentRequests") AS completed_pr,
+  COUNT(*) FILTER (WHERE "foundInPaymentRequests") AS pr,
+  COUNT(*) FILTER (WHERE "foundInSchedule") AS schedule
+FROM public."manualVerificationQueue";
 ```
 
 ---
@@ -262,7 +393,7 @@ resources/testing/documents/data-recovery/
 
 ### `Missing recovery database environment variables`
 
-You have not set the `RECOVERY_DB_*` environment variables. Create a `.env` file or export them in your terminal before running the scripts.
+You have not set the `RECOVERY_DB_*` environment variables. Create a `.env` file (bashrc) or export them in your terminal before running the scripts.
 
 ### Docker container does not start
 

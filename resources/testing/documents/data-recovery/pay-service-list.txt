@@ -1,0 +1,67 @@
+ffc-pay-injection 
+
+- #invoiceNumbers - uses agreementNumber, frn, schemeId
+
+
+ffc-pay-processing -the current single existing solution.
+
+- #frnAgreementClosed - technically is removed but we can ignore as only SFI22
+
+- #paymentRequests - uses agreementNumber, frn, schemeId 
+- if CS - uses contractNumber, frn, schemeId
+
+- #completedPaymentRequests - uses paymentRequestId as determined by paymentRequests
+
+- #completedInvoiceLines - uses completedPaymentRequestId as determined by completedPaymentRequests
+
+- #outbox - uses completedPaymentRequestId as determined by completedPaymentRequests
+
+- #invoiceLines - uses paymentRequestId as determined by paymentRequests
+
+- #schedule - uses paymentRequestId as determined by paymentRequests
+
+
+ffc-pay-request-editor
+
+-#paymentRequests - uses agreementNumber, frn, schemeId 
+if CS - uses contractNumber, frn, schemeId
+
+-#debtData - uses paymentRequestId as determined by paymentRequests
+
+-#qualityChecks - uses paymentRequestId as determined by paymentRequests
+
+-#manualLedgerPayment request - uses paymentRequestId as determined by paymentRequests
+
+-#invoiceLines - uses paymentRequestId as determined by paymentRequests
+
+
+ffc-pay-submission
+
+-#paymentRequests - uses agreementNumber, frn, schemeId 
+if CS - uses contractNumber, frn, schemeId
+
+-#queues - uses paymentRequestId as determined by paymentRequests
+-#invoiceLines - uses paymentRequestId as determined by paymentRequests
+
+
+ffc-pay-tracking
+ 
+-#reportData - uses sourceSystem, frn, agreementNumber
+sourceSystem is calcULATEDd via mapping:
+1: 'SFI',
+2: 'SFIP',
+3: 'LSES',
+4: 'AHWR',
+5: 'SITI AGRI CS SYS',
+6: 'SITI AGRI SYS',
+8: 'Injection',
+9: 'Genesis',
+10: 'GLOS',
+11: 'IMPS',
+12: 'SFIA',
+13: 'DP',
+14: 'ESFIO',
+15: 'COHTR',
+16: 'COHTC',
+17: 'FPTT',
+18: 'WMP'

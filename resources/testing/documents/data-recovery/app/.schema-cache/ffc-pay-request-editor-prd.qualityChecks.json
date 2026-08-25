@@ -1,0 +1,39 @@
+{
+  "tableName": "qualityChecks",
+  "columns": [
+    {
+      "name": "qualityCheckId",
+      "type": "integer",
+      "nullable": false
+    },
+    {
+      "name": "paymentRequestId",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "checkedDate",
+      "type": "timestamp without time zone",
+      "nullable": true
+    },
+    {
+      "name": "checkedBy",
+      "type": "character varying(50)",
+      "nullable": true
+    },
+    {
+      "name": "status",
+      "type": "character varying(50)",
+      "nullable": true
+    },
+    {
+      "name": "checkedById",
+      "type": "character varying(255)",
+      "nullable": true
+    }
+  ],
+  "primaryKey": [
+    "qualityCheckId"
+  ],
+  "indexes": []
+}
