@@ -1,0 +1,228 @@
+{
+  "tableName": "paymentRequests",
+  "columns": [
+    {
+      "name": "paymentRequestId",
+      "type": "integer",
+      "nullable": false
+    },
+    {
+      "name": "schemeId",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "batchId",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "sourceSystem",
+      "type": "character varying(50)",
+      "nullable": true
+    },
+    {
+      "name": "deliveryBody",
+      "type": "character varying(4)",
+      "nullable": true
+    },
+    {
+      "name": "invoiceNumber",
+      "type": "character varying(30)",
+      "nullable": true
+    },
+    {
+      "name": "frn",
+      "type": "bigint",
+      "nullable": true
+    },
+    {
+      "name": "sbi",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "marketingYear",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "ledger",
+      "type": "character varying(2)",
+      "nullable": true
+    },
+    {
+      "name": "agreementNumber",
+      "type": "character varying(50)",
+      "nullable": true
+    },
+    {
+      "name": "contractNumber",
+      "type": "character varying(50)",
+      "nullable": true
+    },
+    {
+      "name": "currency",
+      "type": "character varying(3)",
+      "nullable": true
+    },
+    {
+      "name": "schedule",
+      "type": "character varying(3)",
+      "nullable": true
+    },
+    {
+      "name": "dueDate",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "debtType",
+      "type": "character varying(3)",
+      "nullable": true
+    },
+    {
+      "name": "recoveryDate",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "originalSettlementDate",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "originalInvoiceNumber",
+      "type": "character varying(30)",
+      "nullable": true
+    },
+    {
+      "name": "invoiceCorrectionReference",
+      "type": "character varying(30)",
+      "nullable": true
+    },
+    {
+      "name": "value",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "received",
+      "type": "timestamp without time zone",
+      "nullable": true
+    },
+    {
+      "name": "referenceId",
+      "type": "uuid",
+      "nullable": true
+    },
+    {
+      "name": "correlationId",
+      "type": "uuid",
+      "nullable": true
+    },
+    {
+      "name": "paymentRequestNumber",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "batch",
+      "type": "character varying(255)",
+      "nullable": true
+    },
+    {
+      "name": "paymentType",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "pillar",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "exchangeRate",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "eventDate",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "vendor",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "trader",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "claimDate",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "fesCode",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "annualValue",
+      "type": "numeric(14,2)",
+      "nullable": true
+    },
+    {
+      "name": "remmittanceDescription",
+      "type": "character varying(60)",
+      "nullable": true
+    },
+    {
+      "name": "providesAccountingValues",
+      "type": "boolean",
+      "nullable": true
+    }
+  ],
+  "primaryKey": [
+    "paymentRequestId"
+  ],
+  "indexes": [
+    {
+      "index_name": "invoiceNumber_paymentRequests",
+      "index_type": "btree",
+      "is_unique": false,
+      "is_primary": false,
+      "columns": [
+        "invoiceNumber"
+      ],
+      "predicate": null,
+      "expression": null
+    },
+    {
+      "index_name": "paymentRequests_paymentRequestId_idx",
+      "index_type": "btree",
+      "is_unique": false,
+      "is_primary": false,
+      "columns": [
+        "paymentRequestId"
+      ],
+      "predicate": null,
+      "expression": null
+    },
+    {
+      "index_name": "referenceId_paymentRequests",
+      "index_type": "btree",
+      "is_unique": false,
+      "is_primary": false,
+      "columns": [
+        "referenceId"
+      ],
+      "predicate": null,
+      "expression": null
+    }
+  ]
+}
