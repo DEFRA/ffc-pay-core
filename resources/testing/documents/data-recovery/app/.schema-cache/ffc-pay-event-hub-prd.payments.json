@@ -1,0 +1,109 @@
+{
+  "tableName": "payments",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false
+    },
+    {
+      "name": "partitionKey",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "rowKey",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "timestamp",
+      "type": "timestamp without time zone",
+      "nullable": true
+    },
+    {
+      "name": "type",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "source",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "subject",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "time",
+      "type": "timestamp without time zone",
+      "nullable": true
+    },
+    {
+      "name": "category",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "data",
+      "type": "jsonb",
+      "nullable": true
+    }
+  ],
+  "primaryKey": [
+    "id"
+  ],
+  "indexes": [
+    {
+      "index_name": "idx_payments_partition_category_type",
+      "index_type": "btree",
+      "is_unique": false,
+      "is_primary": false,
+      "columns": [
+        "partitionKey",
+        "category",
+        "type"
+      ],
+      "predicate": null,
+      "expression": null
+    },
+    {
+      "index_name": "idx_payments_partition_rowkey",
+      "index_type": "btree",
+      "is_unique": false,
+      "is_primary": false,
+      "columns": [
+        "partitionKey",
+        "rowKey"
+      ],
+      "predicate": null,
+      "expression": null
+    },
+    {
+      "index_name": "idx_payments_partition_timestamp",
+      "index_type": "btree",
+      "is_unique": false,
+      "is_primary": false,
+      "columns": [
+        "partitionKey",
+        "timestamp"
+      ],
+      "predicate": null,
+      "expression": null
+    },
+    {
+      "index_name": "idx_payments_partition_type",
+      "index_type": "btree",
+      "is_unique": false,
+      "is_primary": false,
+      "columns": [
+        "partitionKey",
+        "type"
+      ],
+      "predicate": null,
+      "expression": null
+    }
+  ]
+}
