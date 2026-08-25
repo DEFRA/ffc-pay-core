@@ -1,52 +1,45 @@
 const path = require('path')
-const { createRecoveryConnection } = require('../database/recovery-db-connection')
-const { createLocalConnection } = require('../database/local-db-connection')
-const { parseCsvIds } = require('../util/parse-csv-ids')
-const { createLocalRecoveryDb } = require('../create-local-db')
+const { createRecoveryConnection } = require('../../database/recovery-db-connection')
+const { createLocalConnection } = require('../../database/local-db-connection')
+const { parseCsvIds } = require('../../util/parse-csv-ids')
+const { createLocalRecoveryDb } = require('../../create-local-db')
+const payProcessing = require('../../config/pay-processing')
 
-const CSV_FILE = path.resolve(__dirname, '..', 'pr-id.csv')
-const BATCH_SIZE = 5000
+const { HOSTED_DATABASE, QUEUE_TABLE, TABLES } = payProcessing
+const CSV_FILE = path.resolve(__dirname, '../..', payProcessing.CSV_FILE)
+const BATCH_SIZE = payProcessing.BATCH_SIZE
 
-const VERIFICATION_TABLES = [
-  { tableName: 'invoiceLines', flagColumn: 'foundInInvoiceLines' },
-  { tableName: 'completedPaymentRequests', flagColumn: 'foundInCompletedPaymentRequests' },
-  { tableName: 'schedule', flagColumn: 'foundInSchedule' }
-]
+function buildQueueTableDdl (tableName, flagColumns) {
+  const flagColumnDefs = flagColumns
+    .map(col => `"${col}" boolean DEFAULT false`)
+    .join(',\n      ')
 
-async function ensureQueueTable (client) {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS public."manualVerificationQueue" (
+  return `
+    CREATE TABLE IF NOT EXISTS public."${tableName}" (
       "paymentRequestId" integer NOT NULL,
-      "foundInInvoiceLines" boolean DEFAULT false,
-      "foundInCompletedPaymentRequests" boolean DEFAULT false,
-      "foundInSchedule" boolean DEFAULT false,
-      "foundInCompletedInvoiceLines" boolean DEFAULT false,
-      "foundInOutbox" boolean DEFAULT false,
+      ${flagColumnDefs},
       status character varying(20) DEFAULT 'PENDING',
       "createdAt" timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
       "updatedAt" timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-      CONSTRAINT "manualVerificationQueue_pkey" PRIMARY KEY ("paymentRequestId")
+      CONSTRAINT "${tableName}_pkey" PRIMARY KEY ("paymentRequestId")
     )
-  `)
+  `
+}
 
-  const requiredColumns = [
-    { name: 'foundInInvoiceLines', type: 'boolean DEFAULT false' },
-    { name: 'foundInCompletedPaymentRequests', type: 'boolean DEFAULT false' },
-    { name: 'foundInSchedule', type: 'boolean DEFAULT false' },
-    { name: 'foundInCompletedInvoiceLines', type: 'boolean DEFAULT false' },
-    { name: 'foundInOutbox', type: 'boolean DEFAULT false' }
-  ]
+async function ensureQueueTable (client) {
+  const flagColumns = QUEUE_TABLE.flagColumns
+  await client.query(buildQueueTableDdl(QUEUE_TABLE.name, flagColumns))
 
-  for (const column of requiredColumns) {
+  for (const column of flagColumns) {
     await client.query(`
-      ALTER TABLE public."manualVerificationQueue"
-      ADD COLUMN IF NOT EXISTS "${column.name}" ${column.type}
+      ALTER TABLE public."${QUEUE_TABLE.name}"
+      ADD COLUMN IF NOT EXISTS "${column}" boolean DEFAULT false
     `)
   }
 
   await client.query(`
-    CREATE INDEX IF NOT EXISTS "idx_manualVerificationQueue_status"
-      ON public."manualVerificationQueue" USING btree (status ASC NULLS LAST)
+    CREATE INDEX IF NOT EXISTS "idx_${QUEUE_TABLE.name}_status"
+      ON public."${QUEUE_TABLE.name}" USING btree (status ASC NULLS LAST)
   `)
 }
 
@@ -90,18 +83,20 @@ async function flagMatchesForTable (localConnection, matchedIds, flagColumn) {
   }
 
   let flaggedCount = 0
+  const primaryKeyColumns = Array.isArray(QUEUE_TABLE.primaryKey) ? QUEUE_TABLE.primaryKey : [QUEUE_TABLE.primaryKey]
+  const pkList = primaryKeyColumns.map(c => `"${c}"`).join(', ')
 
   for (let i = 0; i < matchedIds.length; i += BATCH_SIZE) {
     const batch = matchedIds.slice(i, i + BATCH_SIZE)
     const placeholders = batch.map((_, index) => `($${index + 1}, true)`).join(', ')
     const result = await localConnection.query(
       `
-      INSERT INTO public."manualVerificationQueue" ("paymentRequestId", "${flagColumn}")
+      INSERT INTO public."${QUEUE_TABLE.name}" ("paymentRequestId", "${flagColumn}")
       VALUES ${placeholders}
-      ON CONFLICT ("paymentRequestId") DO UPDATE SET
+      ON CONFLICT (${pkList}) DO UPDATE SET
         "${flagColumn}" = true,
         status = CASE
-          WHEN "manualVerificationQueue".status = 'VERIFIED' THEN 'VERIFIED'
+          WHEN "${QUEUE_TABLE.name}".status = 'VERIFIED' THEN 'VERIFIED'
           ELSE 'PENDING'
         END,
         "updatedAt" = CURRENT_TIMESTAMP
@@ -116,17 +111,19 @@ async function flagMatchesForTable (localConnection, matchedIds, flagColumn) {
 }
 
 async function getSummary (client) {
+  const flagCounts = QUEUE_TABLE.flagColumns
+    .map(col => `COUNT(*) FILTER (WHERE "${col}") AS "${col}"`)
+    .join(',\n      ')
+
   const { rows } = await client.query(`
     SELECT
       COUNT(*) AS total,
-      COUNT(*) FILTER (WHERE "foundInInvoiceLines") AS invoice_lines,
-      COUNT(*) FILTER (WHERE "foundInCompletedPaymentRequests") AS completed_payment_requests,
-      COUNT(*) FILTER (WHERE "foundInSchedule") AS schedule,
+      ${flagCounts},
       COUNT(*) FILTER (WHERE status = 'PENDING') AS pending,
       COUNT(*) FILTER (WHERE status = 'VERIFIED') AS verified,
       COUNT(*) FILTER (WHERE status = 'REJECTED') AS rejected,
       COUNT(*) FILTER (WHERE status = 'IN_PROGRESS') AS in_progress
-    FROM public."manualVerificationQueue"
+    FROM public."${QUEUE_TABLE.name}"
   `)
   return rows[0]
 }
@@ -150,8 +147,8 @@ async function run () {
   let localClient
 
   try {
-    console.log('Connecting to hosted recovery database (read-only)...')
-    hostedConnection = await createRecoveryConnection({ applicationName: 'ffc_pay_recovery_flag_reader' })
+    console.log(`Connecting to hosted ${HOSTED_DATABASE} database (read-only)...`)
+    hostedConnection = await createRecoveryConnection({ database: HOSTED_DATABASE, applicationName: 'ffc_pay_recovery_flag_reader' })
 
     console.log('Connecting to local recovery database (write)...')
     localConnection = await createLocalConnection({ applicationName: 'ffc_pay_recovery_flag_writer' })
@@ -166,9 +163,9 @@ async function run () {
     await ensureQueueTable(localClient)
     await loadStagingTable(localClient, ids)
 
-    for (const { tableName, flagColumn } of VERIFICATION_TABLES) {
-      const matchedIds = await getMatchingIdsFromHostedTable(hostedConnection, ids, tableName)
-      console.log(`Found ${matchedIds.length} IDs in hosted ${tableName}`)
+    for (const { name, flagColumn } of TABLES) {
+      const matchedIds = await getMatchingIdsFromHostedTable(hostedConnection, ids, name)
+      console.log(`Found ${matchedIds.length} IDs in hosted ${name}`)
 
       if (matchedIds.length > 0) {
         const flaggedCount = await flagMatchesForTable(localClient, matchedIds, flagColumn)
@@ -181,9 +178,9 @@ async function run () {
 
     console.log('\nManual verification queue summary:')
     console.log(`  Total flagged:       ${summary.total}`)
-    console.log(`  In invoiceLines:     ${summary.invoice_lines}`)
-    console.log(`  In completedPRs:     ${summary.completed_payment_requests}`)
-    console.log(`  In schedule:         ${summary.schedule}`)
+    for (const flagColumn of QUEUE_TABLE.flagColumns) {
+      console.log(`  ${flagColumn}:  ${summary[flagColumn]}`)
+    }
     console.log(`  PENDING:             ${summary.pending}`)
     console.log(`  VERIFIED:            ${summary.verified}`)
     console.log(`  REJECTED:            ${summary.rejected}`)
