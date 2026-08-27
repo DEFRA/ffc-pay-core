@@ -1,0 +1,47 @@
+{
+  "serviceName": "ffc-pay-event-hub",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-event-hub-prd",
+  "targetDbName": "ffc-pay-event-hub-test",
+  "updatedAt": "2026-08-27T17:34:42.178Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "batches",
+      "keyColumn": "id",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "holds",
+      "keyColumn": "id",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "payment_batch_events",
+      "keyColumn": "id",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "payment_frn_events",
+      "keyColumn": "id",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "payments",
+      "keyColumn": "id",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "warnings",
+      "keyColumn": "id",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}
