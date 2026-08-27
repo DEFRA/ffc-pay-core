@@ -16,7 +16,9 @@ function parseCliArgs (argv = process.argv.slice(2)) {
     continueOnError: false,
     direct: false,
     tableByTable: false,
-    singleTransaction: true
+    singleTransaction: true,
+    resume: false,
+    resetCheckpoints: false
   }
 
   for (let i = 0; i < argv.length; i++) {
@@ -35,6 +37,10 @@ function parseCliArgs (argv = process.argv.slice(2)) {
       args.tableByTable = true
     } else if (arg === '--no-single-transaction') {
       args.singleTransaction = false
+    } else if (arg === '--resume') {
+      args.resume = true
+    } else if (arg === '--reset-checkpoints') {
+      args.resetCheckpoints = true
     } else if (arg === '--help' || arg === '-h') {
       args.help = true
     }
@@ -135,6 +141,8 @@ async function executeScenario (scenarioName = appConfig.scenario, options = {})
   const continueOnError = options.continueOnError !== undefined ? options.continueOnError : false
   const tableByTable = options.tableByTable !== undefined ? options.tableByTable : false
   const singleTransaction = options.singleTransaction !== undefined ? options.singleTransaction : true
+  const resume = options.resume !== undefined ? options.resume : false
+  const resetCheckpoints = options.resetCheckpoints !== undefined ? options.resetCheckpoints : false
 
   let sourceEnvironment = preferredSourceEnvironment
   let targetEnvironment = preferredTargetEnvironment
@@ -177,7 +185,9 @@ async function executeScenario (scenarioName = appConfig.scenario, options = {})
       dryRun,
       continueOnError,
       tableByTable,
-      singleTransaction
+      singleTransaction,
+      resume,
+      resetCheckpoints
     })
   }
 
@@ -194,7 +204,7 @@ const delinkedDataTransformer = async () => {
   try {
     const cliArgs = parseCliArgs()
     if (cliArgs.help) {
-      console.log('Usage: node app/index.js --scenario <test-to-dev|prd-to-pre|dev-to-test> [--dry-run] [--test-connection] [--continue-on-error] [--table-by-table] [--no-single-transaction]')
+      console.log('Usage: node app/index.js --scenario <test-to-dev|prd-to-pre|dev-to-test> [--dry-run] [--test-connection] [--continue-on-error] [--table-by-table] [--no-single-transaction] [--resume] [--reset-checkpoints]')
       return true
     }
 
@@ -204,9 +214,11 @@ const delinkedDataTransformer = async () => {
     const continueOnError = cliArgs.continueOnError
     const tableByTable = cliArgs.tableByTable
     const singleTransaction = cliArgs.singleTransaction
+    const resume = cliArgs.resume
+    const resetCheckpoints = cliArgs.resetCheckpoints
 
     if (cliArgs.direct) {
-      return await executeScenario(scenarioName, { dryRun, testConnection: testConnectionRun, continueOnError, tableByTable, singleTransaction })
+      return await executeScenario(scenarioName, { dryRun, testConnection: testConnectionRun, continueOnError, tableByTable, singleTransaction, resume, resetCheckpoints })
     }
 
     console.log('Starting delinked data transformer process...')
@@ -300,7 +312,7 @@ if (require.main === module) {
   const cliArgs = parseCliArgs()
 
   if (cliArgs.help) {
-    console.log('Usage: node app/index.js --scenario <test-to-dev|prd-to-pre|dev-to-test> [--dry-run] [--test-connection] [--continue-on-error] [--direct] [--table-by-table] [--no-single-transaction]')
+    console.log('Usage: node app/index.js --scenario <test-to-dev|prd-to-pre|dev-to-test> [--dry-run] [--test-connection] [--continue-on-error] [--direct] [--table-by-table] [--no-single-transaction] [--resume] [--reset-checkpoints]')
     process.exit(0)
   }
 
@@ -314,7 +326,9 @@ if (require.main === module) {
       sourceEnvironment: cliArgs.sourceEnvironment,
       targetEnvironment: cliArgs.targetEnvironment,
       tableByTable: cliArgs.tableByTable,
-      singleTransaction: cliArgs.singleTransaction
+      singleTransaction: cliArgs.singleTransaction,
+      resume: cliArgs.resume,
+      resetCheckpoints: cliArgs.resetCheckpoints
     })
     : delinkedDataTransformer()
 

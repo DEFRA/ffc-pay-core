@@ -5,6 +5,7 @@ const { streamPrdToPre } = require('./stream-prd-to-pre')
 const { validateTransferTables, discoverTargetTables, resolveTransferTableList } = require('./transfer-validation')
 const { loadServiceMetadata, saveServiceMetadata } = require('./metadata-storage')
 const { discoverTableMetadata } = require('./discover-service-metadata')
+const { loadCheckpoint, saveCheckpoint, resetCheckpoint } = require('./checkpoint-storage')
 
 function parseArgs (argv = process.argv.slice(2)) {
   const args = {
@@ -15,6 +16,8 @@ function parseArgs (argv = process.argv.slice(2)) {
     continueOnError: false,
     tableByTable: false,
     singleTransaction: true,
+    resume: false,
+    resetCheckpoints: false,
     help: false
   }
 
@@ -32,6 +35,8 @@ function parseArgs (argv = process.argv.slice(2)) {
     else if (arg === '--continue-on-error') args.continueOnError = true
     else if (arg === '--table-by-table') args.tableByTable = true
     else if (arg === '--no-single-transaction') args.singleTransaction = false
+    else if (arg === '--resume') args.resume = true
+    else if (arg === '--reset-checkpoints') args.resetCheckpoints = true
     else if (arg === '--help' || arg === '-h') args.help = true
   }
 
@@ -100,9 +105,12 @@ async function runSequentialTransfers (services, options = {}) {
   const sourceEnvironment = options.sourceEnvironment || 'prd'
   const targetEnvironment = options.targetEnvironment || 'pre'
   const continueOnError = Boolean(options.continueOnError)
+  const resume = Boolean(options.resume)
+  const resetCheckpoints = Boolean(options.resetCheckpoints)
   const summary = {
     success: true,
     processed: 0,
+    skipped: 0,
     succeeded: [],
     failed: []
   }
@@ -117,6 +125,31 @@ async function runSequentialTransfers (services, options = {}) {
       validation: null
     }
 
+    if (resetCheckpoints) {
+      const reset = await resetCheckpoint(service.name, { sourceEnvironment, targetEnvironment })
+      if (reset.reset) {
+        console.log(`[${service.name}] Reset checkpoint: ${reset.filePath}`)
+      }
+    }
+
+    const checkpoint = await loadCheckpoint(service.name, { sourceEnvironment, targetEnvironment })
+    if (resume && checkpoint.exists && checkpoint.status === 'completed') {
+      console.log(`[${service.name}] Checkpoint shows completed; skipping.`)
+      summary.skipped += 1
+      summary.succeeded.push({
+        service: service.name,
+        sourceDbName: service.sourceDbName,
+        targetDbName: service.targetDbName,
+        tablesValidated: Array.isArray(checkpoint.tables) ? checkpoint.tables.length : 0,
+        fromCheckpoint: true
+      })
+      continue
+    }
+
+    if (checkpoint.exists && checkpoint.status !== 'missing') {
+      console.log(`[${service.name}] Existing checkpoint found: ${checkpoint.status}. Use --resume to skip completed services or --reset-checkpoints to start fresh.`)
+    }
+
     let metadataTables
     try {
       metadataTables = await ensureServiceMetadata(service, sourceEnvironment)
@@ -129,6 +162,7 @@ async function runSequentialTransfers (services, options = {}) {
       summary.failed.push(failure)
       summary.success = false
       console.error(`❌ Metadata discovery failed for ${service.name}: ${metadataError.message}`)
+      await saveCheckpoint(service.name, { ...serviceResult, status: 'failed' }, { sourceEnvironment, targetEnvironment })
       if (!continueOnError) {
         throw new Error(`Metadata discovery failed for ${service.name}: ${metadataError.message}`)
       }
@@ -157,6 +191,7 @@ async function runSequentialTransfers (services, options = {}) {
       summary.failed.push(failure)
       summary.success = false
       console.error(`❌ Transfer failed for ${service.name}: ${transferError.message}`)
+      await saveCheckpoint(service.name, { ...serviceResult, status: 'failed' }, { sourceEnvironment, targetEnvironment })
       if (!continueOnError) {
         throw new Error(`Transfer failed for ${service.name}: ${transferError.message}`)
       }
@@ -193,6 +228,7 @@ async function runSequentialTransfers (services, options = {}) {
         summary.failed.push(failure)
         summary.success = false
         console.error(`❌ Validation failed for ${service.name}: ${failure.error}`)
+        await saveCheckpoint(service.name, { ...serviceResult, status: 'failed', tables: serviceResult.validation.tables }, { sourceEnvironment, targetEnvironment })
         if (!continueOnError) {
           throw new Error(`Validation failed for ${service.name}: ${failure.error}`)
         }
@@ -201,6 +237,11 @@ async function runSequentialTransfers (services, options = {}) {
       }
 
       console.log(`✅ Validation passed for ${service.name}`)
+      await saveCheckpoint(service.name, {
+        ...serviceResult,
+        status: 'completed',
+        tables: serviceResult.validation.tables
+      }, { sourceEnvironment, targetEnvironment })
       summary.succeeded.push({
         service: service.name,
         sourceDbName: service.sourceDbName,
@@ -217,6 +258,7 @@ async function runSequentialTransfers (services, options = {}) {
       summary.failed.push(failure)
       summary.success = false
       console.error(`❌ Validation error for ${service.name}: ${validationError.message}`)
+      await saveCheckpoint(service.name, { ...serviceResult, status: 'failed' }, { sourceEnvironment, targetEnvironment })
       if (!continueOnError) {
         throw new Error(`Validation error for ${service.name}: ${validationError.message}`)
       }
@@ -226,6 +268,7 @@ async function runSequentialTransfers (services, options = {}) {
 
   console.log('\n====================================')
   console.log(`Run summary: ${summary.processed}/${services.length} services processed`)
+  console.log(`Skipped (checkpoint): ${summary.skipped}`)
   console.log(`Succeeded: ${summary.succeeded.length}`)
   console.log(`Failed: ${summary.failed.length}`)
   if (summary.failed.length > 0) {
@@ -252,6 +295,8 @@ async function main () {
     console.log('  --continue-on-error          Skip failed services and report them at the end')
     console.log('  --table-by-table             Copy tables individually for progress visibility and memory safety')
     console.log('  --no-single-transaction      Restore without wrapping the whole run in a single transaction')
+    console.log('  --resume                     Skip services already marked completed in checkpoints')
+    console.log('  --reset-checkpoints          Delete existing checkpoints before running')
     return
   }
 
@@ -262,7 +307,9 @@ async function main () {
     dryRun: args.dryRun,
     continueOnError: args.continueOnError,
     tableByTable: args.tableByTable,
-    singleTransaction: args.singleTransaction
+    singleTransaction: args.singleTransaction,
+    resume: args.resume,
+    resetCheckpoints: args.resetCheckpoints
   })
 
   console.log('\nCompleted sequential transfer run:', JSON.stringify(results, null, 2))
