@@ -1,0 +1,29 @@
+{
+  "serviceName": "ffc-pay-demographics",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-demographics-prd",
+  "targetDbName": "ffc-pay-demographics-test",
+  "updatedAt": "2026-08-27T14:30:46.320Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "claimantExceptions",
+      "keyColumn": "claimantExceptionId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "claimantGroups",
+      "keyColumn": "claimantGroupId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "countries",
+      "keyColumn": "countryId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}

@@ -1,9 +1,18 @@
 const { spawn } = require('child_process')
-const { createConnection } = require('./db-connection')
+const { createConnection, resolveDatabaseEnvironmentConfig, getEnhancedAzureToken } = require('./db-connection')
 const { PROTECTED_TABLES, READER_ONLY_EXCLUDED_TABLES } = require('../constants/etl-protection')
 
 const LARGE_TABLE_ROW_THRESHOLD = Number(process.env.LARGE_TABLE_ROW_THRESHOLD || 1000000)
 const LARGE_TABLE_SIZE_MB_THRESHOLD = Number(process.env.LARGE_TABLE_SIZE_MB_THRESHOLD || 1024)
+
+async function refreshToken (environment) {
+  const envConfig = resolveDatabaseEnvironmentConfig({ environment })
+  if (!envConfig.useAzureAd) {
+    return envConfig.password
+  }
+  const token = await getEnhancedAzureToken({ environment })
+  return token
+}
 
 function buildCliEnv (token) {
   return {
@@ -412,7 +421,7 @@ async function restoreLiquibaseMetadataTables (sourceConnection, targetConnectio
 }
 
 async function streamTableByTable (sourceConfig, sourceDbName, targetConfig, targetDbName, tableNames, options = {}) {
-  const { sourceToken, targetToken, dryRun = false } = options
+  const { sourceEnvironment, targetEnvironment, sourceToken, targetToken, dryRun = false } = options
   const results = []
   let totalRows = 0
 
@@ -428,7 +437,10 @@ async function streamTableByTable (sourceConfig, sourceDbName, targetConfig, tar
       continue
     }
 
-    const result = await copyTableRows(sourceConfig, sourceDbName, targetConfig, targetDbName, tableName, sourceToken, targetToken)
+    const currentSourceToken = sourceEnvironment ? await refreshToken(sourceEnvironment) : sourceToken
+    const currentTargetToken = targetEnvironment ? await refreshToken(targetEnvironment) : targetToken
+
+    const result = await copyTableRows(sourceConfig, sourceDbName, targetConfig, targetDbName, tableName, currentSourceToken, currentTargetToken)
     results.push(result)
     totalRows += result.rowCount || 0
     console.log(`  ${tableName}: done`)
@@ -496,7 +508,7 @@ async function copyDatabaseStream (sourceDbName, targetDbName, options = {}) {
         targetConfig,
         targetDbName,
         tableSizes.map(t => t.tableName),
-        { sourceToken: sourceConnection.token, targetToken: targetConnection.token, dryRun: false }
+        { sourceEnvironment, targetEnvironment, dryRun: false }
       )
       return { sourceDbName, targetDbName, dryRun: false, copied: true, tableByTable: true, tableCount: results.length, totalRows }
     }

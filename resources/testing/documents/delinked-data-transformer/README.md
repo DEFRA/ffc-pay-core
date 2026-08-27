@@ -110,6 +110,18 @@ LARGE_TABLE_ROW_THRESHOLD=500000 LARGE_TABLE_SIZE_MB_THRESHOLD=512 node app/inde
 
 A table is considered large when it has at least `LARGE_TABLE_ROW_THRESHOLD` rows (default 1,000,000) or is at least `LARGE_TABLE_SIZE_MB_THRESHOLD` MB (default 1,024 MB). When large tables are detected, the runner automatically switches to table-by-table mode unless you already requested it.
 
+Resume a previous run, skipping services already marked completed:
+
+```bash
+node app/index.js --scenario prd-to-pre --direct --resume
+```
+
+Start fresh and ignore existing checkpoints:
+
+```bash
+node app/index.js --scenario prd-to-pre --direct --reset-checkpoints
+```
+
 ### `test-to-dev` pipeline
 
 Run interactively with prompts:
@@ -162,6 +174,8 @@ node app/database/sequential-transfer-runner.js --services-file ./app/database/s
 --continue-on-error        Skip failed services and report them at the end
 --table-by-table           Copy tables individually for progress and memory safety
 --no-single-transaction    Restore without wrapping in a single transaction
+--resume                   Skip services already marked completed in checkpoints
+--reset-checkpoints        Delete existing checkpoints before running
 ```
 
 ### `node app/database/sequential-transfer-runner.js`
@@ -174,7 +188,21 @@ node app/database/sequential-transfer-runner.js --services-file ./app/database/s
 --continue-on-error        Skip failed services
 --table-by-table           Copy tables individually
 --no-single-transaction    Non-transactional restore
+--resume                   Skip services already marked completed in checkpoints
+--reset-checkpoints        Delete existing checkpoints before running
 ```
+
+## Checkpoints
+
+Service-level checkpoints are written to the `checkpoints/` directory after a service completes and validates successfully. If a run fails part-way through, rerun with `--resume` and any service already marked `completed` will be skipped.
+
+Checkpoint files are named like:
+
+```
+checkpoints/ffc-pay-alerting-prd-to-pre.json
+```
+
+Use `--reset-checkpoints` to delete them and start from scratch. Checkpoints are not written during dry-runs.
 
 ## How a transfer runs
 

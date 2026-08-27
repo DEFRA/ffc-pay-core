@@ -1,0 +1,17 @@
+{
+  "serviceName": "ffc-pay-enrichment",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-enrichment-prd",
+  "targetDbName": "ffc-pay-enrichment-test",
+  "updatedAt": "2026-08-27T14:31:47.783Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "customers",
+      "keyColumn": "id",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}
