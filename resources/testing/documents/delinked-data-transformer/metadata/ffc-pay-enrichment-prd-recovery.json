@@ -1,0 +1,13 @@
+{
+  "databaseName": "ffc-pay-enrichment-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:38:48.810Z",
+  "tables": [
+    {
+      "name": "customers",
+      "keyColumn": "id",
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}

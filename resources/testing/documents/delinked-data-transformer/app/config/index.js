@@ -1,23 +1,56 @@
-const Joi = require('joi')
+const fs = require('fs')
+const path = require('path')
 
-// Define config schema
-const schema = Joi.object({
-  writeTestDbToDev: Joi.boolean().default(false)
-})
+const defaultConfig = require('./default')
+const scenarios = require('./scenarios')
 
-// Build config
-const writeDb = {
-  writeTestDbToDev: process.env.WRITE_TEST_DB_TO_DEV
+const configPath = path.resolve(process.cwd(), 'app/config/local.js')
+
+function getScenarioConfig (scenarioName) {
+  if (!scenarioName) return {}
+  return scenarios[scenarioName] || {}
 }
 
-// Validate config
-const result = schema.validate(writeDb, {
-  abortEarly: false
-})
+function loadConfig () {
+  const runtimeConfig = fs.existsSync(configPath) ? require(configPath) : {}
+  const requestedScenario = process.env.DB_SCENARIO || runtimeConfig.scenario || defaultConfig.scenario || 'test-to-dev'
+  const scenarioConfig = getScenarioConfig(requestedScenario)
 
-// Throw if config is invalid
-if (result.error) {
-  throw new Error(`The config is invalid. ${result.error.message}`)
+  const merged = {
+    ...defaultConfig,
+    ...scenarioConfig,
+    ...runtimeConfig,
+    dump: {
+      ...defaultConfig.dump,
+      ...(scenarioConfig.dump || {}),
+      ...(runtimeConfig.dump || {})
+    },
+    database: {
+      ...defaultConfig.database,
+      ...(scenarioConfig.database || {}),
+      ...(runtimeConfig.database || {}),
+      environments: {
+        ...(defaultConfig.database?.environments || {}),
+        ...(scenarioConfig.database?.environments || {}),
+        ...(runtimeConfig.database?.environments || {})
+      }
+    }
+  }
+
+  const sourceEnvironment = process.env.DB_SOURCE_ENV || merged.sourceEnvironment || defaultConfig.sourceEnvironment
+  const targetEnvironment = process.env.DB_TARGET_ENV || merged.targetEnvironment || defaultConfig.targetEnvironment
+
+  return {
+    ...merged,
+    scenario: requestedScenario,
+    sourceEnvironment,
+    targetEnvironment,
+    database: {
+      ...merged.database,
+      port: Number(process.env.POSTGRES_PORT || merged.database.port || defaultConfig.database.port),
+      ssl: process.env.POSTGRES_SSL !== undefined ? process.env.POSTGRES_SSL === 'true' : merged.database.ssl
+    }
+  }
 }
 
-module.exports = result.value
+module.exports = loadConfig()

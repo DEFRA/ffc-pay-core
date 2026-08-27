@@ -1,0 +1,19 @@
+{
+  "databaseName": "ffc-pay-alerting-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:38:13.602Z",
+  "tables": [
+    {
+      "name": "contacts",
+      "keyColumn": "contactId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "schemes",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}
