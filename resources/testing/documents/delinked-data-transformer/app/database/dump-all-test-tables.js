@@ -1,7 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const { spawn } = require('child_process')
-const { createConnection, listDatabases, getDatabaseStats } = require('./db-connection')
+const { createConnection, listDatabases, getDatabaseStats, getDatabaseEnvironmentDefaults, buildDatabasePatterns } = require('./db-connection')
 const os = require('os')
 
 const { ETL_DATABASES, ETL_TABLE_PREFIX, EXCLUDE_ETL_TABLES, PROTECTED_TABLES } = require('../constants/etl-protection')
@@ -25,27 +25,34 @@ async function dumpAllTestTables (dryRun = false) {
   }
 
   try {
+    const defaults = getDatabaseEnvironmentDefaults()
     console.log('--- Database Discovery Diagnostics ---')
-    const allDatabases = await listDatabases(['%'])
+    const allDatabases = await listDatabases(['%'], {
+      sourceEnvironment: defaults.source.environment,
+      targetEnvironment: defaults.target.environment
+    })
     console.log(`Total databases on server: ${allDatabases.length}`)
 
     const allFfcDatabases = allDatabases.filter(db => db.toLowerCase().includes('ffc'))
     console.log('All FFC-related databases on server:')
     allFfcDatabases.forEach(db => console.log(`  - ${db}`))
 
-    const dbPatterns = ['ffc-doc-%-test', 'ffc-pay-%-test']
+    const dbPatterns = buildDatabasePatterns([defaults.source.environment, defaults.target.environment])
     console.log(`\nSearching for databases matching patterns: ${dbPatterns.join(', ')}`)
 
-    const databases = await listDatabases(dbPatterns)
+    const databases = await listDatabases(dbPatterns, {
+      sourceEnvironment: defaults.source.environment,
+      targetEnvironment: defaults.target.environment
+    })
     console.log(`Found ${databases.length} matching databases:`)
     databases.forEach(db => console.log(`  - ${db}`))
 
     const missingDatabases = allFfcDatabases
-      .filter(db => db.endsWith('-test'))
+      .filter(db => db.endsWith(defaults.source.suffix))
       .filter(db => !databases.includes(db))
 
     if (missingDatabases.length > 0) {
-      console.warn('\n⚠️ WARNING: Some FFC test databases don\'t match the patterns:')
+      console.warn(`\n⚠️ WARNING: Some FFC ${defaults.source.environment} databases don't match the patterns:`)
       missingDatabases.forEach(db => console.warn(`  - ${db} (will be skipped)`))
       console.warn('If these should be included, check database naming patterns')
     }
@@ -146,7 +153,13 @@ async function performFullDump (dbConnection, outputPath) {
         let etlTables = []
         let isEtlDatabase = false
 
-        if (EXCLUDE_ETL_TABLES && ETL_DATABASES.some(db => dbConnection.database.toLowerCase() === db.toLowerCase())) {
+        const normalizedDatabaseName = dbConnection.database.toLowerCase()
+        const matchesEtlDatabase = EXCLUDE_ETL_TABLES && ETL_DATABASES.some(db => {
+          const normalizedDb = db.toLowerCase()
+          return normalizedDatabaseName === normalizedDb || normalizedDatabaseName.startsWith(`${normalizedDb}-`)
+        })
+
+        if (matchesEtlDatabase) {
           isEtlDatabase = true
           console.log(`⚠️ ETL PROTECTION ACTIVE: Preparing to exclude ETL tables from ${dbConnection.database}`)
           etlTables = await getEtlTables(dbConnection)
@@ -185,7 +198,7 @@ async function performFullDump (dbConnection, outputPath) {
           '--file', outputPath,
           '--verbose'
         ]
-        console.log(`Database check: '${dbConnection.database}' is in ETL_DATABASES: ${ETL_DATABASES.some(db => dbConnection.database.toLowerCase() === db.toLowerCase())}`)
+        console.log(`Database check: '${dbConnection.database}' is in ETL_DATABASES: ${matchesEtlDatabase}`)
 
         if (isEtlDatabase && etlTables.length > 0) {
           console.log(`⚠️ ETL PROTECTION: Adding pg_dump exclusions for ${etlTables.length} ETL tables`)

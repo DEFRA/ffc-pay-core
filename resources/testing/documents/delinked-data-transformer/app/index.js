@@ -2,7 +2,46 @@ const dumpFiles = require('./database/dump-all-test-tables')
 const transformFiles = require('./transform/transform-all')
 const upload = require('./upload/upload-to-dev')
 const dummyData = require('../dummy-data-creation/create-dummy-file')
+const appConfig = require('./config')
+const scenarios = require('./config/scenarios')
+const { testConnection } = require('./database/db-connection')
+const { runScenario } = require('./scenarios')
 const readline = require('readline')
+
+function parseCliArgs (argv = process.argv.slice(2)) {
+  const args = {
+    scenario: appConfig.scenario,
+    dryRun: false,
+    testConnection: false,
+    continueOnError: false,
+    direct: false,
+    tableByTable: false,
+    singleTransaction: true
+  }
+
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (arg === '--scenario') {
+      args.scenario = argv[++i]
+    } else if (arg === '--dry-run') {
+      args.dryRun = true
+    } else if (arg === '--test-connection') {
+      args.testConnection = true
+    } else if (arg === '--continue-on-error') {
+      args.continueOnError = true
+    } else if (arg === '--direct') {
+      args.direct = true
+    } else if (arg === '--table-by-table') {
+      args.tableByTable = true
+    } else if (arg === '--no-single-transaction') {
+      args.singleTransaction = false
+    } else if (arg === '--help' || arg === '-h') {
+      args.help = true
+    }
+  }
+
+  return args
+}
 
 function promptContinue (message = 'Continue to next step? (y/n): ', defaultValue = 'y') {
   return new Promise((resolve) => {
@@ -73,8 +112,103 @@ async function safeRun (fn, description) {
   }
 }
 
+async function testBothConnections (sourceEnvironment, targetEnvironment) {
+  console.log(`Testing connection to source environment: ${sourceEnvironment}`)
+  const sourceResult = await testConnection(sourceEnvironment, 'postgres')
+  console.log(`Source connection OK: ${sourceResult.host}:${sourceResult.port}/${sourceResult.database}`)
+
+  console.log(`Testing connection to target environment: ${targetEnvironment}`)
+  const targetResult = await testConnection(targetEnvironment, 'postgres')
+  console.log(`Target connection OK: ${targetResult.host}:${targetResult.port}/${targetResult.database}`)
+
+  return { sourceResult, targetResult }
+}
+
+async function executeScenario (scenarioName = appConfig.scenario, options = {}) {
+  const selectedScenario = scenarios[scenarioName] || {}
+
+  const preferredSourceEnvironment = options.sourceEnvironment || selectedScenario.sourceEnvironment || appConfig.sourceEnvironment
+  const preferredTargetEnvironment = options.targetEnvironment || selectedScenario.targetEnvironment || appConfig.targetEnvironment
+
+  const dryRun = options.dryRun !== undefined ? options.dryRun : false
+  const runConnectionCheck = options.testConnection !== undefined ? options.testConnection : false
+  const continueOnError = options.continueOnError !== undefined ? options.continueOnError : false
+  const tableByTable = options.tableByTable !== undefined ? options.tableByTable : false
+  const singleTransaction = options.singleTransaction !== undefined ? options.singleTransaction : true
+
+  let sourceEnvironment = preferredSourceEnvironment
+  let targetEnvironment = preferredTargetEnvironment
+
+  if (scenarioName === 'test-to-dev') {
+    sourceEnvironment = 'test'
+    targetEnvironment = 'dev'
+  }
+
+  if (scenarioName === 'prd-to-pre') {
+    const allowedSourceEnvironments = new Set(['prd', 'recovery', 'test'])
+    const allowedTargetEnvironments = new Set(['pre', 'test', 'dev'])
+
+    if (!allowedSourceEnvironments.has(sourceEnvironment)) {
+      throw new Error(`prd-to-pre source environment must be one of: ${[...allowedSourceEnvironments].join(', ')}`)
+    }
+
+    if (!allowedTargetEnvironments.has(targetEnvironment)) {
+      throw new Error(`prd-to-pre target environment must be one of: ${[...allowedTargetEnvironments].join(', ')}`)
+    }
+  }
+
+  console.log(`Scenario: ${scenarioName}`)
+  console.log(`Source environment: ${sourceEnvironment}`)
+  console.log(`Target environment: ${targetEnvironment}`)
+  console.log(`Dry run: ${dryRun}`)
+
+  if (runConnectionCheck) {
+    await testBothConnections(sourceEnvironment, targetEnvironment)
+  }
+
+  if (scenarioName === 'prd-to-pre') {
+    const { buildServiceManifest } = require('./database/service-manifest')
+    const { runSequentialTransfers } = require('./database/sequential-transfer-runner')
+    const manifest = buildServiceManifest(sourceEnvironment, targetEnvironment)
+
+    return runSequentialTransfers(manifest.services, {
+      sourceEnvironment,
+      targetEnvironment,
+      dryRun,
+      continueOnError,
+      tableByTable,
+      singleTransaction
+    })
+  }
+
+  const { runScenario: runTestToDevScenario } = require('./scenarios/test-to-dev')
+  return runTestToDevScenario({
+    dryRun,
+    testConnection: runConnectionCheck,
+    sourceEnvironment,
+    targetEnvironment
+  })
+}
+
 const delinkedDataTransformer = async () => {
   try {
+    const cliArgs = parseCliArgs()
+    if (cliArgs.help) {
+      console.log('Usage: node app/index.js --scenario <test-to-dev|prd-to-pre|dev-to-test> [--dry-run] [--test-connection] [--continue-on-error] [--table-by-table] [--no-single-transaction]')
+      return true
+    }
+
+    const scenarioName = cliArgs.scenario || appConfig.scenario || 'test-to-dev'
+    const dryRun = cliArgs.dryRun
+    const testConnectionRun = cliArgs.testConnection
+    const continueOnError = cliArgs.continueOnError
+    const tableByTable = cliArgs.tableByTable
+    const singleTransaction = cliArgs.singleTransaction
+
+    if (cliArgs.direct) {
+      return await executeScenario(scenarioName, { dryRun, testConnection: testConnectionRun, continueOnError, tableByTable, singleTransaction })
+    }
+
     console.log('Starting delinked data transformer process...')
     console.log('This process will run through the following steps:\n' +
       '1. Create dummy data file if required\n' +
@@ -98,21 +232,18 @@ const delinkedDataTransformer = async () => {
       console.log('Skipping dummy data creation.')
     }
 
-    // DUMP
     if (await promptContinue('Run dump step? (y/n): ')) {
       if (!await safeRun(() => dumpFiles.dumpAllTestTables(false), 'dumping test tables')) return
     } else {
       console.log('Skipping dump step.')
     }
 
-    // TRANSFORM
     if (await promptContinue('Run transform step? (y/n): ')) {
       if (!await safeRun(() => transformFiles.transformAll(false), 'transforming files')) return
     } else {
       console.log('Skipping transform step.')
     }
 
-    // UPLOAD
     let done = false
     while (!done) {
       const uploadType = await promptSelectUploadType()
@@ -121,7 +252,6 @@ const delinkedDataTransformer = async () => {
         break
       }
 
-      // Ask if user wants a dry run first
       const doDryRun = await promptDryRun()
       let uploadFn
       if (uploadType === 'ffc-pay') uploadFn = upload.uploadFfcPayToDev
@@ -140,15 +270,16 @@ const delinkedDataTransformer = async () => {
         await safeRun(() => uploadFn(false), `uploading ${uploadType.toUpperCase()} to DEV`)
       }
 
-      // Ask if they want to upload another type
       const again = await promptContinue('Would you like to run another upload? (y/n): ')
       if (!again) {
         console.log('Process complete.')
         done = true
       }
     }
+    return true
   } catch (error) {
     console.error('Error during delinked data transformation:', error)
+    return false
   }
 }
 
@@ -156,12 +287,44 @@ module.exports = {
   delinkedDataTransformer
 }
 
+module.exports = {
+  delinkedDataTransformer,
+  runScenario,
+  executeScenario,
+  testBothConnections,
+  parseCliArgs
+}
+
 // Allow direct execution
 if (require.main === module) {
-  delinkedDataTransformer()
-    .then(success => process.exit(success ? 0 : 1))
+  const cliArgs = parseCliArgs()
+
+  if (cliArgs.help) {
+    console.log('Usage: node app/index.js --scenario <test-to-dev|prd-to-pre|dev-to-test> [--dry-run] [--test-connection] [--continue-on-error] [--direct] [--table-by-table] [--no-single-transaction]')
+    process.exit(0)
+  }
+
+  const scenarioName = cliArgs.scenario || appConfig.scenario || 'test-to-dev'
+
+  const run = cliArgs.direct
+    ? executeScenario(scenarioName, {
+      dryRun: cliArgs.dryRun,
+      testConnection: cliArgs.testConnection,
+      continueOnError: cliArgs.continueOnError,
+      sourceEnvironment: cliArgs.sourceEnvironment,
+      targetEnvironment: cliArgs.targetEnvironment,
+      tableByTable: cliArgs.tableByTable,
+      singleTransaction: cliArgs.singleTransaction
+    })
+    : delinkedDataTransformer()
+
+  run
+    .then(result => {
+      const success = result === true || (result && typeof result === 'object' && result.success !== false)
+      process.exit(success ? 0 : 1)
+    })
     .catch(error => {
-      console.error(`ETL process failed: ${error}`)
+      console.error(`ETL process failed: ${error.message || error}`)
       process.exit(1)
     })
 }

@@ -1,0 +1,25 @@
+{
+  "databaseName": "ffc-pay-demographics-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:38:31.484Z",
+  "tables": [
+    {
+      "name": "claimantExceptions",
+      "keyColumn": "claimantExceptionId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "claimantGroups",
+      "keyColumn": "claimantGroupId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "countries",
+      "keyColumn": "countryId",
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}

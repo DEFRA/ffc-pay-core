@@ -1,4 +1,5 @@
-const { createConnection, listDatabases } = require('../database/db-connection')
+const { createConnection, listDatabases, getDatabaseEnvironmentDefaults, buildDatabasePatterns, getEnvironmentSuffix } = require('../database/db-connection')
+const appConfig = require('../config')
 const { findSqlDumpFiles, safeRemoveFile } = require('../util/file-utils')
 const { logInfo, logError, logWarning } = require('../util/logger')
 const { processForAzure } = require('../transform/sql-processor')
@@ -9,7 +10,13 @@ const { backupDatabase } = require('../database/backup-and-restore')
 const fs = require('fs')
 const os = require('os')
 
-async function uploadToDev (type = 'all', dryRun = false) {
+async function uploadToDev (type = 'all', dryRun = false, options = {}) {
+  const defaults = getDatabaseEnvironmentDefaults()
+  const sourceEnvironment = options.sourceEnvironment || process.env.DB_SOURCE_ENV || appConfig.sourceEnvironment || defaults.source.environment
+  const targetEnvironment = options.targetEnvironment || process.env.DB_TARGET_ENV || appConfig.targetEnvironment || defaults.target.environment
+  const sourceSuffix = getEnvironmentSuffix(sourceEnvironment)
+  const targetSuffix = getEnvironmentSuffix(targetEnvironment)
+
   if (dryRun) {
     logInfo('🔍 DRY RUN MODE: All operations will be simulated without making actual changes')
   }
@@ -28,18 +35,24 @@ async function uploadToDev (type = 'all', dryRun = false) {
   })
 
   logInfo(`Starting database restoration process for type: ${type} (data-only approach)...`)
+  logInfo(`Source environment: ${sourceEnvironment} (${sourceSuffix})`)
+  logInfo(`Target environment: ${targetEnvironment} (${targetSuffix})`)
   logInfo(`Running on ${os.hostname()} with Node.js ${process.version}`)
   logInfo(`System resources: ${os.cpus().length} CPUs, ${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB RAM`)
 
   let dbPatterns = []
-  if (type === 'ffc-pay') dbPatterns = ['ffc-pay-%-dev', 'ffc-pay-%-test']
-  else if (type === 'ffc-doc') dbPatterns = ['ffc-doc-%-dev', 'ffc-doc-%-test']
-  else dbPatterns = ['ffc-doc-%-dev', 'ffc-pay-%-dev', 'ffc-doc-%-test', 'ffc-pay-%-test']
+  const targetPatternSet = [sourceEnvironment, targetEnvironment]
+  if (type === 'ffc-pay') dbPatterns = buildDatabasePatterns(targetPatternSet).filter(pattern => pattern.includes('ffc-pay-'))
+  else if (type === 'ffc-doc') dbPatterns = buildDatabasePatterns(targetPatternSet).filter(pattern => pattern.includes('ffc-doc-'))
+  else dbPatterns = buildDatabasePatterns(targetPatternSet)
 
   let targetDatabases = []
   try {
     logInfo('--- Database Discovery ---')
-    targetDatabases = await listDatabases(dbPatterns)
+    targetDatabases = await listDatabases(dbPatterns, {
+      sourceEnvironment,
+      targetEnvironment
+    })
     logInfo(`Found ${targetDatabases.length} available target databases:`)
     logInfo(targetDatabases)
     logInfo('------------------------')
@@ -47,7 +60,7 @@ async function uploadToDev (type = 'all', dryRun = false) {
     logError(`Database discovery failed: ${err.message}`)
   }
 
-  const databaseFiles = findSqlDumpFiles().filter(({ sourceDbName }) => {
+  const databaseFiles = findSqlDumpFiles(undefined, '_full.sql', { sourceEnvironment, targetEnvironment }).filter(({ sourceDbName }) => {
     if (type === 'ffc-pay') return sourceDbName.startsWith('ffc-pay')
     if (type === 'ffc-doc') return sourceDbName.startsWith('ffc-doc')
     return true
@@ -62,13 +75,14 @@ async function uploadToDev (type = 'all', dryRun = false) {
     const dbStartTime = Date.now()
     logInfo(`\n📦 Processing database: ${sourceDbName}`)
     logInfo(`File: ${filePath}`)
+    logInfo(`Source env: ${sourceEnvironment}, target env: ${targetEnvironment}`)
     logInfo(`Target DB: ${targetDbName}`)
 
     let client
     try {
-      logInfo(`Connecting to ${targetDbName}...`)
+      logInfo(`Connecting to ${targetDbName} on ${targetEnvironment}...`)
       if (!dryRun) {
-        client = await createConnection(targetDbName)
+        client = await createConnection(targetDbName, { environment: targetEnvironment })
 
         const { rows } = await client.query(
           'SELECT current_database(), current_user, version(), current_timestamp'
@@ -144,36 +158,36 @@ async function uploadToDev (type = 'all', dryRun = false) {
         logInfo(`Large dataset detected (${stats.copyRowsConverted} rows), implementing streaming batched processing`)
       }
 
-if (!dryRun) {
-  logInfo('Streaming and executing SQL file in dependency order...')
-  const errorLogFile = `${processedFilePath}.errors.log`
-  const errorStream = fs.createWriteStream(errorLogFile)
-  let currentPosition = 0
-  const progressCallback = (position) => {
-    currentPosition = position
-  }
-  const batchSize = isLargeFile ? 50 : 200
+      if (!dryRun) {
+        logInfo('Streaming and executing SQL file in dependency order...')
+        const errorLogFile = `${processedFilePath}.errors.log`
+        const errorStream = fs.createWriteStream(errorLogFile)
+        let currentPosition = 0
+        const progressCallback = (position) => {
+          currentPosition = position
+        }
+        const batchSize = isLargeFile ? 50 : 200
 
-  // Read SQL statements from processedFilePath
-  const sqlStatements = fs.readFileSync(processedFilePath, 'utf8')
-    .split(/;\s*\n/) // Split by semicolon followed by newline
-    .map(stmt => stmt.trim())
-    .filter(stmt => stmt.length > 0)
+        // Read SQL statements from processedFilePath
+        const sqlStatements = fs.readFileSync(processedFilePath, 'utf8')
+          .split(/;\s*\n/) // Split by semicolon followed by newline
+          .map(stmt => stmt.trim())
+          .filter(stmt => stmt.length > 0)
 
-  // Use dependency-ordered batch execution
-  const results = await loadInDependencyOrder(
-    client,
-    sqlStatements,
-    dryRun,
-    batchSize
-  )
+        // Use dependency-ordered batch execution
+        const results = await loadInDependencyOrder(
+          client,
+          sqlStatements,
+          dryRun,
+          batchSize
+        )
 
-  errorStream.end()
+        errorStream.end()
 
-  logInfo(`Dependency-ordered execution complete: ${results.rowsInserted} rows, ${results.success} successes, ${results.errors} errors`)
-} else {
-  logInfo('[DRY RUN] Would stream and execute SQL file in dependency order')
-}
+        logInfo(`Dependency-ordered execution complete: ${results.rowsInserted} rows, ${results.success} successes, ${results.errors} errors`)
+      } else {
+        logInfo('[DRY RUN] Would stream and execute SQL file in dependency order')
+      }
 
       if (!dryRun) {
         safeRemoveFile(processedFilePath)

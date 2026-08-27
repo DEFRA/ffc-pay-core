@@ -1,0 +1,61 @@
+{
+  "databaseName": "ffc-pay-request-editor-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:44:11.169Z",
+  "tables": [
+    {
+      "name": "category",
+      "keyColumn": "categoryId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "debtData",
+      "keyColumn": "debtDataId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "invoiceLines",
+      "keyColumn": "invoiceLineId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "manualLedgerPaymentRequest",
+      "keyColumn": "manualLedgerPaymentRequestId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "paymentRequests",
+      "keyColumn": "paymentRequestId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "qualityChecks",
+      "keyColumn": "qualityCheckId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "schemes",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "tempDebtData",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "v2TempDebtData",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}
