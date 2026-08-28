@@ -17,6 +17,9 @@ Both use the same database tooling and shared environment definitions.
 - Reports database/table sizes and switches to table-by-table copying for large tables.
 - Supports password authentication for recovery databases and Azure AD authentication for Azure-hosted environments.
 
+Still let to do:
+ Once the transfer complets, we have lost the MID from grantees and should find a way to resotr these automatically. Liquibase tables are untouched by the transfer and therefore will retain a copy of the MId we can use to restore the MID to the grantees. This is a manual process at the moment.
+
 ## Prerequisites
 
 - Node.js installed
