@@ -4,7 +4,9 @@ const path = require('path')
 const defaultConfig = require('./default')
 const scenarios = require('./scenarios')
 
-const configPath = path.resolve(process.cwd(), 'app/config/local.js')
+const projectRootConfigPath = path.resolve(process.cwd(), 'app/config/local.js')
+const moduleRelativeConfigPath = path.resolve(__dirname, 'local.js')
+const configPath = fs.existsSync(projectRootConfigPath) ? projectRootConfigPath : moduleRelativeConfigPath
 
 function getScenarioConfig (scenarioName) {
   if (!scenarioName) return {}
