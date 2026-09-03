@@ -38,6 +38,7 @@ function parseArgs (argv = process.argv.slice(2)) {
     targetSsl: false,
     continueOnError: false,
     skipGrants: false,
+    skipSequenceReset: false,
     help: false
   }
 
@@ -53,6 +54,7 @@ function parseArgs (argv = process.argv.slice(2)) {
     else if (arg === '--target-ssl') args.targetSsl = argv[++i] === 'true'
     else if (arg === '--continue-on-error') args.continueOnError = true
     else if (arg === '--skip-grants') args.skipGrants = true
+    else if (arg === '--skip-sequence-reset') args.skipSequenceReset = true
     else if (arg === '--help' || arg === '-h') args.help = true
   }
 
@@ -186,6 +188,7 @@ async function main () {
     console.log('Options:')
     console.log('  --continue-on-error            Copy remaining tables if one fails')
     console.log('  --skip-grants                  Do not apply managed identity grants after transfer')
+    console.log('  --skip-sequence-reset          Do not reset sequences to match imported data')
     process.exit(args.help ? 0 : 1)
   }
 
@@ -194,6 +197,9 @@ async function main () {
   console.log(`Target credentials: using ${args.targetAdmin}@${args.targetHost}:${args.targetPort}`)
   if (args.skipGrants) {
     console.log('Managed identity grants will be skipped (--skip-grants)')
+  }
+  if (args.skipSequenceReset) {
+    console.log('Sequence reset will be skipped (--skip-sequence-reset)')
   }
 
   const sourceConnection = await createConnection(args.sourceDbName, {
@@ -238,6 +244,10 @@ async function main () {
         }
         console.log('Continuing to next table because --continue-on-error is set.')
       }
+    }
+
+    if (!args.skipSequenceReset) {
+      await streamPrdToPre.resetSequencesAfterTransfer(targetConnection.config, args.targetDbName, targetConnection.token)
     }
 
     if (!args.skipGrants) {

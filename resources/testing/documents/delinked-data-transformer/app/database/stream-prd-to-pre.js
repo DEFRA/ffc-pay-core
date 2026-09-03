@@ -973,6 +973,153 @@ async function copyDatabaseStream (sourceDbName, targetDbName, options = {}) {
   }
 }
 
+async function resetSequencesAfterTransfer (targetConfig, targetDbName, targetToken) {
+  console.log('Resetting sequences to match imported data...')
+  const sql = `
+    DO $$
+    DECLARE
+      rec record;
+      current_max bigint;
+      seq_last_value bigint;
+      new_start bigint;
+    BEGIN
+      FOR rec IN
+        SELECT
+          s.relname AS sequence_name,
+          t.relname AS table_name,
+          a.attname AS column_name
+        FROM pg_class s
+        JOIN pg_depend dep ON dep.objid = s.oid AND dep.refobjsubid != 0
+        JOIN pg_class t ON t.oid = dep.refobjid
+        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = dep.refobjsubid
+        WHERE s.relkind = 'S'
+          AND t.relnamespace = 'public'::regnamespace
+      LOOP
+        EXECUTE format('SELECT last_value FROM %I', rec.sequence_name) INTO seq_last_value;
+        EXECUTE format('SELECT coalesce(max(%I), 0) FROM %I', rec.column_name, rec.table_name) INTO current_max;
+
+        IF current_max = 0 THEN
+          CONTINUE;
+        END IF;
+
+        new_start := current_max + 1;
+
+        IF seq_last_value >= new_start THEN
+          CONTINUE;
+        END IF;
+
+        EXECUTE format('SELECT setval(%L, %s, false)', rec.sequence_name, new_start);
+        RAISE NOTICE 'Reset sequence % on %.% to %', rec.sequence_name, rec.table_name, rec.column_name, new_start;
+      END LOOP;
+    END $$;
+  `
+  await executePsqlCommand(targetConfig, targetDbName, sql, targetToken)
+  console.log('Sequence reset complete.')
+}
+
+async function runTransferHealthCheck (targetConfig, targetDbName, targetToken) {
+  const sql = `
+    DO $$
+    DECLARE
+      rec record;
+      seq_last_value bigint;
+      current_max bigint;
+      issue_count integer := 0;
+    BEGIN
+      -- sequences behind current data
+      FOR rec IN
+        SELECT
+          s.relname AS sequence_name,
+          t.relname AS table_name,
+          a.attname AS column_name
+        FROM pg_class s
+        JOIN pg_depend dep ON dep.objid = s.oid AND dep.refobjsubid != 0
+        JOIN pg_class t ON t.oid = dep.refobjid
+        JOIN pg_attribute a ON a.attrelid = t.oid AND a.attnum = dep.refobjsubid
+        WHERE s.relkind = 'S'
+          AND t.relnamespace = 'public'::regnamespace
+      LOOP
+        EXECUTE format('SELECT last_value FROM %I', rec.sequence_name) INTO seq_last_value;
+        EXECUTE format('SELECT coalesce(max(%I), 0) FROM %I', rec.column_name, rec.table_name) INTO current_max;
+
+        IF seq_last_value < current_max THEN
+          issue_count := issue_count + 1;
+          RAISE WARNING 'sequence behind: % on %.% (last_value=%, max=%)',
+            rec.sequence_name, rec.table_name, rec.column_name, seq_last_value, current_max;
+        END IF;
+      END LOOP;
+
+      -- tables missing primary key
+      FOR rec IN
+        SELECT c.relname AS table_name
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE c.relkind = 'r'
+          AND n.nspname = 'public'
+          AND NOT EXISTS (
+            SELECT 1 FROM pg_constraint con
+            WHERE con.conrelid = c.oid AND con.contype = 'p'
+          )
+      LOOP
+        issue_count := issue_count + 1;
+        RAISE WARNING 'missing primary key: %', rec.table_name;
+      END LOOP;
+
+      -- foreign keys without supporting index
+      FOR rec IN
+        SELECT
+          c.conrelid::regclass::text AS table_name,
+          c.conname AS fk_name,
+          (
+            SELECT string_agg(a.attname, ', ' ORDER BY ord.n)
+            FROM unnest(c.conkey) WITH ORDINALITY AS ord(attnum, n)
+            JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ord.attnum
+          ) AS fk_columns
+        FROM pg_constraint c
+        WHERE c.contype = 'f'
+          AND c.connamespace = 'public'::regnamespace
+          AND NOT EXISTS (
+            SELECT 1 FROM pg_index i
+            WHERE i.indrelid = c.conrelid
+              AND (i.indkey::int4[])[0:array_length(c.conkey,1)-1] @> c.conkey::int4[]
+          )
+      LOOP
+        issue_count := issue_count + 1;
+        RAISE WARNING 'foreign key without index: % on % (columns: %)', rec.fk_name, rec.table_name, rec.fk_columns;
+      END LOOP;
+
+      -- invalid indexes
+      FOR rec IN
+        SELECT indrelid::regclass::text AS table_name, indexrelid::regclass::text AS index_name
+        FROM pg_index
+        WHERE NOT indisvalid
+      LOOP
+        issue_count := issue_count + 1;
+        RAISE WARNING 'invalid index: % on %', rec.index_name, rec.table_name;
+      END LOOP;
+
+      -- unvalidated foreign keys
+      FOR rec IN
+        SELECT conrelid::regclass::text AS table_name, conname AS fk_name
+        FROM pg_constraint
+        WHERE contype = 'f'
+          AND NOT convalidated
+          AND connamespace = 'public'::regnamespace
+      LOOP
+        issue_count := issue_count + 1;
+        RAISE WARNING 'unvalidated foreign key: % on %', rec.fk_name, rec.table_name;
+      END LOOP;
+
+      IF issue_count = 0 THEN
+        RAISE NOTICE 'transfer health check passed: no issues found';
+      ELSE
+        RAISE EXCEPTION 'transfer health check failed: % issue(s) found', issue_count;
+      END IF;
+    END $$;
+  `
+  await executePsqlCommand(targetConfig, targetDbName, sql, targetToken)
+}
+
 async function streamPrdToPre (options = {}) {
   const {
     dryRun = false,
@@ -1016,5 +1163,7 @@ module.exports = {
   copyTableRows,
   executePsqlCommand,
   getForeignKeyDependencies,
-  sortTablesByDependencies
+  sortTablesByDependencies,
+  resetSequencesAfterTransfer,
+  runTransferHealthCheck
 }
