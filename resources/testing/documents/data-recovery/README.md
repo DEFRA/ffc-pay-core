@@ -1,5 +1,8 @@
 # ffc-pay-data-recovery
 
+> Part of the [Testing & Data Tools](../README.md) collection.  
+> This README covers the recovery toolkit in detail; see the index for the other tools.
+
 A small local toolkit that helps developers and testers safely pull payment-request data from the **hosted read-only recovery database** into a **local PostgreSQL database** so it can be inspected, verified, and packaged into dumps for further investigation.
 
 > **What problem does this solve?**  
@@ -317,42 +320,18 @@ Proposed approach:
 
 A small abstraction is provided in [`app/config/target-database.js`](app/config/target-database.js). Individual tools can adopt it when the hosted write-back workflow is implemented.
 
-## Current work in progress (as of 2026-08-21)
+## Known issues
 
-We are extending the recovery utility from a single pay-processing service to multiple services. Event-hub support was added and a shared-service refactor (`app/services/batch-service.js`, `app/services/pull-service.js`, `app/services/schema-service.js`) was completed. The code is on branch `recovery/delinked-transformer-legacy`.
+The `recovery:flag-all` / `pull-pay-processing-data` flow can be slow for very large ID lists (for example 400k+ payment request IDs) because each batch requires a round-trip to Azure. Progress is logged batch-by-batch; only assume the process is frozen if no output appears for several minutes.
 
-### Known outstanding bug: `flag-all` / `pull-pay-processing-data` appears to freeze
+If you hit parameter-limit, missing-dependent-table or schema-introspection errors, make sure you are on the latest version of the `recovery/delinked-transformer-legacy` branch. A shared-service refactor fixed several batching and SQL-generation bugs in `app/services/batch-service.js`, `app/services/pull-service.js` and `app/services/schema-service.js`.
 
-**Symptom:** Running `npm run recovery:flag-all` starts the pay-processing pull, reports a large number of flagged IDs (e.g. `invoiceLines: 410794 payment request IDs flagged in queue`), and then appears to hang.
+For a quick verification, run a limited pull first:
 
-**What has already been fixed:**
-
-1. **Parameter-limit assertion bug in `app/services/batch-service.js`** — `runBatched` was asserting the total item count against `maxParams` before splitting into batches. It now only checks per-batch limits.
-2. **Invalid `WHERE` tuple SQL in `app/services/pull-service.js`** — `filterExistingKeys` was using the same comma-separated list for `SELECT` and `WHERE (...)`; the `WHERE` list now uses bare column expressions without `AS` aliases.
-3. **Column-object bug in `app/services/schema-service.js`** — `ensureLocalTable` returned introspection objects for `hostedColumns`; it now returns plain column-name strings so they interpolate correctly into SQL.
-4. **Missing dependent-table bug in `app/tools/pull/pull-pay-processing-data.js`** — `copyDependentTables` now calls `ensureLocalTable` for `completedInvoiceLines` and `outbox` before trying to filter parent IDs against them.
-5. **Progress logging added** — `filterExistingKeys` now emits `checking <table>: <done>/<total>` progress when given an `onProgress` callback.
-
-### Still to verify on Monday
-
-- [ ] Run a small limited pull end-to-end:
-  ```bash
-  cd resources/testing/documents/data-recovery
-  node app/tools/pull/pull-pay-processing-data.js --limit 50
-  ```
-  This should complete quickly and prove the dependent-table fix.
-- [ ] If the limited run works, restart the full run:
-  ```bash
-  npm run recovery:flag-all
-  ```
-  It is expected to take a long time with 410k+ IDs because each ID batch requires a round-trip to Azure. Do not assume it is frozen unless there is no progress output for several minutes.
-- [ ] If it really is frozen, i'll try replacing the ID-list existence check with a single temp staging table so filtering and fetching become set-based SQL operations instead of thousands of parameterised `IN` queries.
-- [ ] Check whether `--force` re-fetches behave correctly when tables already have data.
-- [ ] Validate event-hub flag/pull still works after the shared-service refactor:
-  ```bash
-  node app/tools/flag/flag-event-hub-matches.js
-  node app/tools/pull/pull-event-hub-data.js --limit 50
-  ```
+```bash
+cd resources/testing/documents/data-recovery
+node app/tools/pull/pull-pay-processing-data.js --limit 50
+```
 
 ### Quick diagnostic commands
 

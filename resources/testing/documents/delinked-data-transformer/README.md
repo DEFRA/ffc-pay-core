@@ -1,5 +1,8 @@
 # Delinked Data Transformer
 
+> Part of the [Testing & Data Tools](..) collection.  
+> This README covers the transformer and local-test workflows; see the index for the other tools.
+
 Two database copy workflows live in this repo:
 
 1. **`test-to-dev`** — the original interactive pipeline for generating dummy data, dumping test tables, transforming SQL, and uploading to dev.
