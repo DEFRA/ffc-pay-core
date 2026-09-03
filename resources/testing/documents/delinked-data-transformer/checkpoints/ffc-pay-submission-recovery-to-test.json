@@ -1,0 +1,47 @@
+{
+  "serviceName": "ffc-pay-submission",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-submission-prd",
+  "targetDbName": "ffc-pay-submission-test",
+  "updatedAt": "2026-08-27T18:32:49.578Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "batchProperties",
+      "keyColumn": "schemeId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "batches",
+      "keyColumn": "batchId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "invoiceLines",
+      "keyColumn": "invoiceLineId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "paymentRequests",
+      "keyColumn": "paymentRequestId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "queue",
+      "keyColumn": "queueId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "sequences",
+      "keyColumn": "schemeId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "serviceName": "ffc-pay-request-editor",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-request-editor-prd",
+  "targetDbName": "ffc-pay-request-editor-test",
+  "updatedAt": "2026-08-27T18:30:03.472Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "category",
+      "keyColumn": "categoryId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "debtData",
+      "keyColumn": "debtDataId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "invoiceLines",
+      "keyColumn": "invoiceLineId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "manualLedgerPaymentRequest",
+      "keyColumn": "manualLedgerPaymentRequestId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "paymentRequests",
+      "keyColumn": "paymentRequestId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "qualityChecks",
+      "keyColumn": "qualityCheckId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "tempDebtData",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "v2TempDebtData",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "tableName": "manualLedgerPaymentRequest",
+  "columns": [
+    {
+      "name": "manualLedgerPaymentRequestId",
+      "type": "integer",
+      "nullable": false
+    },
+    {
+      "name": "paymentRequestId",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "ledgerPaymentRequestId",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "createdBy",
+      "type": "character varying(50)",
+      "nullable": true
+    },
+    {
+      "name": "createdDate",
+      "type": "timestamp without time zone",
+      "nullable": true
+    },
+    {
+      "name": "active",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "original",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "createdById",
+      "type": "character varying(255)",
+      "nullable": true
+    }
+  ],
+  "primaryKey": [
+    "manualLedgerPaymentRequestId"
+  ],
+  "indexes": []
+}

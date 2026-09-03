@@ -1,0 +1,36 @@
+{
+  "name": "ffc-pay-data-recovery",
+  "version": "1.0.0",
+  "description": "Local tooling to pull, inspect, and package payment-request recovery data from a hosted read-only recovery database.",
+  "scripts": {
+    "recovery:create-local-db": "node app/create-local-db.js",
+    "recovery:load-agreements": "node app/tools/load-agreements.js",
+    "recovery:flag": "node app/tools/flag/flag-pay-processing-matches.js",
+    "recovery:flag-injection": "node app/tools/flag/flag-pay-injection-matches.js",
+    "recovery:flag-event-hub": "node app/tools/flag/flag-event-hub-matches.js",
+    "recovery:flag-request-editor": "node app/tools/flag/flag-pay-request-editor-matches.js",
+    "recovery:flag-submission": "node app/tools/flag/flag-pay-submission-matches.js",
+    "recovery:flag-tracking": "node app/tools/flag/flag-pay-tracking-matches.js",
+    "recovery:flag-all": "node app/tools/flag-all-services.js",
+    "recovery:pull": "node app/tools/pull/pull-pay-processing-data.js",
+    "recovery:pull-injection": "node app/tools/pull/pull-pay-injection-data.js",
+    "recovery:pull-event-hub": "node app/tools/pull/pull-event-hub-data.js",
+    "recovery:pull-request-editor": "node app/tools/pull/pull-pay-request-editor-data.js",
+    "recovery:pull-submission": "node app/tools/pull/pull-pay-submission-data.js",
+    "recovery:pull-tracking": "node app/tools/pull/pull-pay-tracking-data.js",
+    "recovery:pull-dependent": "node app/tools/pull/pull-pay-processing-dependent-data.js",
+    "recovery:pull-all": "node app/tools/pull-all-services.js",
+    "recovery:test-connection": "node app/tools/test-recovery-connection.js",
+    "recovery:create-staging-dump": "bash app/tools/create-staging-dump.sh",
+    "recovery:summary": "node app/tools/report/recovery-summary.js",
+    "recovery:summary:service": "node app/tools/report/recovery-summary.js --service",
+    "lint": "standard",
+    "lint:fix": "standard --fix"
+  },
+  "dependencies": {
+    "pg": "^8.16.0"
+  },
+  "devDependencies": {
+    "standard": "^17.1.2"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "serviceName": "ffc-pay-tracking",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-tracking-prd",
+  "targetDbName": "ffc-pay-tracking-test",
+  "updatedAt": "2026-08-27T18:35:11.802Z",
+  "status": "failed",
+  "tables": [
+    {
+      "name": "reportData",
+      "keyColumn": "reportDataId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "tempSREData",
+      "keyColumn": null
+    }
+  ]
+}

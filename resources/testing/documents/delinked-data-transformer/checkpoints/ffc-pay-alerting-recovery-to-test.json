@@ -1,0 +1,10 @@
+{
+  "serviceName": "ffc-pay-alerting",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-alerting-prd",
+  "targetDbName": "ffc-pay-alerting-test",
+  "updatedAt": "2026-08-27T14:29:43.264Z",
+  "status": "completed",
+  "tables": []
+}

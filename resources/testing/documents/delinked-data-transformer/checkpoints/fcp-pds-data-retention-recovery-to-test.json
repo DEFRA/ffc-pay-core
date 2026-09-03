@@ -1,0 +1,17 @@
+{
+  "serviceName": "fcp-pds-data-retention",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "fcp-pds-data-retention-prd",
+  "targetDbName": "fcp-pds-data-retention-test",
+  "updatedAt": "2026-08-27T18:35:49.582Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "retentionData",
+      "keyColumn": "retentionDataId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}
