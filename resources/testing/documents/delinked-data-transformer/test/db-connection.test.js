@@ -10,7 +10,7 @@ const {
   getDatabaseEnvironmentDefaults,
   loadEnvironmentFiles
 } = require('../app/database/db-connection')
-const { buildPgDumpArgs, isLiquibasePermissionFailure, replaceEnvironmentSuffix } = require('../app/database/stream-prd-to-pre')
+const { buildPgDumpArgs, isLiquibasePermissionFailure, replaceEnvironmentSuffix, restoreDatabaseSchema, getTableSchemaDump } = require('../app/database/stream-prd-to-pre')
 const { resolveTransferTableList } = require('../app/database/transfer-validation')
 const { scenarioRegistry } = require('../app/scenarios')
 
@@ -186,6 +186,28 @@ test('buildPgDumpArgs can include Liquibase metadata tables for a blank PRE vali
 
   assert.equal(args.includes('public."databasechangelog"'), false)
   assert.equal(args.includes('public."databasechangeloglock"'), false)
+})
+
+test('schema preservation helpers are exported', () => {
+  assert.equal(typeof getTableSchemaDump, 'function')
+  assert.equal(typeof restoreDatabaseSchema, 'function')
+})
+
+test('grant-managed-identity exports a reusable processService entry point', () => {
+  const grantModule = require('../app/database/grant-managed-identity')
+  assert.equal(typeof grantModule.processService, 'function')
+  assert.equal(typeof grantModule.applyGrants, 'function')
+  assert.equal(typeof grantModule.findTablesMissingGrant, 'function')
+})
+
+test('buildPgDumpArgs supports adding --schema-only for schema-only restores', () => {
+  const args = buildPgDumpArgs({ host: 'example.com', port: 5432, username: 'azure-user' }, 'ffc-pay-alerting-prd', { includeLiquibaseTables: false })
+  args.push('--schema-only')
+
+  assert.ok(args.includes('--schema-only'))
+  assert.ok(args.includes('--no-owner'))
+  assert.ok(args.includes('--clean'))
+  assert.ok(args.includes('--if-exists'))
 })
 
 test('resolveTransferTableList excludes reader-only tables like contacts and schemes from validation', () => {

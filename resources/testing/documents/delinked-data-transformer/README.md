@@ -16,9 +16,8 @@ Both use the same database tooling and shared environment definitions.
 - Continues past individual service failures when `--continue-on-error` is set.
 - Reports database/table sizes and switches to table-by-table copying for large tables.
 - Supports password authentication for recovery databases and Azure AD authentication for Azure-hosted environments.
-
-Still let to do:
- Once the transfer complets, we have lost the MID from grantees and should find a way to resotr these automatically. Liquibase tables are untouched by the transfer and therefore will retain a copy of the MId we can use to restore the MID to the grantees. This is a manual process at the moment.
+- Reinstates managed identity (MID) grants after transfer by discovering the MID from the preserved Liquibase tables on the target.
+- Preserves primary keys, foreign keys, indexes, unique constraints and triggers through `pg_dump` schema restoration.
 
 ## Prerequisites
 
@@ -46,7 +45,9 @@ module.exports = {
 }
 ```
 
-Supported environments: `dev`, `test`, `pre`, `prd`, `recovery`. The environment definitions are shared from [app/constants/environment-definitions.js](app/constants/environment-definitions.js).
+Supported environments: `dev`, `test`, `pre`, `prd`, `recovery`, `local`. The environment definitions (host/admin/password env vars, suffix and auth mode) are the single source of truth in [app/constants/environment-definitions.js](app/constants/environment-definitions.js).
+
+The scenario name remains `prd-to-pre` for historical reasons, but the actual source and target environments are controlled by `sourceEnvironment` and `targetEnvironment` (or by `DB_SOURCE_ENV` / `DB_TARGET_ENV`).
 
 ## Authentication
 
@@ -69,20 +70,37 @@ All commands are run from the transformer directory:
 cd /home/bunglehaze/defra/ffc-pay-core/resources/testing/documents/delinked-data-transformer
 ```
 
-### Source-to-target pipeline
+### Source-to-target pipeline (hosted)
 
-The scenario name stays `prd-to-pre` for historical reasons; the actual source and target are controlled by `sourceEnvironment` and `targetEnvironment` in `app/config/local.js` or by `DB_SOURCE_ENV` / `DB_TARGET_ENV`.
+The actual source and target are controlled by `sourceEnvironment` and `targetEnvironment` in [app/config/local.js](app/config/local.js) or by `DB_SOURCE_ENV` / `DB_TARGET_ENV`.
+
+#### Examples
+
+Transfer from production to pre-production:
+
+```bash
+DB_SOURCE_ENV=prd DB_TARGET_ENV=pre node app/index.js --scenario prd-to-pre --direct --dry-run
+DB_SOURCE_ENV=prd DB_TARGET_ENV=pre node app/index.js --scenario prd-to-pre --direct
+```
+
+Transfer from recovery to test:
+
+```bash
+DB_SOURCE_ENV=recovery DB_TARGET_ENV=test node app/index.js --scenario prd-to-pre --direct --dry-run
+DB_SOURCE_ENV=recovery DB_TARGET_ENV=test node app/index.js --scenario prd-to-pre --direct
+```
+
+Transfer from test to dev:
+
+```bash
+DB_SOURCE_ENV=test DB_TARGET_ENV=dev node app/index.js --scenario prd-to-pre --direct --dry-run
+DB_SOURCE_ENV=test DB_TARGET_ENV=dev node app/index.js --scenario prd-to-pre --direct
+```
 
 Check connectivity and configuration:
 
 ```bash
 node app/index.js --scenario prd-to-pre --direct --test-connection --dry-run
-```
-
-Dry-run the full flow (sizes, metadata, service selection, no data copied):
-
-```bash
-node app/index.js --scenario prd-to-pre --direct --dry-run
 ```
 
 Run the live transfer:
@@ -214,18 +232,28 @@ For each service in the manifest:
 1. Load saved metadata or discover and save it from the source database.
 2. Report source database size and large tables.
 3. Truncate target tables while preserving Liquibase metadata.
-4. Copy data:
+4. Copy data and schema:
    - Default: `pg_dump | psql` with `--single-transaction`.
    - Large tables or `--table-by-table`: copy each table individually with per-table progress.
-5. Validate row counts and distinct key counts (skipped in dry-run).
-6. Print a final summary of succeeded and failed services.
+   - Schema objects (primary keys, foreign keys, indexes, unique constraints and triggers) are restored through `pg_dump --schema-only`.
+5. Re-apply managed identity grants by discovering the MID from the preserved Liquibase tables on the target (`databasechangelog` owner/grantees).
+6. Validate row counts and distinct key counts (skipped in dry-run).
+7. Print a final summary of succeeded and failed services.
+
+### Local testing equivalent
+
+To verify the same copy/grant behaviour against a local PostgreSQL instance, see [scripts/README.md](scripts/README.md). In particular:
+
+- [scripts/transfer-single-table.js](scripts/transfer-single-table.js) copies one table from a configured source to a local database, preserving its schema and reinstating MID grants.
+- [scripts/run-local-transfer-test.sh](scripts/run-local-transfer-test.sh) orchestrates the full local test flow including setup, transfer and verification.
 
 ## Important operational notes
 
-- Liquibase metadata tables are preserved on the target and excluded from the copy.
+- Liquibase metadata tables are preserved on the target and excluded from the copy; this is what allows the grant step to discover the correct managed identity per database.
 - The source role must be able to read all application tables needed for the copy.
 - By default the runner stops at the first failure. Use `--continue-on-error` only when you accept that failed services will leave the target in a partial state.
 - `--no-single-transaction` can help with very large restores but also means a failed restore can leave partially copied data.
+- Managed identity grants are reinstated automatically after transfer by the sequential runner and by `scripts/transfer-single-table.js`; use `--skip-grants` to disable this.
 
 ## File layout
 

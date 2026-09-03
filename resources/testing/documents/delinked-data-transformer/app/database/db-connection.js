@@ -149,10 +149,11 @@ function resolveDatabaseEnvironmentConfig (options = {}) {
     process.env[definition.adminEnvVar] || shellOverrides[definition.adminEnvVar] ||
     process.env.RECOVERY_DB_ADMIN || shellOverrides.RECOVERY_DB_ADMIN ||
     process.env.POSTGRES_USER || 'postgres'
-  const password = definition.useAzureAd === false
+  const useAzureAd = options.useAzureAd !== undefined ? options.useAzureAd : definition.useAzureAd !== false
+  const password = useAzureAd === false
     ? (options.password || process.env[definition.passwordEnvVar] || shellOverrides[definition.passwordEnvVar] || '')
     : undefined
-  const tenantId = definition.useAzureAd === false
+  const tenantId = useAzureAd === false
     ? undefined
     : (options.tenantId || resolveTenantId(definition, shellOverrides))
 
@@ -163,7 +164,7 @@ function resolveDatabaseEnvironmentConfig (options = {}) {
     username,
     password,
     tenantId,
-    useAzureAd: definition.useAzureAd !== false,
+    useAzureAd,
     port: options.port || process.env.POSTGRES_PORT || config.database.port || 5432,
     ssl: options.ssl !== undefined ? options.ssl : true,
     applicationName: options.applicationName || 'database_dump',
@@ -260,7 +261,8 @@ async function createConnection (database = 'postgres', options = {}) {
         host: environmentConfig.host,
         port: environmentConfig.port,
         database,
-        username
+        username,
+        ssl: environmentConfig.ssl
       },
       token: password,
       environment: environmentConfig.environment
