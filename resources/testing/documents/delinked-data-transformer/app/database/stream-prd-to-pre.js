@@ -1,4 +1,5 @@
 const { spawn } = require('child_process')
+const { Transform } = require('stream')
 const { createConnection, resolveDatabaseEnvironmentConfig, getEnhancedAzureToken } = require('./db-connection')
 const { PROTECTED_TABLES, READER_ONLY_EXCLUDED_TABLES } = require('../constants/etl-protection')
 
@@ -14,12 +15,48 @@ async function refreshToken (environment) {
   return token
 }
 
-function buildCliEnv (token) {
+function buildCliEnv (token, options = {}) {
   return {
     ...process.env,
     PGPASSWORD: token,
-    PGSSLMODE: process.env.PGSSLMODE || 'require'
+    PGSSLMODE: options.ssl === false ? 'disable' : (process.env.PGSSLMODE || 'require')
   }
+}
+
+function createDumpSanitizer () {
+  let buffer = ''
+  const isSafeLine = (line) => {
+    if (/^\\(?:un)?restrict\b/.test(line)) return false
+    if (/^SET\s+default_table_access_method\s*=/i.test(line)) return false
+    return true
+  }
+  const rewriteGeneratedColumn = (line) => {
+    // PostgreSQL < 12 does not support GENERATED ALWAYS AS (...) STORED.
+    // Convert generated columns to plain columns so the schema loads on older servers.
+    return line.replace(/\s+GENERATED\s+ALWAYS\s+AS\s+\(.+?\)\s+STORED/i, '')
+  }
+  return new Transform({
+    transform (chunk, encoding, callback) {
+      buffer += chunk.toString()
+      const lines = buffer.split('\n')
+      buffer = lines.pop()
+      const filtered = lines.filter(isSafeLine).map(rewriteGeneratedColumn)
+      if (filtered.length) {
+        this.push(filtered.join('\n') + '\n')
+      }
+      callback()
+    },
+    flush (callback) {
+      if (buffer && isSafeLine(buffer)) {
+        this.push(rewriteGeneratedColumn(buffer))
+      }
+      callback()
+    }
+  })
+}
+
+function sanitizeDumpString (value = '') {
+  return value.replace(/^\\(?:un)?restrict\b.*$/gm, '')
 }
 
 function isLiquibasePermissionFailure (value = '') {
@@ -145,7 +182,7 @@ async function ensureTargetDatabaseExists (targetDbName, targetEnvironment = 'pr
   if (!targetConnection.token) {
     throw new Error(`No authentication token available for target environment ${targetEnvironment}`)
   }
-  const env = buildCliEnv(targetConnection.token)
+  const env = buildCliEnv(targetConnection.token, { ssl: targetConnection.config.ssl })
 
   try {
     const exists = await new Promise((resolve, reject) => {
@@ -195,7 +232,7 @@ async function truncateTargetTablesExceptProtected (targetDbName, targetEnvironm
   if (!targetConnection.token) {
     throw new Error(`No authentication token available for target environment ${targetEnvironment}`)
   }
-  const env = buildCliEnv(targetConnection.token)
+  const env = buildCliEnv(targetConnection.token, { ssl: targetConnection.config.ssl })
 
   try {
     const tableNames = await new Promise((resolve, reject) => {
@@ -241,6 +278,7 @@ async function executePsqlCommand (config, databaseName, sql, token) {
   if (!token) {
     throw new Error(`No authentication token available for psql command against ${databaseName}`)
   }
+  console.log(`[DEBUG executePsqlCommand] databaseName=${databaseName} tokenStartsWith=${token.slice(0, 20)} tokenLength=${token.length} sqlLength=${sql.length} sqlLast100=${JSON.stringify(sql.slice(-100))}`)
   return await new Promise((resolve, reject) => {
     const args = [
       '-h', config.host,
@@ -254,7 +292,7 @@ async function executePsqlCommand (config, databaseName, sql, token) {
       '-c', sql
     ]
 
-    const child = spawn('psql', args, { env: buildCliEnv(token), stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn('psql', args, { env: buildCliEnv(token, { ssl: config.ssl }), stdio: ['ignore', 'pipe', 'pipe'] })
     let stdout = ''
     let stderr = ''
 
@@ -315,6 +353,21 @@ async function getTableSizes (sourceConfig, sourceDbName, token) {
   })
 }
 
+function stripPsqlMetaCommands (sql) {
+  return sql
+    .split('\n')
+    .filter(line => !/^\\[a-zA-Z]/.test(line))
+    .join('\n')
+}
+
+function stripUnsupportedSetCommands (sql) {
+  // PostgreSQL < 12 does not recognise default_table_access_method.
+  return sql
+    .split('\n')
+    .filter(line => !/^SET\s+default_table_access_method\s*=/i.test(line))
+    .join('\n')
+}
+
 function formatBytes (bytes) {
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   let value = bytes
@@ -326,7 +379,120 @@ function formatBytes (bytes) {
   return `${value.toFixed(2)} ${units[unitIndex]}`
 }
 
-async function copyTableRows (sourceConfig, sourceDbName, targetConfig, targetDbName, tableName, sourceToken, targetToken) {
+function normaliseTableName (value) {
+  return String(value || '').replace(/^public\./, '')
+}
+
+async function getForeignKeyDependencies (sourceConfig, sourceDbName, sourceToken) {
+  const sql = `
+    SELECT
+      conrelid::regclass::text AS table_name,
+      confrelid::regclass::text AS referenced_table_name
+    FROM pg_constraint
+    WHERE contype = 'f'
+      AND connamespace = 'public'::regnamespace
+  `
+  const payload = await executePsqlCommand(sourceConfig, sourceDbName, sql, sourceToken)
+  return String(payload)
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => {
+      const [tableName, referencedTableName] = line.split('|')
+      return {
+        tableName: normaliseTableName(tableName),
+        referencedTableName: normaliseTableName(referencedTableName)
+      }
+    })
+    .filter(dep => dep.tableName && dep.referencedTableName && dep.tableName !== dep.referencedTableName)
+}
+
+function sortTablesByDependencies (tables, dependencies) {
+  const tableSet = new Set(tables)
+  const graph = new Map()
+  const inDegree = new Map()
+
+  for (const table of tables) {
+    graph.set(table, [])
+    inDegree.set(table, 0)
+  }
+
+  for (const { tableName, referencedTableName } of dependencies) {
+    if (!tableSet.has(tableName) || !tableSet.has(referencedTableName)) {
+      continue
+    }
+    graph.get(referencedTableName).push(tableName)
+    inDegree.set(tableName, (inDegree.get(tableName) || 0) + 1)
+  }
+
+  const queue = []
+  for (const [table, degree] of inDegree.entries()) {
+    if (degree === 0) {
+      queue.push(table)
+    }
+  }
+
+  const sorted = []
+  while (queue.length > 0) {
+    const table = queue.shift()
+    sorted.push(table)
+    for (const dependent of graph.get(table) || []) {
+      const newDegree = inDegree.get(dependent) - 1
+      inDegree.set(dependent, newDegree)
+      if (newDegree === 0) {
+        queue.push(dependent)
+      }
+    }
+  }
+
+  if (sorted.length !== tables.length) {
+    const remaining = tables.filter(table => !sorted.includes(table))
+    console.warn(`Circular foreign-key dependencies detected; appending remaining tables: ${remaining.join(', ')}`)
+    sorted.push(...remaining)
+  }
+
+  return sorted
+}
+
+async function getTableSchemaDump (sourceConfig, sourceDbName, tableName, token) {
+  if (!token) {
+    throw new Error(`No authentication token available for source database ${sourceDbName}`)
+  }
+
+  return await new Promise((resolve, reject) => {
+    const args = [
+      '-h', sourceConfig.host,
+      '-p', String(sourceConfig.port || 5432),
+      '-U', sourceConfig.username,
+      '-d', sourceDbName,
+      '-w',
+      '--no-owner',
+      '--no-privileges',
+      '--no-tablespaces',
+      '--schema-only',
+      '--format=plain',
+      '--verbose',
+      '--table', `public.${quoteIdentifier(tableName)}`
+    ]
+
+    const child = spawn('pg_dump', args, { env: buildCliEnv(token, { ssl: sourceConfig.ssl }), stdio: ['ignore', 'pipe', 'pipe'] })
+    let stdout = ''
+    let stderr = ''
+
+    child.stdout.on('data', chunk => { stdout += chunk.toString() })
+    child.stderr.on('data', chunk => { stderr += chunk.toString() })
+    child.on('error', error => reject(error))
+    child.on('close', code => {
+      if (code !== 0) {
+        reject(new Error(`pg_dump schema-only failed for public.${tableName}: ${stderr || stdout}`))
+        return
+      }
+      resolve(sanitizeDumpString(stdout))
+    })
+  })
+}
+
+async function copyTableRows (sourceConfig, sourceDbName, targetConfig, targetDbName, tableName, sourceToken, targetToken, options = {}) {
   if (!sourceToken) {
     throw new Error(`No authentication token available for source database ${sourceDbName}`)
   }
@@ -334,11 +500,29 @@ async function copyTableRows (sourceConfig, sourceDbName, targetConfig, targetDb
     throw new Error(`No authentication token available for target database ${targetDbName}`)
   }
 
-  const createStatement = buildTableCreateStatement(tableName, await describeTableColumns(sourceConfig, sourceDbName, tableName, sourceToken))
+  const { dataOnly = false } = options
 
-  await executePsqlCommand(targetConfig, targetDbName, `DROP TABLE IF EXISTS public.${quoteIdentifier(tableName)} CASCADE; ${createStatement}`, targetToken)
+  if (!dataOnly) {
+    let createStatement
+    try {
+      createStatement = await getTableSchemaDump(sourceConfig, sourceDbName, tableName, sourceToken)
+    } catch (error) {
+      console.warn(`  ${tableName}: schema dump failed (${error.message}); falling back to column-only CREATE TABLE. Keys/indexes may be missing.`)
+      createStatement = buildTableCreateStatement(tableName, await describeTableColumns(sourceConfig, sourceDbName, tableName, sourceToken))
+    }
+    const cleanCreateStatement = stripUnsupportedSetCommands(stripPsqlMetaCommands(createStatement))
+    await executePsqlCommand(targetConfig, targetDbName, `DROP TABLE IF EXISTS public.${quoteIdentifier(tableName)} CASCADE; ${cleanCreateStatement}`, targetToken)
+  } else {
+    await executePsqlCommand(targetConfig, targetDbName, `TRUNCATE TABLE public.${quoteIdentifier(tableName)} CASCADE`, targetToken)
+  }
 
   return await new Promise((resolve, reject) => {
+    const exportEnv = buildCliEnv(sourceToken, { ssl: sourceConfig.ssl })
+    const importEnv = buildCliEnv(targetToken, { ssl: targetConfig.ssl })
+    // Disable foreign-key trigger checks for this import session only. Each psql
+    // invocation is a fresh session, so SET from executePsqlCommand does not carry
+    // over to the COPY process below.
+    importEnv.PGOPTIONS = `${process.env.PGOPTIONS ? process.env.PGOPTIONS + ' ' : ''}-c session_replication_role=replica`
     const exportArgs = [
       '-h', sourceConfig.host,
       '-p', String(sourceConfig.port || 5432),
@@ -359,8 +543,8 @@ async function copyTableRows (sourceConfig, sourceDbName, targetConfig, targetDb
       '-c', `COPY public.${quoteIdentifier(tableName)} FROM STDIN WITH CSV HEADER`
     ]
 
-    const exportStream = spawn('psql', exportArgs, { env: buildCliEnv(sourceToken), stdio: ['ignore', 'pipe', 'pipe'] })
-    const importStream = spawn('psql', importArgs, { env: buildCliEnv(targetToken), stdio: ['pipe', 'pipe', 'pipe'] })
+    const exportStream = spawn('psql', exportArgs, { env: exportEnv, stdio: ['ignore', 'pipe', 'pipe'] })
+    const importStream = spawn('psql', importArgs, { env: importEnv, stdio: ['pipe', 'pipe', 'pipe'] })
 
     let stderr = ''
     let bytesTransferred = 0
@@ -408,6 +592,96 @@ async function copyTableRows (sourceConfig, sourceDbName, targetConfig, targetDb
   })
 }
 
+async function restoreDatabaseSchema (sourceConfig, sourceDbName, targetConfig, targetDbName, options = {}) {
+  const { includeLiquibaseTables = false, extraExcludedTables = [], sourceToken, targetToken } = options
+
+  if (!sourceToken) {
+    throw new Error(`No authentication token available for source database ${sourceDbName}`)
+  }
+  if (!targetToken) {
+    throw new Error(`No authentication token available for target database ${targetDbName}`)
+  }
+
+  console.log(`Restoring schema-only dump from ${sourceDbName} to ${targetDbName}...`)
+
+  return await new Promise((resolve, reject) => {
+    const dumpArgs = buildPgDumpArgs(sourceConfig, sourceDbName, { includeLiquibaseTables, extraExcludedTables })
+    dumpArgs.push('--schema-only')
+
+    const restoreArgs = [
+      '-h', targetConfig.host,
+      '-p', String(targetConfig.port || 5432),
+      '-U', targetConfig.username,
+      '-d', targetDbName,
+      '-w',
+      '--set=ON_ERROR_STOP=1'
+    ]
+
+    let bytesTransferred = 0
+    let dumpStderr = ''
+    const dump = spawn('pg_dump', dumpArgs, { env: buildCliEnv(sourceToken, { ssl: sourceConfig.ssl }), stdio: ['ignore', 'pipe', 'pipe'] })
+    const restore = spawn('psql', restoreArgs, { env: buildCliEnv(targetToken, { ssl: targetConfig.ssl }), stdio: ['pipe', 'pipe', 'pipe'] })
+    const sanitizer = createDumpSanitizer()
+
+    dump.stdout.on('data', chunk => {
+      bytesTransferred += chunk.length
+      if (bytesTransferred % (10 * 1024 * 1024) < chunk.length) {
+        console.log(`  Schema dump transferred ${formatBytes(bytesTransferred)}...`)
+      }
+      if (!sanitizer.destroyed) {
+        const canContinue = sanitizer.write(chunk)
+        if (!canContinue) {
+          dump.stdout.pause()
+          sanitizer.once('drain', () => dump.stdout.resume())
+        }
+      }
+    })
+
+    sanitizer.on('data', chunk => {
+      if (!restore.stdin.destroyed) {
+        const canContinue = restore.stdin.write(chunk)
+        if (!canContinue) {
+          sanitizer.pause()
+          restore.stdin.once('drain', () => sanitizer.resume())
+        }
+      }
+    })
+
+    dump.stderr.on('data', chunk => {
+      const message = chunk.toString()
+      dumpStderr += message
+      process.stderr.write(`[pg_dump] ${message}`)
+    })
+
+    dump.on('error', error => reject(error))
+    dump.on('close', code => {
+      if (code !== 0) {
+        reject(new Error(`pg_dump schema-only failed for ${sourceDbName} with exit code ${code}. ${dumpStderr.trim()}`))
+        return
+      }
+      sanitizer.end()
+    })
+
+    sanitizer.on('end', () => {
+      restore.stdin.end()
+    })
+
+    restore.stderr.on('data', chunk => {
+      process.stderr.write(`[psql] ${chunk.toString()}`)
+    })
+
+    restore.on('error', error => reject(error))
+    restore.on('close', code => {
+      if (code !== 0) {
+        reject(new Error(`psql schema restore failed for ${targetDbName} with exit code ${code}`))
+        return
+      }
+      console.log(`Restored schema-only dump (${formatBytes(bytesTransferred)})`)
+      resolve({ restored: true, bytesTransferred })
+    })
+  })
+}
+
 async function restoreLiquibaseMetadataTables (sourceConnection, targetConnection, sourceDbName, targetDbName) {
   const protectedTables = [...PROTECTED_TABLES, ...READER_ONLY_EXCLUDED_TABLES]
   const sourceConfig = sourceConnection.config
@@ -421,15 +695,29 @@ async function restoreLiquibaseMetadataTables (sourceConnection, targetConnectio
 }
 
 async function streamTableByTable (sourceConfig, sourceDbName, targetConfig, targetDbName, tableNames, options = {}) {
-  const { sourceEnvironment, targetEnvironment, sourceToken, targetToken, dryRun = false } = options
+  const { sourceEnvironment, targetEnvironment, sourceToken, targetToken, dryRun = false, dataOnly = false } = options
   const results = []
   let totalRows = 0
 
-  console.log(`Copying ${tableNames.length} table(s) individually`)
+  const dependencies = await getForeignKeyDependencies(sourceConfig, sourceDbName, sourceToken)
+  const orderedTableNames = sortTablesByDependencies(tableNames, dependencies)
 
-  for (let i = 0; i < tableNames.length; i++) {
-    const tableName = tableNames[i]
-    console.log(`[${i + 1}/${tableNames.length}] Copying table ${tableName}`)
+  if (process.env.DEBUG_TRANSFER_ORDER) {
+    console.log('Dependency edges:')
+    for (const { tableName, referencedTableName } of dependencies) {
+      console.log(`  ${tableName} -> ${referencedTableName}`)
+    }
+    console.log('Copy order:')
+    for (let i = 0; i < orderedTableNames.length; i++) {
+      console.log(`  ${i + 1}. ${orderedTableNames[i]}`)
+    }
+  }
+
+  console.log(`Copying ${orderedTableNames.length} table(s) individually`)
+
+  for (let i = 0; i < orderedTableNames.length; i++) {
+    const tableName = orderedTableNames[i]
+    console.log(`[${i + 1}/${orderedTableNames.length}] Copying table ${tableName}`)
 
     if (dryRun) {
       console.log(`[DRY RUN] Would copy ${tableName}`)
@@ -440,7 +728,7 @@ async function streamTableByTable (sourceConfig, sourceDbName, targetConfig, tar
     const currentSourceToken = sourceEnvironment ? await refreshToken(sourceEnvironment) : sourceToken
     const currentTargetToken = targetEnvironment ? await refreshToken(targetEnvironment) : targetToken
 
-    const result = await copyTableRows(sourceConfig, sourceDbName, targetConfig, targetDbName, tableName, currentSourceToken, currentTargetToken)
+    const result = await copyTableRows(sourceConfig, sourceDbName, targetConfig, targetDbName, tableName, currentSourceToken, currentTargetToken, { dataOnly })
     results.push(result)
     totalRows += result.rowCount || 0
     console.log(`  ${tableName}: done`)
@@ -498,20 +786,26 @@ async function copyDatabaseStream (sourceDbName, targetDbName, options = {}) {
     console.log(`Tables: ${tableSizes.length}, large tables: ${largeTables.length}`)
 
     await ensureTargetDatabaseExists(targetDbName, targetEnvironment)
-    await truncateTargetTablesExceptProtected(targetDbName, targetEnvironment, { preserveLiquibaseTables: true })
 
     if (tableByTable || largeTables.length > 0) {
       console.log('Using table-by-table copy mode for better progress visibility and memory safety')
+      await restoreDatabaseSchema(sourceConfig, sourceDbName, targetConfig, targetDbName, {
+        includeLiquibaseTables,
+        sourceToken: sourceConnection.token,
+        targetToken: targetConnection.token
+      })
       const { results, totalRows } = await streamTableByTable(
         sourceConfig,
         sourceDbName,
         targetConfig,
         targetDbName,
         tableSizes.map(t => t.tableName),
-        { sourceEnvironment, targetEnvironment, dryRun: false }
+        { sourceEnvironment, targetEnvironment, dryRun: false, dataOnly: true }
       )
       return { sourceDbName, targetDbName, dryRun: false, copied: true, tableByTable: true, tableCount: results.length, totalRows }
     }
+
+    await truncateTargetTablesExceptProtected(targetDbName, targetEnvironment, { preserveLiquibaseTables: true })
 
     try {
       return await new Promise((resolve, reject) => {
@@ -531,19 +825,30 @@ async function copyDatabaseStream (sourceDbName, targetDbName, options = {}) {
 
         let bytesTransferred = 0
         let dumpStderr = ''
-        const dump = spawn('pg_dump', dumpArgs, { env: buildCliEnv(sourceConnection.token), stdio: ['ignore', 'pipe', 'pipe'] })
-        const restore = spawn('psql', restoreArgs, { env: buildCliEnv(targetConnection.token), stdio: ['pipe', 'pipe', 'pipe'] })
+        const dump = spawn('pg_dump', dumpArgs, { env: buildCliEnv(sourceConnection.token, { ssl: sourceConnection.config.ssl }), stdio: ['ignore', 'pipe', 'pipe'] })
+        const restore = spawn('psql', restoreArgs, { env: buildCliEnv(targetConnection.token, { ssl: targetConnection.config.ssl }), stdio: ['pipe', 'pipe', 'pipe'] })
+        const sanitizer = createDumpSanitizer()
 
         dump.stdout.on('data', chunk => {
           bytesTransferred += chunk.length
           if (bytesTransferred % (10 * 1024 * 1024) < chunk.length) {
             console.log(`Transferred ${formatBytes(bytesTransferred)}...`)
           }
+          if (!sanitizer.destroyed) {
+            const canContinue = sanitizer.write(chunk)
+            if (!canContinue) {
+              dump.stdout.pause()
+              sanitizer.once('drain', () => dump.stdout.resume())
+            }
+          }
+        })
+
+        sanitizer.on('data', chunk => {
           if (!restore.stdin.destroyed) {
             const canContinue = restore.stdin.write(chunk)
             if (!canContinue) {
-              dump.stdout.pause()
-              restore.stdin.once('drain', () => dump.stdout.resume())
+              sanitizer.pause()
+              restore.stdin.once('drain', () => sanitizer.resume())
             }
           }
         })
@@ -560,6 +865,10 @@ async function copyDatabaseStream (sourceDbName, targetDbName, options = {}) {
             reject(new Error(`pg_dump failed for ${sourceDbName} with exit code ${code}. ${dumpStderr.trim()}`))
             return
           }
+          sanitizer.end()
+        })
+
+        sanitizer.on('end', () => {
           restore.stdin.end()
         })
 
@@ -597,11 +906,28 @@ async function copyDatabaseStream (sourceDbName, targetDbName, options = {}) {
             '--set=ON_ERROR_STOP=1'
           ]
 
-          const dump = spawn('pg_dump', fallbackDumpArgs, { env: buildCliEnv(sourceConnection.token), stdio: ['ignore', 'pipe', 'pipe'] })
-          const restore = spawn('psql', restoreArgs, { env: buildCliEnv(targetConnection.token), stdio: ['pipe', 'pipe', 'pipe'] })
+          const dump = spawn('pg_dump', fallbackDumpArgs, { env: buildCliEnv(sourceConnection.token, { ssl: sourceConnection.config?.ssl }), stdio: ['ignore', 'pipe', 'pipe'] })
+          const restore = spawn('psql', restoreArgs, { env: buildCliEnv(targetConnection.token, { ssl: targetConnection.config?.ssl }), stdio: ['pipe', 'pipe', 'pipe'] })
+          const sanitizer = createDumpSanitizer()
 
           dump.stdout.on('data', chunk => {
-            if (!restore.stdin.destroyed) restore.stdin.write(chunk)
+            if (!sanitizer.destroyed) {
+              const canContinue = sanitizer.write(chunk)
+              if (!canContinue) {
+                dump.stdout.pause()
+                sanitizer.once('drain', () => dump.stdout.resume())
+              }
+            }
+          })
+
+          sanitizer.on('data', chunk => {
+            if (!restore.stdin.destroyed) {
+              const canContinue = restore.stdin.write(chunk)
+              if (!canContinue) {
+                sanitizer.pause()
+                restore.stdin.once('drain', () => sanitizer.resume())
+              }
+            }
           })
 
           dump.stderr.on('data', chunk => {
@@ -614,6 +940,10 @@ async function copyDatabaseStream (sourceDbName, targetDbName, options = {}) {
               reject(new Error(`Fallback pg_dump failed for ${sourceDbName} with exit code ${code}`))
               return
             }
+            sanitizer.end()
+          })
+
+          sanitizer.on('end', () => {
             restore.stdin.end()
           })
 
@@ -680,5 +1010,11 @@ module.exports = {
   resolveTargetDatabaseName,
   filterPayDatabases,
   streamPrdToPre,
-  copyDatabaseStream
+  copyDatabaseStream,
+  restoreDatabaseSchema,
+  getTableSchemaDump,
+  copyTableRows,
+  executePsqlCommand,
+  getForeignKeyDependencies,
+  sortTablesByDependencies
 }

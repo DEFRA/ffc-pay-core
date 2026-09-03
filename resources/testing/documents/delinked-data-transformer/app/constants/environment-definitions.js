@@ -29,6 +29,13 @@ const ENVIRONMENT_DEFINITIONS = {
     adminEnvVar: 'RECOVERY_DB_USER',
     passwordEnvVar: 'RECOVERY_DB_PASSWORD',
     useAzureAd: false
+  },
+  local: {
+    suffix: '',
+    hostEnvVar: 'LOCAL_POSTGRES_HOST',
+    adminEnvVar: 'LOCAL_POSTGRES_ADMIN',
+    passwordEnvVar: 'LOCAL_POSTGRES_PASSWORD',
+    useAzureAd: false
   }
 }
 module.exports = ENVIRONMENT_DEFINITIONS

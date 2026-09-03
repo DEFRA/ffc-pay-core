@@ -1,23 +1,26 @@
 #!/usr/bin/env node
 
+const config = require('../config')
 const { createConnection } = require('./db-connection')
 const { streamPrdToPre } = require('./stream-prd-to-pre')
 const { validateTransferTables, discoverTargetTables, resolveTransferTableList } = require('./transfer-validation')
 const { loadServiceMetadata, saveServiceMetadata } = require('./metadata-storage')
 const { discoverTableMetadata } = require('./discover-service-metadata')
 const { loadCheckpoint, saveCheckpoint, resetCheckpoint } = require('./checkpoint-storage')
+const { processService: applyManagedIdentityGrants } = require('./grant-managed-identity')
 
 function parseArgs (argv = process.argv.slice(2)) {
   const args = {
     services: [],
-    sourceEnvironment: 'prd',
-    targetEnvironment: 'pre',
+    sourceEnvironment: config.sourceEnvironment || 'prd',
+    targetEnvironment: config.targetEnvironment || 'pre',
     dryRun: false,
     continueOnError: false,
     tableByTable: false,
     singleTransaction: true,
     resume: false,
     resetCheckpoints: false,
+    skipGrants: false,
     help: false
   }
 
@@ -37,6 +40,7 @@ function parseArgs (argv = process.argv.slice(2)) {
     else if (arg === '--no-single-transaction') args.singleTransaction = false
     else if (arg === '--resume') args.resume = true
     else if (arg === '--reset-checkpoints') args.resetCheckpoints = true
+    else if (arg === '--skip-grants') args.skipGrants = true
     else if (arg === '--help' || arg === '-h') args.help = true
   }
 
@@ -199,6 +203,34 @@ async function runSequentialTransfers (services, options = {}) {
       continue
     }
 
+    if (!options.skipGrants && !options.dryRun) {
+      try {
+        console.log(`[${service.name}] Applying managed identity grants...`)
+        serviceResult.grants = await applyManagedIdentityGrants(
+          { name: service.name, sourceDbName: service.sourceDbName, targetDbName: service.targetDbName },
+          { targetEnvironment, dryRun: false, verify: true }
+        )
+        console.log(`✅ Managed identity grants applied for ${service.name}: ${serviceResult.grants.applied || 0} table(s)`)
+      } catch (grantsError) {
+        const failure = {
+          ...serviceResult,
+          stage: 'grants',
+          error: grantsError.message
+        }
+        summary.failed.push(failure)
+        summary.success = false
+        console.error(`❌ Managed identity grant failed for ${service.name}: ${grantsError.message}`)
+        await saveCheckpoint(service.name, { ...serviceResult, status: 'failed' }, { sourceEnvironment, targetEnvironment })
+        if (!continueOnError) {
+          throw new Error(`Managed identity grant failed for ${service.name}: ${grantsError.message}`)
+        }
+        console.log('Continuing to next service because --continue-on-error is set.')
+        continue
+      }
+    } else {
+      console.log(`[${service.name}] Skipping managed identity grants (${options.dryRun ? 'dry run' : '--skip-grants'})`)
+    }
+
     if (options.dryRun) {
       console.log(`[DRY RUN] Skipping validation for ${service.name}`)
       summary.succeeded.push({
@@ -297,6 +329,7 @@ async function main () {
     console.log('  --no-single-transaction      Restore without wrapping the whole run in a single transaction')
     console.log('  --resume                     Skip services already marked completed in checkpoints')
     console.log('  --reset-checkpoints          Delete existing checkpoints before running')
+    console.log('  --skip-grants                Do not re-apply managed identity grants after transfer')
     return
   }
 
@@ -309,7 +342,8 @@ async function main () {
     tableByTable: args.tableByTable,
     singleTransaction: args.singleTransaction,
     resume: args.resume,
-    resetCheckpoints: args.resetCheckpoints
+    resetCheckpoints: args.resetCheckpoints,
+    skipGrants: args.skipGrants
   })
 
   console.log('\nCompleted sequential transfer run:', JSON.stringify(results, null, 2))

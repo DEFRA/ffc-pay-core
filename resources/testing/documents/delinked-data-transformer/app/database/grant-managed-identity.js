@@ -13,6 +13,7 @@ function parseArgs (argv = process.argv.slice(2)) {
     sourceEnvironment: config.sourceEnvironment || 'recovery',
     targetEnvironment: config.targetEnvironment || 'test',
     managedIdentity: null,
+    // fallback prefix for managed identity discovery if not specified in metadata or via --managed-identity
     managedIdentityPrefix: 'DEVFFCINFMID',
     dryRun: true,
     verify: false,
@@ -27,8 +28,7 @@ function parseArgs (argv = process.argv.slice(2)) {
       args.servicesFile = path.resolve(process.cwd(), argv[++i])
       const loaded = require(args.servicesFile)
       args.services = loaded.services || loaded
-    }
-    else if (arg === '--source-environment') args.sourceEnvironment = argv[++i]
+    } else if (arg === '--source-environment') args.sourceEnvironment = argv[++i]
     else if (arg === '--target-environment') args.targetEnvironment = argv[++i]
     else if (arg === '--managed-identity') args.managedIdentity = argv[++i]
     else if (arg === '--managed-identity-prefix') args.managedIdentityPrefix = argv[++i]
@@ -135,6 +135,8 @@ async function discoverManagedIdentityFromLiquibase (connection, options) {
     return options.managedIdentity
   }
 
+  const serviceName = (options.sourceDbName || '').toLowerCase().replace(/^ffc-pay-/, '').replace(/-prd$|-pre$|-test$|-dev$|-recovery$/i, '')
+
   const candidates = new Set()
 
   const ownerResult = await connection.query(
@@ -163,12 +165,28 @@ async function discoverManagedIdentityFromLiquibase (connection, options) {
     throw new Error('No managed identity candidate found from databasechangelog owner or grantees')
   }
 
-  const prefixMatch = candidatesArray.find(role =>
-    role.toLowerCase().startsWith(options.managedIdentityPrefix.toLowerCase())
-  )
+  const prefix = options.managedIdentityPrefix || ''
+  const prefixMatches = candidatesArray.filter(role => {
+    if (!role || !prefix) return false
+    return role.toLowerCase().startsWith(prefix.toLowerCase())
+  })
 
-  if (prefixMatch) return prefixMatch
-  if (candidatesArray.length === 1) return candidatesArray[0]
+  if (prefixMatches.length === 1) return prefixMatches[0]
+
+  const midMatches = candidatesArray.filter(role => /MID/i.test(role))
+  if (midMatches.length === 1) return midMatches[0]
+
+  if (serviceName) {
+    const serviceMatches = candidatesArray.filter(role => role.toLowerCase().includes(serviceName))
+    if (serviceMatches.length === 1) return serviceMatches[0]
+    if (serviceMatches.length > 1 && midMatches.length) {
+      const combined = serviceMatches.filter(role => /MID/i.test(role))
+      if (combined.length === 1) return combined[0]
+    }
+  }
+
+  if (prefixMatches.length > 1) return prefixMatches[0]
+  if (midMatches.length > 1) return midMatches[0]
 
   throw new Error(`Multiple managed identity candidates found in databasechangelog: ${candidatesArray.join(', ')}. Use --managed-identity to specify one.`)
 }
@@ -246,15 +264,29 @@ async function processService (service, options) {
   console.log(`Source DB: ${sourceDbName}`)
   console.log(`Target DB: ${targetDbName}`)
 
-  const connection = await createConnection(targetDbName, { environment: targetEnvironment })
+  const connection = options.connection || await createConnection(targetDbName, { environment: targetEnvironment })
+  const shouldCloseConnection = !options.connection
 
   try {
-    const managedIdentity = await discoverManagedIdentityFromLiquibase(connection, options)
-    console.log(`Discovered managed identity: ${managedIdentity}`)
+    let managedIdentity
+    if (options.managedIdentity) {
+      managedIdentity = options.managedIdentity
+      console.log(`Using managed identity override: ${managedIdentity}`)
+    } else if (targetEnvironment === 'local' && options.sourceConnection) {
+      managedIdentity = await discoverManagedIdentityFromLiquibase(options.sourceConnection, options)
+      console.log(`Discovered managed identity from source: ${managedIdentity}`)
+    } else {
+      managedIdentity = await discoverManagedIdentityFromLiquibase(connection, options)
+      console.log(`Discovered managed identity from target: ${managedIdentity}`)
+    }
 
     const roleFound = await roleExists(connection, managedIdentity)
     if (!roleFound) {
-      throw new Error(`Managed identity role "${managedIdentity}" does not exist in target database "${targetDbName}"`)
+      if (targetEnvironment !== 'local') {
+        throw new Error(`Managed identity role "${managedIdentity}" does not exist in target database "${targetDbName}"`)
+      }
+      console.log(`  Creating managed identity role "${managedIdentity}" in local target...`)
+      await connection.query(`CREATE ROLE ${quoteIdentifier(managedIdentity)} WITH LOGIN`)
     }
 
     const missingBefore = await findTablesMissingGrant(connection, managedIdentity)
@@ -287,14 +319,16 @@ async function processService (service, options) {
 
     return { service: service.name, targetDbName, managedIdentity, missing: missingBefore.length, applied: missingBefore.length }
   } finally {
-    await connection?.pool?.end()
+    if (shouldCloseConnection) {
+      await connection?.pool?.end()
+    }
   }
 }
 
-async function run () {
-  const options = parseArgs()
+async function run (options) {
+  const resolvedOptions = options || parseArgs()
 
-  if (options.help) {
+  if (resolvedOptions.help) {
     console.log('Usage: node grant-managed-identity.js [options]\n\n' + [
       '--service <name>              single service to process',
       '--services-file <path>        JSON file with a "services" array',
@@ -306,35 +340,53 @@ async function run () {
       '--verify                      re-check after applying grants',
       '--metadata-dir <dir>          directory to scan for metadata files'
     ].join('\n'))
-    process.exit(0)
+    if (!options) {
+      process.exit(0)
+    }
+    return []
   }
 
-  const services = await resolveServices(options)
+  const services = await resolveServices(resolvedOptions)
 
   if (!services.length) {
     throw new Error('No services found to process. Use --service, --services-file, or ensure metadata files exist.')
   }
 
-  console.log(`Processing ${services.length} service(s) in ${options.dryRun ? 'dry-run' : 'apply'} mode`)
-  console.log(`Source environment: ${options.sourceEnvironment}`)
-  console.log(`Target environment: ${options.targetEnvironment}`)
+  console.log(`Processing ${services.length} service(s) in ${resolvedOptions.dryRun ? 'dry-run' : 'apply'} mode`)
+  console.log(`Source environment: ${resolvedOptions.sourceEnvironment}`)
+  console.log(`Target environment: ${resolvedOptions.targetEnvironment}`)
 
   const summary = []
   for (const service of services) {
-    const result = await processService(service, options)
+    const result = await processService(service, resolvedOptions)
     summary.push(result)
   }
 
   console.log('\n=== Summary ===')
   let totalMissing = 0
   for (const result of summary) {
+    totalMissing += result.missing || 0
     console.log(`${result.service.padEnd(35)} | target=${result.targetDbName.padEnd(35)} | missing=${String(result.missing).padEnd(6)} | applied=${result.applied}`)
   }
   console.log(`\nTotal tables missing grant across services: ${totalMissing}`)
+
+  return summary
 }
 
-run().catch(error => {
-  console.error('\nGrant managed identity failed:')
-  console.error(error)
-  process.exit(1)
-})
+if (require.main === module) {
+  run().catch(error => {
+    console.error('\nGrant managed identity failed:')
+    console.error(error)
+    process.exit(1)
+  })
+}
+
+module.exports = {
+  parseArgs,
+  resolveServices,
+  discoverManagedIdentityFromLiquibase,
+  findTablesMissingGrant,
+  applyGrants,
+  processService,
+  run
+}
