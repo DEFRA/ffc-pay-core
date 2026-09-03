@@ -1,5 +1,8 @@
 # Local integration testing
 
+> Part of the [Testing & Data Tools](../..) collection.  
+> This README covers the local transfer scripts; see the [transformer README](../README.md) for the related hosted workflows.
+
 These scripts let you test the data transformer against a local PostgreSQL instance without touching hosted environments (except for the source database, which is read from whatever source environment is configured).
 
 The `local` environment is defined centrally in [app/constants/environment-definitions.js](../app/constants/environment-definitions.js) alongside the hosted environments, so the local transfer scripts use the same connection-resolution code path and the same env var names everywhere.
