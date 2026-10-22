@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Commit and push the same change across every payment service repo on a given branch.
+. "$(dirname "$0")/lib.sh"
+
+show_help() {
+  cat <<EOF
+    Usage: path/to/ffc-pay-core/devtools/commit -b <branch> -c "<message>" [OPTION...]
+    Commit and push changes in every payment service repo currently on <branch>.
+    Each repo's changes are shown and confirmed before committing and pushing.
+
+    Options:
+      -b <branch>      only include repos currently on this branch (required)
+      -c "<message>"   commit message used for every repo (required)
+      -f "<paths>"     only commit these paths, space separated (default: all changes, including new files)
+      -y               skip confirmation prompts
+      -g <group>       only include payments, documents, pds or all repos (default: all)
+      -h, --help       display this help text
+
+    Example:
+      ./devtools/commit -b DOC-1234 -c "DOC-1234: relax npm audit threshold" -f "azure-pipelines.yml .snyk"
+EOF
+}
+
+[[ $1 == --help ]] && { show_help; exit; }
+
+branch=""
+message=""
+files=""
+group="all"
+
+while getopts "b:c:f:yg:h" opt; do
+  case $opt in
+    b) branch=$OPTARG ;;
+    c) message=$OPTARG ;;
+    f) files=$OPTARG ;;
+    y) yes=true ;;
+    g) group=$OPTARG ;;
+    h) show_help; exit ;;
+    *) show_help; exit 1 ;;
+  esac
+done
+
+use_group "$group" || exit 1
+
+if [[ -z $branch || -z $message ]]; then
+  echo "Error: -b and -c are required"; show_help; exit 1
+fi
+
+read -ra paths <<< "$files"
+
+committed=()
+skipped=()
+failed=()
+
+for repo in "${repos[@]}"; do
+  is_cloned "$repo" || continue
+  on_branch "$repo" "$branch" || continue
+  dir="$projectRoot/$repo"
+
+  # Only the requested paths that have changes in this repo, so unmatched paths don't fail git add
+  changed=()
+  for path in "${paths[@]}"; do
+    [[ -n $(git -C "$dir" status --porcelain -- "$path") ]] && changed+=("$path")
+  done
+
+  if ((${#paths[@]} && !${#changed[@]})) || [[ -z $(git -C "$dir" status --porcelain) ]]; then
+    echo "-- $repo: no changes - skipping"
+    continue
+  fi
+
+  echo; echo "===== $repo ($branch)"
+  git -C "$dir" status --short -- "${changed[@]}"
+  git -C "$dir" --no-pager diff HEAD -- "${changed[@]}"
+
+  if ! confirm "Commit & push $repo?"; then
+    echo "skipped"; skipped+=("$repo"); continue
+  fi
+
+  if ((${#changed[@]})); then
+    git -C "$dir" add -A -- "${changed[@]}" && git -C "$dir" commit --quiet -m "$message" -- "${changed[@]}"
+  else
+    git -C "$dir" add -A && git -C "$dir" commit --quiet -m "$message"
+  fi && git -C "$dir" push --quiet -u origin "$branch" && committed+=("$repo") || failed+=("$repo")
+done
+
+echo
+echo "Committed & pushed: ${committed[*]:-none}"
+echo "Skipped:            ${skipped[*]:-none}"
+echo "Failed:             ${failed[*]:-none}"

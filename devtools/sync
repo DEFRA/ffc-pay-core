@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Pull the latest changes into whatever branch each payment service repo is on, like ./update without checking out main.
+. "$(dirname "$0")/lib.sh"
+
+show_help() {
+  cat <<EOF
+    Usage: path/to/ffc-pay-core/devtools/sync [OPTION...]
+    Fast-forward the current branch of every payment service repo from origin, without switching branches.
+    Repos whose branch has diverged from origin, or would clash with uncommitted changes, are reported and left alone.
+
+    Options:
+      -b <branch>      only include repos currently on this branch (default: all repos)
+      -m               also fast-forward local main, without checking it out
+      -g <group>       only include payments, documents, pds or all repos (default: all)
+      -h, --help       display this help text
+
+    Example:
+      ./devtools/sync -b DOC-1234 -m
+EOF
+}
+
+[[ $1 == --help ]] && { show_help; exit; }
+
+branch=""
+main=false
+group="all"
+
+while getopts "b:mg:h" opt; do
+  case $opt in
+    b) branch=$OPTARG ;;
+    m) main=true ;;
+    g) group=$OPTARG ;;
+    h) show_help; exit ;;
+    *) show_help; exit 1 ;;
+  esac
+done
+
+use_group "$group" || exit 1
+
+updated=()
+uptodate=()
+skipped=()
+failed=()
+
+for repo in "${repos[@]}"; do
+  is_cloned "$repo" || continue
+  if [[ -n $branch ]]; then
+    on_branch "$repo" "$branch" || continue
+  fi
+  dir="$projectRoot/$repo"
+  current=$(git -C "$dir" branch --show-current)
+
+  if [[ -z $current ]]; then
+    echo "!! $repo is on a detached HEAD - skipping"; skipped+=("$repo"); continue
+  fi
+
+  if $main && [[ $current != main ]] && ! git -C "$dir" fetch --quiet origin main:main; then
+    echo "!! $repo: local main has diverged from origin/main - not updated"
+  fi
+
+  if ! git -C "$dir" rev-parse --verify --quiet "@{u}" > /dev/null; then
+    echo "-- $repo: '$current' has no upstream - skipping"; skipped+=("$repo"); continue
+  fi
+
+  before=$(git -C "$dir" rev-parse HEAD)
+  if ! git -C "$dir" pull --quiet --ff-only; then
+    echo "!! $repo: could not fast-forward '$current'"; failed+=("$repo"); continue
+  fi
+
+  if [[ $(git -C "$dir" rev-parse HEAD) == "$before" ]]; then
+    uptodate+=("$repo")
+  else
+    echo "-- $repo: updated '$current'"; updated+=("$repo")
+  fi
+done
+
+echo
+echo "Updated:    ${updated[*]:-none}"
+echo "Up to date: ${uptodate[*]:-none}"
+echo "Skipped:    ${skipped[*]:-none}"
+echo "Failed:     ${failed[*]:-none}"
