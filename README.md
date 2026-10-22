@@ -392,6 +392,22 @@ Like [`./update`](update), but pulls the latest changes into whatever branch eac
 - `-b` - only include repositories on this branch (default all repositories)
 - `-m` - also fast-forward local `main` without checking it out
 
+### Run
+
+Run the same shell command in every repository currently on a branch, e.g. `npm i && npm audit fix`. Asks once before running, keeps going if a repository fails and prints a summary. Nothing is committed - use [`./devtools/commit`](devtools/commit) afterwards.
+
+[`./devtools/run`](devtools/run)
+
+```sh
+./devtools/run -b DOC-1234 -x "npm i && npm audit fix"
+```
+
+#### Options
+
+- `-b` - only include repositories on this branch (required)
+- `-x` - shell command to run in each repository (required)
+- `-y` - skip confirmation prompts
+
 In all scripts, repositories not on the target branch are skipped. Repositories that have the branch but are on another one get a warning.
 
 ## Resources
