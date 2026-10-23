@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Generated output (dumps can be very large — never commit them)
+dumps/
+logs/
+*.log
+
+# Operational data
+app/pr-id.csv
+app/agreements.csv
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

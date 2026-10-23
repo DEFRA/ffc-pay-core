@@ -1,0 +1,72 @@
+{
+  "tableName": "payment_batch_events",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false
+    },
+    {
+      "name": "batchName",
+      "type": "text",
+      "nullable": false
+    },
+    {
+      "name": "schemeId",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "frn",
+      "type": "text",
+      "nullable": false
+    },
+    {
+      "name": "marketingYear",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "agreementNumber",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "paymentRequestNumber",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "originalValue",
+      "type": "numeric",
+      "nullable": true
+    },
+    {
+      "name": "type",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "providesAccountingValues",
+      "type": "boolean",
+      "nullable": true
+    }
+  ],
+  "primaryKey": [
+    "id"
+  ],
+  "indexes": [
+    {
+      "index_name": "payment_batch_events_unique",
+      "index_type": "btree",
+      "is_unique": true,
+      "is_primary": false,
+      "columns": [
+        "batchName",
+        "frn"
+      ],
+      "predicate": null,
+      "expression": null
+    }
+  ]
+}

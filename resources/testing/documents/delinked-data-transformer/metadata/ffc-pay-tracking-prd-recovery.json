@@ -1,0 +1,13 @@
+{
+  "databaseName": "ffc-pay-tracking-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:44:39.149Z",
+  "tables": [
+    {
+      "name": "reportData",
+      "keyColumn": "reportDataId",
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}

@@ -1,0 +1,151 @@
+{
+  "databaseName": "ffc-pay-processing-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:42:32.312Z",
+  "tables": [
+    {
+      "name": "autoHoldCategories",
+      "keyColumn": "autoHoldCategoryId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "autoHolds",
+      "keyColumn": "autoHoldId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "completedInvoiceLines",
+      "keyColumn": "completedInvoiceLineId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "completedPaymentRequests",
+      "keyColumn": "completedPaymentRequestId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "frnAgreementClosed",
+      "keyColumn": "closedId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "holdCategories",
+      "keyColumn": "holdCategoryId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "holds",
+      "keyColumn": "holdId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "invoiceLines",
+      "keyColumn": "invoiceLineId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "metrics",
+      "keyColumn": "id",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "outbox",
+      "keyColumn": "outboxId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "paymentRequests",
+      "keyColumn": "paymentRequestId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "schedule",
+      "keyColumn": "scheduleId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "schemes",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "tempCompletedPaymentRequests",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "tempInvoiceLines",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "tempPaymentRequests",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "tempSettlementData",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "v2TempCompletedInvoiceLines",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "v2TempCompletedPaymentRequests",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "v2TempDualAccounting",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "v2TempHoldData",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "v2TempInvoiceLines",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "v2TempPaymentRequests",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "v2TempSettlementData",
+      "keyColumn": null,
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}

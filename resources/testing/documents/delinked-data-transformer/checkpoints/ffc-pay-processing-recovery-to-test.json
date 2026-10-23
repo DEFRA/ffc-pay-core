@@ -1,0 +1,149 @@
+{
+  "serviceName": "ffc-pay-processing",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-processing-prd",
+  "targetDbName": "ffc-pay-processing-test",
+  "updatedAt": "2026-08-27T18:29:09.874Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "autoHoldCategories",
+      "keyColumn": "autoHoldCategoryId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "autoHolds",
+      "keyColumn": "autoHoldId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "completedInvoiceLines",
+      "keyColumn": "completedInvoiceLineId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "completedPaymentRequests",
+      "keyColumn": "completedPaymentRequestId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "frnAgreementClosed",
+      "keyColumn": "closedId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "holdCategories",
+      "keyColumn": "holdCategoryId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "holds",
+      "keyColumn": "holdId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "invoiceLines",
+      "keyColumn": "invoiceLineId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "metrics",
+      "keyColumn": "id",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "outbox",
+      "keyColumn": "outboxId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "paymentRequests",
+      "keyColumn": "paymentRequestId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "schedule",
+      "keyColumn": "scheduleId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "tempCompletedPaymentRequests",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "tempInvoiceLines",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "tempPaymentRequests",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "tempSettlementData",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "v2TempCompletedInvoiceLines",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "v2TempCompletedPaymentRequests",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "v2TempDualAccounting",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "v2TempHoldData",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "v2TempInvoiceLines",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "v2TempPaymentRequests",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "v2TempSettlementData",
+      "keyColumn": null,
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}

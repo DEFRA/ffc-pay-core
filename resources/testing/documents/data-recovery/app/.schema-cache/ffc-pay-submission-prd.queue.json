@@ -1,0 +1,24 @@
+{
+  "tableName": "queue",
+  "columns": [
+    {
+      "name": "queueId",
+      "type": "integer",
+      "nullable": false
+    },
+    {
+      "name": "paymentRequestId",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "batchId",
+      "type": "integer",
+      "nullable": true
+    }
+  ],
+  "primaryKey": [
+    "queueId"
+  ],
+  "indexes": []
+}

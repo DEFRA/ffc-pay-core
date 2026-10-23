@@ -1,0 +1,59 @@
+{
+  "tableName": "warnings",
+  "columns": [
+    {
+      "name": "id",
+      "type": "uuid",
+      "nullable": false
+    },
+    {
+      "name": "partitionKey",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "rowKey",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "timestamp",
+      "type": "timestamp without time zone",
+      "nullable": true
+    },
+    {
+      "name": "type",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "source",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "subject",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "time",
+      "type": "timestamp without time zone",
+      "nullable": true
+    },
+    {
+      "name": "category",
+      "type": "text",
+      "nullable": true
+    },
+    {
+      "name": "data",
+      "type": "jsonb",
+      "nullable": true
+    }
+  ],
+  "primaryKey": [
+    "id"
+  ],
+  "indexes": []
+}

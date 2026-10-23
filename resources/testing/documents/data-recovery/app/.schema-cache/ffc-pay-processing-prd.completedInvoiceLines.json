@@ -1,0 +1,69 @@
+{
+  "tableName": "completedInvoiceLines",
+  "columns": [
+    {
+      "name": "completedInvoiceLineId",
+      "type": "integer",
+      "nullable": false
+    },
+    {
+      "name": "completedPaymentRequestId",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "accountCode",
+      "type": "character varying(6)",
+      "nullable": true
+    },
+    {
+      "name": "fundCode",
+      "type": "character varying(6)",
+      "nullable": true
+    },
+    {
+      "name": "description",
+      "type": "character varying(255)",
+      "nullable": true
+    },
+    {
+      "name": "value",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "schemeCode",
+      "type": "character varying(10)",
+      "nullable": true
+    },
+    {
+      "name": "convergence",
+      "type": "boolean",
+      "nullable": true
+    },
+    {
+      "name": "deliveryBody",
+      "type": "character varying(4)",
+      "nullable": true
+    },
+    {
+      "name": "agreementNumber",
+      "type": "character varying(255)",
+      "nullable": true
+    },
+    {
+      "name": "marketingYear",
+      "type": "integer",
+      "nullable": true
+    },
+    {
+      "name": "stateAid",
+      "type": "boolean",
+      "nullable": true
+    }
+  ],
+  "primaryKey": [
+    "completedInvoiceLineId"
+  ],
+  "indexes": []
+}
