@@ -1,0 +1,114 @@
+#!/usr/bin/env bash
+# Merge the latest main into a given branch across every payment service repo on that branch.
+. "$(dirname "$0")/lib.sh"
+
+show_help() {
+  cat <<EOF
+    Usage: path/to/ffc-pay-core/devtools/merge-main -b <branch> [OPTION...]
+    Pull main and merge it into <branch> in every payment service repo currently on <branch>.
+    Conflicts are reported per repo and left for you to resolve, unless -a is passed.
+
+    Options:
+      -b <branch>      only include repos currently on this branch (required)
+      -s <base>        branch to merge in (default: main)
+      -a               abort merges that conflict instead of leaving them in progress
+      -p               push the branch after a successful merge
+      -y               skip confirmation prompts
+      -g <group>       only include payments, documents, pds or all repos (default: all)
+      -h, --help       display this help text
+
+    Example:
+      ./devtools/merge-main -b DOC-1234 -p
+EOF
+}
+
+[[ $1 == --help ]] && { show_help; exit; }
+
+branch=""
+base="main"
+abort=false
+push=false
+group="all"
+
+while getopts "b:s:apyg:h" opt; do
+  case $opt in
+    b) branch=$OPTARG ;;
+    s) base=$OPTARG ;;
+    a) abort=true ;;
+    p) push=true ;;
+    y) yes=true ;;
+    g) group=$OPTARG ;;
+    h) show_help; exit ;;
+    *) show_help; exit 1 ;;
+  esac
+done
+
+use_group "$group" || exit 1
+
+if [[ -z $branch ]]; then
+  echo "Error: -b is required"; show_help; exit 1
+fi
+
+merged=()
+uptodate=()
+conflicts=()
+pushed=()
+skipped=()
+failed=()
+
+for repo in "${repos[@]}"; do
+  is_cloned "$repo" || continue
+  on_branch "$repo" "$branch" || continue
+  dir="$projectRoot/$repo"
+
+  if [[ -n $(git -C "$dir" status --porcelain --untracked-files=no) ]]; then
+    echo "!! $repo has uncommitted changes - skipping"; skipped+=("$repo"); continue
+  fi
+
+  # Fast-forward local main too where possible, otherwise just update origin/main
+  if ! git -C "$dir" fetch --quiet origin "$base:$base" 2> /dev/null && ! git -C "$dir" fetch --quiet origin "$base"; then
+    echo "!! $repo: could not fetch origin/$base"; failed+=("$repo"); continue
+  fi
+
+  if git -C "$dir" rev-parse --verify --quiet "@{u}" > /dev/null && ! git -C "$dir" pull --quiet --ff-only; then
+    echo "!! $repo: '$branch' has diverged from its upstream - skipping"; failed+=("$repo"); continue
+  fi
+
+  if git -C "$dir" merge-base --is-ancestor "origin/$base" HEAD; then
+    echo "-- $repo: already up to date with $base"; uptodate+=("$repo"); continue
+  fi
+
+  echo; echo "===== $repo ($base -> $branch)"
+  if git -C "$dir" merge --no-edit "origin/$base"; then
+    merged+=("$repo")
+  elif [[ -n $(git -C "$dir" diff --name-only --diff-filter=U) ]]; then
+    echo "!! $repo: conflicts in"
+    git -C "$dir" diff --name-only --diff-filter=U | sed 's/^/     /'
+    if $abort; then
+      git -C "$dir" merge --abort && echo "   merge aborted"
+    fi
+    conflicts+=("$repo"); continue
+  else
+    failed+=("$repo"); continue
+  fi
+
+  if $push && confirm "Push '$branch' to origin for $repo?"; then
+    if git -C "$dir" push --quiet -u origin "$branch"; then
+      pushed+=("$repo")
+    else
+      failed+=("$repo")
+    fi
+  fi
+done
+
+echo
+echo "Merged:     ${merged[*]:-none}"
+echo "Up to date: ${uptodate[*]:-none}"
+echo "Conflicts:  ${conflicts[*]:-none}"
+$push && echo "Pushed:     ${pushed[*]:-none}"
+echo "Skipped:    ${skipped[*]:-none}"
+echo "Failed:     ${failed[*]:-none}"
+if ((${#conflicts[@]})) && ! $abort; then
+  echo
+  echo "Resolve conflicts and commit in each repo, or run 'git merge --abort' to back out."
+fi

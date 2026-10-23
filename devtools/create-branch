@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# Create the same branch, from the latest origin/<base>, across payment service repos.
+. "$(dirname "$0")/lib.sh"
+
+show_help() {
+  cat <<EOF
+    Usage: path/to/ffc-pay-core/devtools/create-branch -b <branch> [OPTION...]
+    Create a branch from the latest origin/main in every payment service repo.
+    Uncommitted changes in a repo are carried over to the new branch.
+
+    Options:
+      -b <branch>      name of the branch to create (required)
+      -s <base>        branch to create from (default: main)
+      -r "<repos>"     only these repos, space separated (overrides -g)
+      -p               push the new branch to origin and set upstream
+      -y               skip confirmation prompts
+      -g <group>       only include payments, documents, pds or all repos (default: all)
+      -h, --help       display this help text
+
+    Example:
+      ./devtools/create-branch -b DOC-1234 -r "ffc-pay-processing ffc-pay-submission" -p
+EOF
+}
+
+[[ $1 == --help ]] && { show_help; exit; }
+
+branch=""
+base="main"
+selected=""
+push=false
+group="all"
+
+while getopts "b:s:r:pyg:h" opt; do
+  case $opt in
+    b) branch=$OPTARG ;;
+    s) base=$OPTARG ;;
+    r) selected=$OPTARG ;;
+    p) push=true ;;
+    y) yes=true ;;
+    g) group=$OPTARG ;;
+    h) show_help; exit ;;
+    *) show_help; exit 1 ;;
+  esac
+done
+
+use_group "$group" || exit 1
+
+if [[ -z $branch ]]; then
+  echo "Error: -b is required"; show_help; exit 1
+fi
+
+if [[ -n $selected ]]; then
+  read -ra targets <<< "$selected"
+else
+  targets=("${repos[@]}")
+fi
+
+created=()
+pushed=()
+skipped=()
+failed=()
+
+for repo in "${targets[@]}"; do
+  if ! is_cloned "$repo"; then
+    [[ -n $selected ]] && { echo "!! $repo is not cloned - skipping"; skipped+=("$repo"); }
+    continue
+  fi
+  dir="$projectRoot/$repo"
+
+  if git -C "$dir" show-ref --verify --quiet "refs/heads/$branch"; then
+    echo "!! $repo already has '$branch' - skipping"; skipped+=("$repo"); continue
+  fi
+
+  if ! git -C "$dir" fetch --quiet origin "$base"; then
+    echo "!! $repo: could not fetch origin/$base"; failed+=("$repo"); continue
+  fi
+
+  if remote_branch_exists "$repo" "$branch"; then
+    echo "!! $repo: '$branch' already exists on origin - check it out instead - skipping"
+    skipped+=("$repo"); continue
+  fi
+
+  echo; echo "===== $repo ($(git -C "$dir" branch --show-current) -> $branch)"
+  if [[ -n $(git -C "$dir" status --porcelain) ]]; then
+    echo "Uncommitted changes will be carried over:"
+    git -C "$dir" status --short
+  fi
+
+  if ! confirm "Create '$branch' from origin/$base in $repo?"; then
+    echo "skipped"; skipped+=("$repo"); continue
+  fi
+
+  if ! git -C "$dir" switch --quiet --no-track -c "$branch" "origin/$base"; then
+    failed+=("$repo"); continue
+  fi
+  created+=("$repo")
+
+  if $push && confirm "Push '$branch' to origin for $repo?"; then
+    if git -C "$dir" push --quiet -u origin "$branch"; then
+      pushed+=("$repo")
+    else
+      failed+=("$repo")
+    fi
+  fi
+done
+
+echo
+echo "Created: ${created[*]:-none}"
+$push && echo "Pushed:  ${pushed[*]:-none}"
+echo "Skipped: ${skipped[*]:-none}"
+echo "Failed:  ${failed[*]:-none}"

@@ -133,3 +133,11 @@ cd "${projectRoot}"
 cd ./ffc-doc-alerting && \
   git checkout main && \
   git pull
+cd "${projectRoot}"
+cd ./ffc-pds-web && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
+cd ./ffc-pds-data-retention && \
+  git checkout main && \
+  git pull
