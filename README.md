@@ -323,6 +323,25 @@ Create a branch from the latest `origin/main` in every repository, or only those
 - `-p` - push the new branch and set upstream
 - `-y` - skip confirmation prompts
 
+### Switch
+
+Switch every repository that has a branch, locally or on origin, onto that branch, e.g. back to `main` or onto a teammate's branch. Repositories without the branch are left alone. Repositories with uncommitted changes are skipped, unless `-S` is passed to stash them. Stashed changes are restored the next time you switch back to that branch with `-S`. Lists every switch and asks once before making them.
+
+[`./devtools/switch`](devtools/switch)
+
+```sh
+./devtools/switch -b main -S -u
+./devtools/switch -b DOC-1234 -S
+```
+
+#### Options
+
+- `-b` - branch to switch to (required)
+- `-r` - only these repositories, space separated (overrides `-g`)
+- `-S` - stash uncommitted changes before switching, and restore any changes stashed on the target branch
+- `-u` - fast-forward the branch from origin after switching
+- `-y` - skip confirmation prompts
+
 ### Commit
 
 Commit and push changes in every repository currently on a branch, using the same message. Shows each repository's diff and asks before committing, then prints a summary of committed, skipped and failed repositories.
@@ -408,7 +427,7 @@ Run the same shell command in every repository currently on a branch, e.g. `npm 
 - `-x` - shell command to run in each repository (required)
 - `-y` - skip confirmation prompts
 
-In all scripts, repositories not on the target branch are skipped. Repositories that have the branch but are on another one get a warning.
+Except for Create branch and Switch, scripts that take `-b` skip repositories not on that branch. Repositories that have the branch but are on another one get a warning.
 
 ## Resources
 
