@@ -11,7 +11,6 @@ show_help() {
       -b <branch>      only include repos currently on this branch (required)
       -x "<command>"   shell command to run in each repo (required)
       -y               skip confirmation prompts
-      -g <group>       only include payments, documents, pds or all repos (default: all)
       -h, --help       display this help text
 
     Example:
@@ -23,20 +22,17 @@ EOF
 
 branch=""
 command=""
-group="all"
 
-while getopts "b:x:yg:h" opt; do
+while getopts "b:x:yh" opt; do
   case $opt in
     b) branch=$OPTARG ;;
     x) command=$OPTARG ;;
     y) yes=true ;;
-    g) group=$OPTARG ;;
     h) show_help; exit ;;
     *) show_help; exit 1 ;;
   esac
 done
 
-use_group "$group" || exit 1
 
 if [[ -z $branch || -z $command ]]; then
   echo "Error: -b and -x are required"; show_help; exit 1

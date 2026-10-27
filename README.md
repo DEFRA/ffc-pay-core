@@ -234,17 +234,16 @@ Saves your Key Vault name, email and suffix in `~/.bashrc_setup.conf` so you onl
 
 ### Start
 
-Run all payment services.
+Run all payment, document and PDS services. PDS is used by both payments and documents, so it always runs.
 
-Runs `Seed` script if `ffc-pay-scripts` repository is cloned.
+Runs `Seed` script when payment services are started, if `ffc-pay-scripts` repository is cloned.
 
 [`./start`](start)
 
 #### Optional arguments
 
-- `-f` - include Azure Functions
-- `-s` - include Statement services
-- `-S` - only statement services
+- `-p` - only payment services, plus PDS
+- `-d` - only document services, plus PDS
 
 ### Stop
 
@@ -299,9 +298,7 @@ Determine the Kubernetes resource usage for a namespace based on all microservic
 
 ## Dev tools
 
-Helpers for making the same git change across many repositories, e.g. a dependency upgrade in every service. They act on the same repositories as [`./update`](update), plus `ffc-pds-web` and `fcp-pds-data-retention`, and need `bash`. Repositories that aren't cloned are ignored.
-
-Every script takes `-g` to limit it to one group of repositories: `payments` (including `ffc-pay-core` and `ffc-pay-scripts`), `documents`, `pds` or `all` (default).
+Helpers for making the same git change across many repositories, e.g. a dependency upgrade in every service. They act on the same repositories as [`./update`](update) and need `bash`. Repositories that aren't cloned are ignored.
 
 Each script shows what it is about to do per repository and asks before making changes or pushing. Pass `-y` to skip the prompts. Run any script with `-h` for full usage.
 
@@ -319,8 +316,28 @@ Create a branch from the latest `origin/main` in every repository, or only those
 
 - `-b` - branch to create (required)
 - `-s` - branch to create from (default `main`)
-- `-r` - only these repositories, space separated (overrides `-g`)
+- `-r` - only these repositories, space separated in one quoted argument, e.g. `-r "ffc-pay-web ffc-pay-tracking"`
 - `-p` - push the new branch and set upstream
+- `-y` - skip confirmation prompts
+
+### Switch
+
+Switch every repository that has a branch, locally or on origin, onto that branch, e.g. back to `main` or onto a teammate's branch. Repositories without the branch are left alone, unless `-m` is passed to switch them to `main` and fast-forward it. Repositories with uncommitted changes are skipped, unless `-s` is passed to stash them. Stashed changes are restored the next time you switch back to that branch with `-s`. Lists every switch and asks once before making them.
+
+[`./devtools/switch`](devtools/switch)
+
+```sh
+./devtools/switch -b main -s -u
+./devtools/switch -b DOC-1234 -s -u -m
+```
+
+#### Options
+
+- `-b` - branch to switch to (required)
+- `-r` - only these repositories, space separated in one quoted argument, e.g. `-r "ffc-pay-web ffc-pay-tracking"`
+- `-s` - stash uncommitted changes before switching, and restore any changes stashed on the target branch
+- `-u` - fast-forward the branch from origin, including repositories already on it
+- `-m` - switch repositories without the branch to `main` instead, and fast-forward `main`
 - `-y` - skip confirmation prompts
 
 ### Commit
@@ -408,7 +425,7 @@ Run the same shell command in every repository currently on a branch, e.g. `npm 
 - `-x` - shell command to run in each repository (required)
 - `-y` - skip confirmation prompts
 
-In all scripts, repositories not on the target branch are skipped. Repositories that have the branch but are on another one get a warning.
+Except for Create branch and Switch, scripts that take `-b` skip repositories not on that branch. Repositories that have the branch but are on another one get a warning.
 
 ## Resources
 

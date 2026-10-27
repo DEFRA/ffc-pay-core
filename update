@@ -110,6 +110,10 @@ cd ./fcp-pds-web && \
   git checkout main && \
   git pull
 cd "${projectRoot}"
+cd ./fcp-pds-data-retention && \
+  git checkout main && \
+  git pull
+cd "${projectRoot}"
 cd ./ffc-doc-statement-data && \
   git checkout main && \
   git pull
@@ -131,13 +135,5 @@ cd ./ffc-doc-statement-receiver && \
   git pull
 cd "${projectRoot}"
 cd ./ffc-doc-alerting && \
-  git checkout main && \
-  git pull
-cd "${projectRoot}"
-cd ./ffc-pds-web && \
-  git checkout main && \
-  git pull
-cd "${projectRoot}"
-cd ./ffc-pds-data-retention && \
   git checkout main && \
   git pull
