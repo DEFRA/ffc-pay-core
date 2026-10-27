@@ -7,13 +7,13 @@ show_help() {
     Usage: path/to/ffc-pay-core/devtools/switch -b <branch> [OPTION...]
     Switch to <branch> in every payment service repo that has it, locally or on origin.
     Repos without the branch are left alone, unless -m is passed. Repos with uncommitted changes are skipped,
-    unless -S is passed.
+    unless -s is passed.
 
     Options:
       -b <branch>      branch to switch to (required)
       -r "<repos>"     only these repos, space separated in one quoted argument,
                        e.g. -r "ffc-pay-web ffc-pay-tracking"
-      -S               stash uncommitted changes before switching, and restore any changes
+      -s               stash uncommitted changes before switching, and restore any changes
                        this script stashed on <branch> when it was last switched away from
       -u               fast-forward the branch from origin, including repos already on it
       -m               switch repos without <branch> to main instead, and fast-forward main
@@ -21,8 +21,8 @@ show_help() {
       -h, --help       display this help text
 
     Example:
-      ./devtools/switch -b main -S -u
-      ./devtools/switch -b DOC-1234 -S -u -m
+      ./devtools/switch -b main -s -u
+      ./devtools/switch -b DOC-1234 -s -u -m
 EOF
 }
 
@@ -34,11 +34,11 @@ stash=false
 update=false
 fallback=false
 
-while getopts "b:r:Sumyh" opt; do
+while getopts "b:r:sumyh" opt; do
   case $opt in
     b) branch=$OPTARG ;;
     r) selected=$OPTARG ;;
-    S) stash=true ;;
+    s) stash=true ;;
     u) update=true ;;
     m) fallback=true ;;
     y) yes=true ;;
@@ -110,7 +110,7 @@ for repo in "${candidates[@]}"; do
   fi
 
   if [[ -n $(git -C "$dir" status --porcelain --untracked-files=no) ]] && ! $stash; then
-    echo "!! $repo has uncommitted changes on '${current:-detached HEAD}' - skipping (use -S to stash them)"
+    echo "!! $repo has uncommitted changes on '${current:-detached HEAD}' - skipping (use -s to stash them)"
     skipped+=("$repo"); continue
   fi
 
@@ -213,5 +213,5 @@ echo "Skipped:        ${skipped[*]:-none}"
 echo "Failed:         ${failed[*]:-none}"
 if ((${#stashed[@]})); then
   echo
-  echo "Stashed changes are restored by switching back with -S, e.g. ./devtools/switch -b <branch> -S"
+  echo "Stashed changes are restored by switching back with -s, e.g. ./devtools/switch -b <branch> -s"
 fi
