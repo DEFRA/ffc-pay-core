@@ -86,6 +86,9 @@ cd "${projectRoot}"
 cd ./fcp-pds-web && \
   docker compose down $@
 cd "${projectRoot}"
+cd ./fcp-pds-data-retention && \
+  docker compose down $@
+cd "${projectRoot}"
 cd ./ffc-doc-statement-data && \
   docker compose down $@
 cd "${projectRoot}"

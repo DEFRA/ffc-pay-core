@@ -4,7 +4,7 @@
 projectRoot="$(a="/$0"; a=${a%/*}; a=${a:-.}; a=${a#/}/; cd "$a/../.." || return; pwd)"
 
 # Shared packages are deliberately excluded.
-payments=(
+repos=(
   ffc-pay-batch-verifier
   ffc-pay-batch-processor
   ffc-pay-enrichment
@@ -24,9 +24,8 @@ payments=(
   ffc-pay-xb
   ffc-pay-dps
   ffc-pay-demographics
-)
-
-documents=(
+  fcp-pds-web
+  fcp-pds-data-retention
   ffc-doc-statement-data
   ffc-doc-statement-constructor
   ffc-doc-statement-generator
@@ -34,24 +33,6 @@ documents=(
   ffc-doc-statement-receiver
   ffc-doc-alerting
 )
-
-pds=(
-  fcp-pds-web
-  fcp-pds-data-retention
-)
-
-repos=("${payments[@]}" "${documents[@]}" "${pds[@]}")
-
-# Narrows repos to a group: payments, documents, pds or all
-use_group() {
-  case $1 in
-    payments) repos=("${payments[@]}") ;;
-    documents|docs) repos=("${documents[@]}") ;;
-    pds) repos=("${pds[@]}") ;;
-    all) ;;
-    *) echo "Error: unknown group '$1' - use payments, documents, pds or all"; return 1 ;;
-  esac
-}
 
 yes=false
 

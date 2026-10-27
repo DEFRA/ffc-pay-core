@@ -60,6 +60,9 @@ echo 'ffc-pay-demographics' &&
 echo 'fcp-pds-web' &&
   curl --silent "https://api.github.com/repos/defra/fcp-pds-web/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
+echo 'fcp-pds-data-retention' &&
+  curl --silent "https://api.github.com/repos/defra/fcp-pds-data-retention/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
+
 echo 'ffc-doc-statement-data' &&
   curl --silent "https://api.github.com/repos/defra/ffc-doc-statement-data/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
 
