@@ -11,7 +11,6 @@ show_help() {
     Options:
       -b <branch>      only include repos currently on this branch (default: all repos)
       -m               also fast-forward local main, without checking it out
-      -g <group>       only include payments, documents, pds or all repos (default: all)
       -h, --help       display this help text
 
     Example:
@@ -23,19 +22,16 @@ EOF
 
 branch=""
 main=false
-group="all"
 
-while getopts "b:mg:h" opt; do
+while getopts "b:mh" opt; do
   case $opt in
     b) branch=$OPTARG ;;
     m) main=true ;;
-    g) group=$OPTARG ;;
     h) show_help; exit ;;
     *) show_help; exit 1 ;;
   esac
 done
 
-use_group "$group" || exit 1
 
 updated=()
 uptodate=()

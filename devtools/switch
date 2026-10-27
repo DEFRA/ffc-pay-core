@@ -11,13 +11,13 @@ show_help() {
 
     Options:
       -b <branch>      branch to switch to (required)
-      -r "<repos>"     only these repos, space separated (overrides -g)
+      -r "<repos>"     only these repos, space separated in one quoted argument,
+                       e.g. -r "ffc-pay-web ffc-pay-tracking"
       -S               stash uncommitted changes before switching, and restore any changes
                        this script stashed on <branch> when it was last switched away from
       -u               fast-forward the branch from origin, including repos already on it
       -m               switch repos without <branch> to main instead, and fast-forward main
       -y               skip confirmation prompts
-      -g <group>       only include payments, documents, pds or all repos (default: all)
       -h, --help       display this help text
 
     Example:
@@ -33,9 +33,8 @@ selected=""
 stash=false
 update=false
 fallback=false
-group="all"
 
-while getopts "b:r:Sumyg:h" opt; do
+while getopts "b:r:Sumyh" opt; do
   case $opt in
     b) branch=$OPTARG ;;
     r) selected=$OPTARG ;;
@@ -43,13 +42,11 @@ while getopts "b:r:Sumyg:h" opt; do
     u) update=true ;;
     m) fallback=true ;;
     y) yes=true ;;
-    g) group=$OPTARG ;;
     h) show_help; exit ;;
     *) show_help; exit 1 ;;
   esac
 done
 
-use_group "$group" || exit 1
 
 if [[ -z $branch ]]; then
   echo "Error: -b is required"; show_help; exit 1

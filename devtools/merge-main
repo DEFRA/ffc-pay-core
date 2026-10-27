@@ -14,7 +14,6 @@ show_help() {
       -a               abort merges that conflict instead of leaving them in progress
       -p               push the branch after a successful merge
       -y               skip confirmation prompts
-      -g <group>       only include payments, documents, pds or all repos (default: all)
       -h, --help       display this help text
 
     Example:
@@ -28,22 +27,19 @@ branch=""
 base="main"
 abort=false
 push=false
-group="all"
 
-while getopts "b:s:apyg:h" opt; do
+while getopts "b:s:apyh" opt; do
   case $opt in
     b) branch=$OPTARG ;;
     s) base=$OPTARG ;;
     a) abort=true ;;
     p) push=true ;;
     y) yes=true ;;
-    g) group=$OPTARG ;;
     h) show_help; exit ;;
     *) show_help; exit 1 ;;
   esac
 done
 
-use_group "$group" || exit 1
 
 if [[ -z $branch ]]; then
   echo "Error: -b is required"; show_help; exit 1
