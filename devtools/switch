@@ -6,21 +6,23 @@ show_help() {
   cat <<EOF
     Usage: path/to/ffc-pay-core/devtools/switch -b <branch> [OPTION...]
     Switch to <branch> in every payment service repo that has it, locally or on origin.
-    Repos without the branch are left alone. Repos with uncommitted changes are skipped, unless -S is passed.
+    Repos without the branch are left alone, unless -m is passed. Repos with uncommitted changes are skipped,
+    unless -S is passed.
 
     Options:
       -b <branch>      branch to switch to (required)
       -r "<repos>"     only these repos, space separated (overrides -g)
       -S               stash uncommitted changes before switching, and restore any changes
                        this script stashed on <branch> when it was last switched away from
-      -u               fast-forward the branch from origin after switching
+      -u               fast-forward the branch from origin, including repos already on it
+      -m               switch repos without <branch> to main instead, and fast-forward main
       -y               skip confirmation prompts
       -g <group>       only include payments, documents, pds or all repos (default: all)
       -h, --help       display this help text
 
     Example:
       ./devtools/switch -b main -S -u
-      ./devtools/switch -b DOC-1234 -S
+      ./devtools/switch -b DOC-1234 -S -u -m
 EOF
 }
 
@@ -30,14 +32,16 @@ branch=""
 selected=""
 stash=false
 update=false
+fallback=false
 group="all"
 
-while getopts "b:r:Suyg:h" opt; do
+while getopts "b:r:Sumyg:h" opt; do
   case $opt in
     b) branch=$OPTARG ;;
     r) selected=$OPTARG ;;
     S) stash=true ;;
     u) update=true ;;
+    m) fallback=true ;;
     y) yes=true ;;
     g) group=$OPTARG ;;
     h) show_help; exit ;;
@@ -68,8 +72,21 @@ find_stash() {
     substr($0, length($0) - length(tag) + 1) == tag { print $1; exit }'
 }
 
+# Fast-forwards a repo's current branch from origin, if it tracks one
+fast_forward() {
+  git -C "$projectRoot/$1" rev-parse --verify --quiet "@{u}" > /dev/null || return 0
+  if git -C "$projectRoot/$1" pull --quiet --ff-only; then
+    updated+=("$1")
+  else
+    echo "!! $1: could not fast-forward '$2'"; failed+=("$1")
+  fi
+}
+
+# targets[i] is switched to dests[i]: <branch>, or main when it has no <branch> and -m is passed
 targets=()
+dests=()
 uptodate=()
+onmain=()
 skipped=()
 failed=()
 
@@ -85,9 +102,14 @@ for repo in "${candidates[@]}"; do
     uptodate+=("$repo"); continue
   fi
 
+  dest=$branch
   if ! git -C "$dir" show-ref --verify --quiet "refs/heads/$branch" && ! remote_branch_exists "$repo" "$branch"; then
-    [[ -n $selected ]] && { echo "-- $repo has no '$branch' - skipping"; skipped+=("$repo"); }
-    continue
+    if ! $fallback || [[ $branch == main ]]; then
+      [[ -n $selected ]] && { echo "-- $repo has no '$branch' - skipping"; skipped+=("$repo"); }
+      continue
+    fi
+    dest=main
+    [[ $current == main ]] && { onmain+=("$repo"); continue; }
   fi
 
   if [[ -n $(git -C "$dir" status --porcelain --untracked-files=no) ]] && ! $stash; then
@@ -96,28 +118,36 @@ for repo in "${candidates[@]}"; do
   fi
 
   targets+=("$repo")
+  dests+=("$dest")
 done
 
 if ((${#targets[@]})); then
   echo
   echo "Switching to '$branch':"
-  for repo in "${targets[@]}"; do
+  for i in "${!targets[@]}"; do
+    repo=${targets[i]}
+    dest=${dests[i]}
     dir="$projectRoot/$repo"
     note=""
+    [[ $dest != "$branch" ]] && note+=" (has no '$branch')"
     [[ -n $(git -C "$dir" status --porcelain --untracked-files=no) ]] && note+=" (changes will be stashed)"
-    [[ -n $(find_stash "$repo" "$branch") ]] && note+=" (stashed changes will be restored)"
+    $stash && [[ -n $(find_stash "$repo" "$dest") ]] && note+=" (stashed changes will be restored)"
     current=$(git -C "$dir" branch --show-current)
-    echo "  $repo: ${current:-detached HEAD} -> $branch$note"
+    echo "  $repo: ${current:-detached HEAD} -> $dest$note"
   done
   echo
-  confirm "Switch ${#targets[@]} repos to '$branch'?" || exit
+  confirm "Switch ${#targets[@]} repos?" || exit
 fi
 
 switched=()
+switchedmain=()
 stashed=()
 restored=()
+updated=()
 
-for repo in "${targets[@]}"; do
+for i in "${!targets[@]}"; do
+  repo=${targets[i]}
+  dest=${dests[i]}
   dir="$projectRoot/$repo"
   current=$(git -C "$dir" branch --show-current)
   did_stash=false
@@ -129,15 +159,15 @@ for repo in "${targets[@]}"; do
     did_stash=true
   fi
 
-  if git -C "$dir" show-ref --verify --quiet "refs/heads/$branch"; then
-    git -C "$dir" switch --quiet "$branch"
+  if git -C "$dir" show-ref --verify --quiet "refs/heads/$dest"; then
+    git -C "$dir" switch --quiet "$dest"
   else
-    git -C "$dir" fetch --quiet origin "$branch:refs/remotes/origin/$branch" &&
-      git -C "$dir" switch --quiet --track -c "$branch" "origin/$branch"
+    git -C "$dir" fetch --quiet origin "$dest:refs/remotes/origin/$dest" &&
+      git -C "$dir" switch --quiet --track -c "$dest" "origin/$dest"
   fi
 
   if (($?)); then
-    echo "!! $repo: could not switch to '$branch'"
+    echo "!! $repo: could not switch to '$dest'"
     if $did_stash && git -C "$dir" stash pop --quiet; then
       echo "   stashed changes restored on '$current'"
     elif $did_stash; then
@@ -145,27 +175,41 @@ for repo in "${targets[@]}"; do
     fi
     failed+=("$repo"); continue
   fi
-  switched+=("$repo")
+  if [[ $dest == "$branch" ]]; then
+    switched+=("$repo")
+  else
+    switchedmain+=("$repo")
+  fi
   $did_stash && stashed+=("$repo")
 
-  ref=$(find_stash "$repo" "$branch")
+  ref=$(find_stash "$repo" "$dest")
   if $stash && [[ -n $ref ]]; then
     if git -C "$dir" stash pop --quiet "$ref"; then
       restored+=("$repo")
     else
-      echo "!! $repo: stashed changes for '$branch' clash - resolve them, then run 'git stash drop $ref'"
+      echo "!! $repo: stashed changes for '$dest' clash - resolve them, then run 'git stash drop $ref'"
       failed+=("$repo")
     fi
   fi
 
-  if $update && git -C "$dir" rev-parse --verify --quiet "@{u}" > /dev/null && ! git -C "$dir" pull --quiet --ff-only; then
-    echo "!! $repo: could not fast-forward '$branch'"; failed+=("$repo")
+  if $update || [[ $dest != "$branch" ]]; then
+    fast_forward "$repo" "$dest"
   fi
 done
+
+if $update; then
+  for repo in "${uptodate[@]}"; do fast_forward "$repo" "$branch"; done
+fi
+for repo in "${onmain[@]}"; do fast_forward "$repo" main; done
 
 echo
 echo "Switched:       ${switched[*]:-none}"
 echo "Already on it:  ${uptodate[*]:-none}"
+if $fallback; then
+  echo "Moved to main:  ${switchedmain[*]:-none}"
+  echo "Already main:   ${onmain[*]:-none}"
+fi
+($update || $fallback) && echo "Fast-forwarded: ${updated[*]:-none}"
 $stash && echo "Stashed:        ${stashed[*]:-none}"
 $stash && echo "Restored:       ${restored[*]:-none}"
 echo "Skipped:        ${skipped[*]:-none}"
