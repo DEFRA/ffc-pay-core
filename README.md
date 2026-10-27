@@ -325,13 +325,13 @@ Create a branch from the latest `origin/main` in every repository, or only those
 
 ### Switch
 
-Switch every repository that has a branch, locally or on origin, onto that branch, e.g. back to `main` or onto a teammate's branch. Repositories without the branch are left alone. Repositories with uncommitted changes are skipped, unless `-S` is passed to stash them. Stashed changes are restored the next time you switch back to that branch with `-S`. Lists every switch and asks once before making them.
+Switch every repository that has a branch, locally or on origin, onto that branch, e.g. back to `main` or onto a teammate's branch. Repositories without the branch are left alone, unless `-m` is passed to switch them to `main` and fast-forward it. Repositories with uncommitted changes are skipped, unless `-S` is passed to stash them. Stashed changes are restored the next time you switch back to that branch with `-S`. Lists every switch and asks once before making them.
 
 [`./devtools/switch`](devtools/switch)
 
 ```sh
 ./devtools/switch -b main -S -u
-./devtools/switch -b DOC-1234 -S
+./devtools/switch -b DOC-1234 -S -u -m
 ```
 
 #### Options
@@ -339,7 +339,8 @@ Switch every repository that has a branch, locally or on origin, onto that branc
 - `-b` - branch to switch to (required)
 - `-r` - only these repositories, space separated (overrides `-g`)
 - `-S` - stash uncommitted changes before switching, and restore any changes stashed on the target branch
-- `-u` - fast-forward the branch from origin after switching
+- `-u` - fast-forward the branch from origin, including repositories already on it
+- `-m` - switch repositories without the branch to `main` instead, and fast-forward `main`
 - `-y` - skip confirmation prompts
 
 ### Commit
