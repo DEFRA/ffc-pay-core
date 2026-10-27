@@ -11,10 +11,10 @@ show_help() {
     Options:
       -b <branch>      name of the branch to create (required)
       -s <base>        branch to create from (default: main)
-      -r "<repos>"     only these repos, space separated (overrides -g)
+      -r "<repos>"     only these repos, space separated in one quoted argument,
+                       e.g. -r "ffc-pay-web ffc-pay-tracking"
       -p               push the new branch to origin and set upstream
       -y               skip confirmation prompts
-      -g <group>       only include payments, documents, pds or all repos (default: all)
       -h, --help       display this help text
 
     Example:
@@ -28,22 +28,19 @@ branch=""
 base="main"
 selected=""
 push=false
-group="all"
 
-while getopts "b:s:r:pyg:h" opt; do
+while getopts "b:s:r:pyh" opt; do
   case $opt in
     b) branch=$OPTARG ;;
     s) base=$OPTARG ;;
     r) selected=$OPTARG ;;
     p) push=true ;;
     y) yes=true ;;
-    g) group=$OPTARG ;;
     h) show_help; exit ;;
     *) show_help; exit 1 ;;
   esac
 done
 
-use_group "$group" || exit 1
 
 if [[ -z $branch ]]; then
   echo "Error: -b is required"; show_help; exit 1

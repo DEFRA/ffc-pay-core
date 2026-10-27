@@ -15,7 +15,6 @@ show_help() {
       -s <base>        branch to merge into (default: main)
       -D               create as draft
       -y               skip confirmation prompts
-      -g <group>       only include payments, documents, pds or all repos (default: all)
       -h, --help       display this help text
 
     Example:
@@ -30,9 +29,8 @@ title=""
 body=""
 base="main"
 draft=()
-group="all"
 
-while getopts "b:t:d:s:Dyg:h" opt; do
+while getopts "b:t:d:s:Dyh" opt; do
   case $opt in
     b) branch=$OPTARG ;;
     t) title=$OPTARG ;;
@@ -40,13 +38,11 @@ while getopts "b:t:d:s:Dyg:h" opt; do
     s) base=$OPTARG ;;
     D) draft=(--draft) ;;
     y) yes=true ;;
-    g) group=$OPTARG ;;
     h) show_help; exit ;;
     *) show_help; exit 1 ;;
   esac
 done
 
-use_group "$group" || exit 1
 
 if [[ -z $branch || -z $title ]]; then
   echo "Error: -b and -t are required"; show_help; exit 1

@@ -13,7 +13,6 @@ show_help() {
       -c "<message>"   commit message used for every repo (required)
       -f "<paths>"     only commit these paths, space separated (default: all changes, including new files)
       -y               skip confirmation prompts
-      -g <group>       only include payments, documents, pds or all repos (default: all)
       -h, --help       display this help text
 
     Example:
@@ -26,21 +25,18 @@ EOF
 branch=""
 message=""
 files=""
-group="all"
 
-while getopts "b:c:f:yg:h" opt; do
+while getopts "b:c:f:yh" opt; do
   case $opt in
     b) branch=$OPTARG ;;
     c) message=$OPTARG ;;
     f) files=$OPTARG ;;
     y) yes=true ;;
-    g) group=$OPTARG ;;
     h) show_help; exit ;;
     *) show_help; exit 1 ;;
   esac
 done
 
-use_group "$group" || exit 1
 
 if [[ -z $branch || -z $message ]]; then
   echo "Error: -b and -c are required"; show_help; exit 1
