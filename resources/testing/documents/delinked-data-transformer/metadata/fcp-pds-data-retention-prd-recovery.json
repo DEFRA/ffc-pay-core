@@ -1,0 +1,19 @@
+{
+  "databaseName": "fcp-pds-data-retention-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T10:25:03.918Z",
+  "tables": [
+    {
+      "name": "retentionData",
+      "keyColumn": "retentionDataId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "schemes",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}

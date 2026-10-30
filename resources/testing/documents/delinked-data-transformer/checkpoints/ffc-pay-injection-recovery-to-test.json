@@ -1,0 +1,29 @@
+{
+  "serviceName": "ffc-pay-injection",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-injection-prd",
+  "targetDbName": "ffc-pay-injection-test",
+  "updatedAt": "2026-08-27T17:35:09.178Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "invoiceNumbers",
+      "keyColumn": "invoiceId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "lock",
+      "keyColumn": "lockId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "manualUploads",
+      "keyColumn": "uploadId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}
