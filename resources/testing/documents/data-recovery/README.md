@@ -1,402 +1,218 @@
-# ffc-pay-data-recovery
+# PostgreSQL Database Backup And Restore
 
-> Part of the [Testing & Data Tools](../README.md) collection.  
-> This README covers the recovery toolkit in detail; see the index for the other tools.
+This directory contains a PostgreSQL database refresh tool with two set workflows: archive backup/restore for a durable local copy, and direct streaming from source to target when no archive is needed. Both stage each database on the target and replace existing targets only after validation.
 
-A small local toolkit that helps developers and testers safely pull payment-request data from the **hosted read-only recovery database** into a **local PostgreSQL database** so it can be inspected, verified, and packaged into dumps for further investigation.
+The workflow is database-wide; it does not require payment-request IDs, a queue, or a service-specific table list. It preserves database schemas, tables, data, sequences, constraints, indexes, triggers, views, routines, extensions, and large objects. An anonymization step is not included.
 
-> **What problem does this solve?**  
-> In the event that data is removed from a table or tables. The recovery database holds the historical truth, but it is read-only and shared. This tool copies only the payment request IDs you care about onto your own machine, where you can query freely and generate staging dumps without affecting anyone else.
+## Safety And Scope
 
----
-
-## What the tool does
-
-The recovery workflow is made up of five small steps:
-
-1. **Prepare a CSV** of payment request IDs you want to investigate.
-2. **Create a local recovery database** from scratch (Docker PostgreSQL).
-3. **Flag** which IDs exist in the hosted recovery tables.
-4. **Pull** the matching rows into your local database.
-5. **Create a staging dump** that can be restored elsewhere for analysis.
-
-Steps 2 and 3 are now orchestrated: the flag script will start the local database automatically if it is not already running. If you prefer, you can still run each step manually.
-
-The local database is entirely separate from the hosted environment, so you cannot accidentally change production or recovery data.
-
----
+- The source is read-only. Backup uses a repeatable-read snapshot and does not modify source data.
+- Archive restore verifies the archive checksum and table of contents. Both workflows validate schema fingerprint, extensions, locale, relation inventory, and exact row counts before cutover.
+- A live single-database restore requires `--wipe --confirm-target`; live set restore and streaming require `--wipe --confirm-target-set` with the token printed by dry-run.
+- During cutover, the current target is renamed and kept offline as a rollback database. It is not dropped automatically.
+- Source and target database major versions must match. The `pg_dump`/`pg_restore` tools must be compatible with the archive.
+- Required extension names must be available on the target. PostgreSQL installs the target's default extension version; version differences are warned about because extension code may behave differently. Set `RECOVERY_REQUIRE_EXACT_EXTENSION_VERSIONS=true` in `~/.bashrc` to reject version differences.
+- Database encoding, collation, `LC_CTYPE`, locale provider, and ICU locale must match the source. A different libc/ICU collation library version is allowed with a warning: indexes are rebuilt using the target version, so verify collation-sensitive ordering and uniqueness behavior. A stale collation version within either database is rejected.
+- Foreign tables are rejected because their external data is not part of a normal database archive. Tablespace placement, cluster roles, role memberships, source ownership, and source ACLs are not copied.
+- Restored objects are owned by the configured target database user. Set `RECOVERY_TARGET_APP_ROLES` to grant target-specific application roles access; do not assume source grants are appropriate in another environment.
+- The archive contains the source data as-is. It is not anonymized. Protect it as sensitive data and do not send production-derived data to a lower environment without an approved privacy policy.
 
 ## Prerequisites
 
-- **Docker** (or Docker Desktop) — to run the local PostgreSQL container.
-- **Node.js** — to run the helper scripts.
-- Access details for the **hosted recovery database** (host, database name, username, password). Ask a team member if you do not have them.
+- Node.js 18 or newer.
+- PostgreSQL `pg_dump` and `pg_restore` client tools on `PATH`.
+- Source credentials with permission to read the entire database and export a snapshot.
+- Target credentials with permission to create databases, terminate connections to the selected target, and rename databases. Hosted restores generally require an administrative database role.
+- Docker, if using the bundled local PostgreSQL target.
 
----
-
-## Quick start
-
-Open a terminal in this folder:
+Run commands from this directory:
 
 ```bash
 cd resources/testing/documents/data-recovery
-```
-
-Install the dependencies:
-
-```bash
 npm install
 ```
 
-Create a file named `app/pr-id.csv` containing the payment request IDs you want to recover. Use the example file as a template:
+## Configure Credentials In `~/.bashrc`
+
+Put connection settings in your local `~/.bashrc`, not in the repository and not as one-off commands in the terminal. Add the source settings and whichever target settings you use, then load them into the current terminal with `source ~/.bashrc` or open a new terminal.
 
 ```bash
-cp pr-id.example.csv app/pr-id.csv
+# Source server, shared by every database in the set
+export RECOVERY_SOURCE_DB_HOST=source.postgres.example
+export RECOVERY_SOURCE_DB_USER=readonly_user
+export RECOVERY_SOURCE_DB_PASSWORD=source_password
+export RECOVERY_SOURCE_DB_PORT=5432
+export RECOVERY_SOURCE_DB_SSL=true
+export RECOVERY_SOURCE_DB_SSL_MODE=require
+
+# Local PostgreSQL target settings for TARGET_ENV = 'local'
+export LOCAL_DB_HOST=localhost
+export LOCAL_DB_PORT=5467
+export LOCAL_DB_USER=postgres
+export LOCAL_DB_PASSWORD=ppp
+
+# Hosted PostgreSQL target settings for TARGET_ENV = 'test', 'dev', etc.
+export RECOVERY_TARGET_DB_HOST=target.postgres.example
+export RECOVERY_TARGET_DB_USER=target_admin
+export RECOVERY_TARGET_DB_PASSWORD=target_password
+export RECOVERY_TARGET_DB_PORT=5432
+export RECOVERY_TARGET_DB_SSL=true
+export RECOVERY_TARGET_DB_SSL_MODE=require
+export RECOVERY_TARGET_ADMIN_DATABASE=postgres
+# Optional roles that should receive full privileges on restored databases
+export RECOVERY_TARGET_APP_ROLES=app_runtime_role,reporting_role
+# Optional: fail restore if target extension versions differ from the source
+export RECOVERY_REQUIRE_EXACT_EXTENSION_VERSIONS=true
 ```
 
-Then edit `app/pr-id.csv` and replace the example IDs with the real IDs. Any format with numbers in it works (one per line is easiest).
+Keep this file private and out of source control. The set runner chooses local versus hosted from `TARGET_ENV` in `app/config/database-refresh.js`; do not set `RECOVERY_SOURCE_DATABASE`, `RECOVERY_TARGET_DATABASE`, or `RECOVERY_SERVICE_NAME` for set commands.
 
----
+## Configure The Source
 
-## Simple orchestrated run
+Choose database names and `SOURCE_ENV` in `app/config/database-refresh.js`. For example, `SOURCE_ENV = 'prd'` and base name `ffc-pay-processing` select `ffc-pay-processing-prd`. Source credentials come from `~/.bashrc`; `.env` files are not loaded.
 
-Once `app/pr-id.csv` and `.env` are in place, the whole process is just three commands:
+## Configure The Database Set
+
+Edit [app/config/database-refresh.js](app/config/database-refresh.js) to select the source environment, target environment, and base database names. Names in `DATABASE_NAMES` must not include environment suffixes:
+
+```js
+const SOURCE_ENV = 'prd'
+const TARGET_ENV = 'local' // or 'dev', 'test', or another configured environment
+
+const DATABASE_NAMES = [
+	'ffc-pay-processing',
+	'ffc-pay-submission'
+]
+```
+
+The repository config contains the full database list. Each selected base name is suffixed independently, for example `ffc-pay-processing-prd` to `ffc-pay-processing-local`. All databases in one set use the same source host and the same target host. Do not export `RECOVERY_SOURCE_DATABASE`, `RECOVERY_TARGET_DATABASE`, or `RECOVERY_SERVICE_NAME` when using set commands; the runner supplies those per database.
+
+Verify a resolved source connection with `psql` before starting a large set operation. This example matches `SOURCE_ENV = 'prd'` and base name `ffc-pay-processing`:
 
 ```bash
-npm run recovery:flag
-npm run recovery:pull
-npm run recovery:create-staging-dump
+PGPASSWORD="$RECOVERY_SOURCE_DB_PASSWORD" \
+PGSSLMODE=require \
+psql -h "$RECOVERY_SOURCE_DB_HOST" \
+	-p "${RECOVERY_SOURCE_DB_PORT:-5432}" \
+	-U "$RECOVERY_SOURCE_DB_USER" \
+	-d ffc-pay-processing-prd \
+	-c 'SELECT current_database(), current_user, version();'
 ```
 
-The `recovery:flag` script will:
+Change the database argument to the resolved name for another base database. This checks connectivity and identity; backup and streaming also verify that the source role can export a consistent snapshot and read all database objects and rows.
 
-- start the local PostgreSQL container if it is not running;
-- create the local database and apply the schema files;
-- import the payment request IDs from `app/pr-id.csv`;
-- compare the IDs against the hosted recovery tables;
-- store the results in the local `manualVerificationQueue` table.
+## Back Up The Configured Set
 
-The `recovery:pull` script copies the matched rows into your local database. The optional `recovery:create-staging-dump` step produces dump files in `dumps/`.
-
-If you want to inspect or rerun individual steps, see the sections below.
-
----
-
-## Configuration
-
-All settings are provided through environment variables. The easiest way is to create a `.env` file in this folder:
+After configuring and loading `~/.bashrc`, the configured source environment and each base name select the databases:
 
 ```bash
-# Hosted recovery database (read-only)
-RECOVERY_DB_HOST=your-recovery-host.postgres.database.azure.com
-RECOVERY_DB_NAME=ffc_pay_recovery
-RECOVERY_DB_USER=your-readonly-user
-RECOVERY_DB_PASSWORD=your-readonly-password
-RECOVERY_DB_PORT=5432
-RECOVERY_DB_SSL=true
-RECOVERY_DB_SSL_MODE=require
-
-# Local database (started automatically by Docker)
-LOCAL_DB_HOST=localhost
-LOCAL_DB_NAME=ffc_pay_local_recovery
-LOCAL_DB_USER=postgres
-LOCAL_DB_PASSWORD=ppp
-
-# Target destination for recovered data (optional, defaults to local/public)
-RECOVERY_TARGET_MODE=local        # 'local' or 'hosted'
-RECOVERY_TARGET_SCHEMA=public     # schema to write recovered data into
-RECOVERY_TARGET_DATABASE=         # hosted database name when RECOVERY_TARGET_MODE=hosted
-LOCAL_DB_PORT=5467
+npm run database:backup-set
 ```
 
-> **Security note:** never commit `.env` or `app/pr-id.csv`. They are already ignored by `.gitignore`.
+The default output is a timestamped directory under `dumps/`. It contains one custom-format `.dump` archive and `.dump.json` metadata sidecar per database, plus `database-refresh-set.json`. Keep the entire directory together. Archives and metadata are created with owner-only permissions where supported and are ignored by Git.
 
----
-
-## Typical workflow
-
-Run the steps below in order. Each step prints progress to the terminal.
-
-### 1. Test the hosted recovery connection
+To back up only selected databases from `DATABASE_NAMES`:
 
 ```bash
-npm run recovery:test-connection
+npm run database:backup-set -- \
+	--database ffc-pay-processing \
+	--database ffc-pay-submission
 ```
 
-You should see a list of public tables from the recovery database. If this fails, check your `.env` values and network access.
+The command stops on the first failure and removes the incomplete output directory. It does not mark a partial set as complete.
 
-### 2. Create the local recovery database (individual step)
+## Stream The Configured Set
 
-You normally do not need to run this on its own because `npm run recovery:flag` will do it automatically. Use this step if you want to set up the local database manually before flagging.
+Streaming uses the same `DATABASE_NAMES`, `SOURCE_ENV`, and `TARGET_ENV` config but pipes each source `pg_dump` directly into `pg_restore` on its staging target. It creates no durable archive directory or local database copy. The source and target must be reachable at the same time; the target still needs enough space for each staging database.
+
+Set source credentials as in **Back Up The Configured Set**, then configure the target server credentials. For local testing, keep `TARGET_ENV = 'local'`; for hosted refreshes, set it to `test`, `dev`, or another target suffix in [app/config/database-refresh.js](app/config/database-refresh.js).
+
+Run the stream preflight first. It checks every source/target pair and prints a set confirmation token without creating staging databases:
 
 ```bash
-npm run recovery:create-local-db
+npm run database:stream-set -- --dry-run
 ```
 
-This command:
-
-- starts a PostgreSQL container on port `5467` using `docker-compose.yaml`;
-- creates the local database `ffc_pay_local_recovery`;
-- applies the schema files in `app/schemas/`;
-- imports the payment request IDs from `app/pr-id.csv`.
-
-> If you already have the container running, the script reuses it.
-
-### 3. Flag which IDs exist in the hosted tables
+Review every endpoint, then run with the token printed by the dry run:
 
 ```bash
-npm run recovery:flag
+npm run database:stream-set -- --wipe --confirm-target-set <token-from-dry-run>
 ```
 
-This compares your CSV against the hosted `invoiceLines`, `completedPaymentRequests`, and `schedule` tables. It stores the results in a local `manualVerificationQueue` table and prints a summary.
-
-> If the local database is not running, this script starts it automatically by calling `create-local-db.js` first.
-
-### 4. Pull the matched rows into your local database
+To stream only selected base names from `DATABASE_NAMES`, pass them to both commands:
 
 ```bash
-npm run recovery:pull
+npm run database:stream-set -- --dry-run \
+	--database ffc-pay-processing \
+	--database ffc-pay-submission
+
+npm run database:stream-set -- --wipe \
+	--confirm-target-set <token-from-dry-run> \
+	--database ffc-pay-processing \
+	--database ffc-pay-submission
 ```
 
-This copies the rows that were flagged in step 3 from the hosted database into your local database. It also pulls dependent rows for `completedInvoiceLines` and `outbox` automatically.
+The stream token is bound to the selected source names and target endpoints. The live operation holds a consistent snapshot per database while that database streams. All databases are staged and validated before the first cutover; cutovers are sequential, not atomic as a set. If a later cutover fails, the tool attempts to roll back earlier cutovers.
 
-If you only want to pull one table, you can run:
+## Restore The Set To Local
+
+Keep `TARGET_ENV = 'local'` in the config. The local server is a PostgreSQL host for the individually named targets, for example `ffc-pay-processing-local`; `LOCAL_DB_NAME` is not used as a shared data target when a base name is selected.
+
+The bundled server uses PostgreSQL 16. If the existing Compose volume was created by PostgreSQL 11, it cannot be reused by PostgreSQL 16. To deliberately discard that old local volume and initialize the new server, run from this directory:
 
 ```bash
-node app/tools/pull/pull-pay-processing-data.js --table invoiceLines
+docker compose down -v
+docker compose up -d --wait
 ```
 
-Allowed tables: `invoiceLines`, `completedPaymentRequests`, `schedule`.
-
-To see what would be copied without actually copying, add `--dry-run`:
+The `down -v` command permanently deletes all data in this Compose volume. Check that the local server is available:
 
 ```bash
-node app/tools/pull/pull-pay-processing-data.js --dry-run
+PGPASSWORD=ppp psql -h localhost -p 5467 -U postgres -d postgres \
+  -c 'SELECT current_database(), version();'
 ```
 
-### 5. (Optional) Pull dependent tables separately
+The local server uses PostgreSQL 16. The source and target PostgreSQL major versions must match. The same local connection settings are used by archive restore and streaming.
 
-If you already have `completedPaymentRequests` locally but later need to add `completedInvoiceLines` and `outbox`, run:
+Run the set restore dry-run first. It verifies every archive and target and prints all endpoints plus one set confirmation token:
 
 ```bash
-npm run recovery:pull-dependent
+npm run database:restore-set -- \
+  --manifest dumps/<backup-set>/database-refresh-set.json \
+  --dry-run
 ```
 
-### 6. Create a staging dump
+Review the listed databases and token, then run the live restore with that exact token:
 
 ```bash
-npm run recovery:create-staging-dump
+npm run database:restore-set -- \
+  --manifest dumps/<backup-set>/database-refresh-set.json \
+  --wipe \
+  --confirm-target-set <token-from-dry-run>
 ```
 
-This creates two files in the `dumps/` folder:
+All databases are restored and validated in staging before any target is cut over. Cutovers are sequential, not atomic as a set; if a later cutover fails, the tool attempts to roll back databases already cut over. Previous targets remain offline for verification or manual recovery.
 
-- `recovery-staging-<timestamp>.dump` — a compressed PostgreSQL custom-format dump that can be restored with `pg_restore`.
-- `recovery-delta-<timestamp>.sql` — plain `INSERT` statements for the same data.
+## Restore The Set To A Hosted Target
 
-These files are ignored by Git because they can be very large and we do not want this data to be publicy viewable.
+Set `TARGET_ENV` in `app/config/database-refresh.js` to `test`, `dev`, or another hosted environment. Put the matching target server credentials in `~/.bashrc` as shown in **Configure Credentials In `~/.bashrc`**. The set runner derives each target database name from `DATABASE_NAMES` and `TARGET_ENV`.
 
----
+If applications use separate roles, list existing target roles with `RECOVERY_TARGET_APP_ROLES` in `~/.bashrc`. Run the set dry-run and confirmed restore commands; inspect every target before using the token.
 
-## Connecting to the local database
+## Choose Archive Or Stream
 
-You can connect with any PostgreSQL client using these defaults:
+- **Archive set** (`database:backup-set`, then `database:restore-set`) writes one durable archive and JSON object per database under `dumps/`. Use it when you want to retain the backup, retry restore later, or move the set separately from the source.
+- **Streaming set** (`database:stream-set`) pipes source `pg_dump` output directly into `pg_restore` on each target staging database. It creates no durable local archives, but source and target must be reachable at the same time. It still uses temporary staging databases on the target.
 
-| Setting   | Value                    |
-|-----------|--------------------------|
-| Host      | `localhost`              |
-| Port      | `5467`                   |
-| Database  | `ffc_pay_local_recovery` |
-| User      | `postgres`               |
-| Password  | `ppp`                    |
+Both modes use a repeatable-read snapshot per database, verify schema and row counts, stage and validate the full set before cutover, require `--wipe` plus explicit set confirmation for live changes, and keep old targets offline for rollback. The set as a whole is not transactionally atomic, and data is not anonymized. Do not copy production data into a lower environment without approval.
 
-Command-line example:
+## Single-Database Commands
+
+The single-database archive commands remain available for ad-hoc databases outside `DATABASE_NAMES`:
 
 ```bash
-PGPASSWORD=ppp psql -h localhost -p 5467 -U postgres -d ffc_pay_local_recovery
+npm run database:backup -- --output dumps/source-refresh.dump
+npm run database:restore -- --archive dumps/source-refresh.dump --dry-run
+npm run database:restore -- --archive dumps/source-refresh.dump --wipe \
+  --confirm-target target.postgres.example:5432/target_database
 ```
-
----
-
-## Stopping and cleaning up
-
-To stop the local PostgreSQL container:
-
-```bash
-docker compose -f docker-compose.yaml down
-```
-
-To remove the container **and** its data volume:
-
-```bash
-docker compose -f docker-compose.yaml down -v
-```
-
-> **Warning:** the `-v` flag deletes the local database permanently. You can recreate it by running `npm run recovery:create-local-db`, or simply run `npm run recovery:flag` and the database will be created automatically.
-
----
-
-## File structure
-
-```text
-resources/testing/documents/data-recovery/
-├── README.md                              # this file
-├── docker-compose.yaml                    # local PostgreSQL container
-├── package.json                           # Node scripts and dependencies
-├── pr-id.example.csv                      # example CSV of payment request IDs
-├── app/
-│   ├── create-local-db.js                 # sets up the local database
-│   ├── database/
-│   │   ├── local-db-connection.js         # connects to the local Docker DB
-│   │   └── recovery-db-connection.js      # connects to the hosted recovery DB
-│   ├── services/                          # shared pull/batch/schema helpers
-│   │   ├── batch-service.js               # PostgreSQL parameter-limit batching
-│   │   ├── pull-service.js                # fetch/insert/filter operations
-│   │   └── schema-service.js              # schema introspection and local table creation
-│   ├── tools/                             # orchestrators and utility scripts
-│   │   ├── create-staging-dump.sh         # creates dump files from local DB
-│   │   ├── flag-all-services.js           # orchestrates flagging across services
-│   │   ├── pull-all-services.js           # orchestrates pulling across services
-│   │   └── test-recovery-connection.js    # tests hosted recovery DB connectivity
-│   ├── tools/flag/                        # per-service flag scripts
-│   │   ├── flag-pay-processing-matches.js
-│   │   ├── flag-pay-injection-matches.js
-│   │   ├── flag-pay-request-editor-matches.js
-│   │   ├── flag-pay-submission-matches.js
-│   │   ├── flag-pay-tracking-matches.js
-│   │   └── flag-event-hub-matches.js
-│   ├── tools/pull/                        # per-service pull scripts
-│   │   ├── pull-pay-processing-data.js
-│   │   ├── pull-pay-processing-dependent-data.js
-│   │   ├── pull-pay-injection-data.js
-│   │   ├── pull-pay-request-editor-data.js
-│   │   ├── pull-pay-submission-data.js
-│   │   ├── pull-pay-tracking-data.js
-│   │   └── pull-event-hub-data.js
-│   ├── config/                            # per-service source/destination config
-│   │   ├── event-hub.js
-│   │   ├── pay-processing.js
-│   │   ├── pay-injection.js
-│   │   ├── pay-request-editor.js
-│   │   ├── pay-submission.js
-│   │   ├── pay-tracking.js
-│   │   └── services.js
-│   └── util/
-│       └── parse-csv-ids.js               # reads payment request IDs from CSV
-```
-
----
-
-## Quick verification summary
-
-To get the queue flags and local recovered row counts without running the full flag or pull workflows, use the summary script:
-
-```bash
-npm run recovery:summary
-```
-
-This prints:
-
-- Local queue totals and per-table `foundIn*` flags (counts of payment request IDs).
-- Local recovered row counts for each service table that has been pulled.
-
-To restrict the report to one service:
-
-```bash
-npm run recovery:summary:service ffc-pay-submission
-```
-
-The script is read-only against the local recovery database and safe to run at any time.
-
-## Future: writing back to a hosted recovery area
-
-Today the toolkit writes all recovered data to the **local** Docker database. The code is structured so that the destination can later be switched to a **hosted recovery area** without overwriting existing data.
-
-Proposed approach:
-
-1. **Target mode toggle** — set `RECOVERY_TARGET_MODE=hosted` to write to the hosted recovery database instead of the local one. The default remains `local`.
-2. **Dedicated staging schema** — recovered data should land in a separate schema, e.g. `recovery_staging`, rather than `public` where the real source data lives. Configure the schema with `RECOVERY_TARGET_SCHEMA=recovery_staging`.
-3. **Non-destructive writes** — the tooling creates tables in the configured target schema only. It never drops, truncates, or writes to `public` or any other existing schema.
-4. **Validation workflow** — data can be staged in `recovery_staging`, verified, and only copied/promoted to `public` (or consumed by downstream processes) after human or automated approval.
-
-A small abstraction is provided in [`app/config/target-database.js`](app/config/target-database.js). Individual tools can adopt it when the hosted write-back workflow is implemented.
-
-## Known issues
-
-The `recovery:flag-all` / `pull-pay-processing-data` flow can be slow for very large ID lists (for example 400k+ payment request IDs) because each batch requires a round-trip to Azure. Progress is logged batch-by-batch; only assume the process is frozen if no output appears for several minutes.
-
-If you hit parameter-limit, missing-dependent-table or schema-introspection errors, make sure you are on the latest version of the `recovery/delinked-transformer-legacy` branch. A shared-service refactor fixed several batching and SQL-generation bugs in `app/services/batch-service.js`, `app/services/pull-service.js` and `app/services/schema-service.js`.
-
-For a quick verification, run a limited pull first:
-
-```bash
-cd resources/testing/documents/data-recovery
-node app/tools/pull/pull-pay-processing-data.js --limit 50
-```
-
-### Quick diagnostic commands
-
-Check whether the local database is running:
-
-```bash
-docker compose -f resources/testing/documents/data-recovery/docker-compose.yaml ps
-```
-
-Watch live logs from a long-running script:
-
-```bash
-cd resources/testing/documents/data-recovery
-node app/tools/pull/pull-pay-processing-data.js --limit 1000 2>&1 | tee logs/pull-$(date +%Y%m%d-%H%M%S).log
-```
-
-Connect to the local database and inspect counts:
-
-```bash
-PGPASSWORD=ppp psql -h localhost -p 5467 -U postgres -d ffc_pay_local_recovery
-```
-
-Useful query:
-
-```sql
-SELECT
-  COUNT(*) AS total,
-  COUNT(*) FILTER (WHERE "foundInInvoiceLines") AS invoice_lines,
-  COUNT(*) FILTER (WHERE "foundInCompletedPaymentRequests") AS completed_pr,
-  COUNT(*) FILTER (WHERE "foundInPaymentRequests") AS pr,
-  COUNT(*) FILTER (WHERE "foundInSchedule") AS schedule
-FROM public."manualVerificationQueue";
-```
-
----
-
-## Troubleshooting
-
-### `Missing recovery database environment variables`
-
-You have not set the `RECOVERY_DB_*` environment variables. Create a `.env` file (bashrc) or export them in your terminal before running the scripts.
-
-### Docker container does not start
-
-- Make sure Docker is running.
-- Check that port `5467` is not already in use: `lsof -i :5467` or `netstat -an | grep 5467`.
-- If a previous container exists with a different name, remove it: `docker compose -f docker-compose.yaml down`.
-
-### `paymentRequestIds` table is empty
-
-- Check that `app/pr-id.csv` exists and contains numeric IDs.
-- The parser extracts any numbers it finds, so comments without numbers are fine.
-
-### `No payment request IDs flagged`
-
-The IDs in your CSV may not exist in the hosted recovery tables. Double-check the IDs and the `RECOVERY_DB_NAME` setting.
-
-### Staging dump files are huge
-
-That is expected for large recovery sets. The `dumps/` and `logs/` folders are ignored by Git so they will not be committed.
-
----
-
-## Important rules
-
-- **Never commit `app/pr-id.csv`, `.env`, or anything in `dumps/` or `logs/`.** They are already ignored.
-- **The hosted recovery connection is read-only.** These scripts do not write to it, but still keep credentials secure.
-- **The local database is yours.** You can experiment, delete it, and recreate it at any time.

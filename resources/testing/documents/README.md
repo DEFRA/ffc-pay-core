@@ -1,12 +1,12 @@
 # Testing & Data Tools
 
-This folder contains standalone helper tools used by the payments team to move, recover, transform and inspect data across environments. Each tool lives in its own directory and can be run independently.
+This folder contains standalone helper tools used by the payments team to refresh, transform and inspect data across environments. Each tool lives in its own directory and can be run independently.
 
 There are **four tools** documented here:
 
 | Tool | Purpose | Location |
 |------|---------|----------|
-| [Data Recovery](#data-recovery-toolkit) | Pull selected payment-request IDs from the hosted read-only recovery database into a local PostgreSQL instance. | [`data-recovery/`](data-recovery/) |
+| [Database Backup and Restore](#postgresql-database-backup-and-restore) | Create a full PostgreSQL archive from an explicitly configured source and safely restore it to a local or hosted target. | [`data-recovery/`](data-recovery/) |
 | [Source-to-Target Transformer](#source-to-target-transformer) | Copy whole service databases from one hosted environment to another (e.g. `prd → pre`, `recovery → test`). | [`delinked-data-transformer/`](delinked-data-transformer/) |
 | [Test-to-Dev Pipeline](#test-to-dev-pipeline) | Generate dummy test data, transform SQL, and push it to the dev environment. | [`delinked-data-transformer/`](delinked-data-transformer/) |
 | [Local Transfer Testing](#local-transfer-testing) | Test the transformer against a local PostgreSQL instance without touching hosted targets. | [`delinked-data-transformer/scripts/`](delinked-data-transformer/scripts/) |
@@ -15,63 +15,27 @@ All tools are command-line driven and use environment variables for credentials.
 
 ---
 
-## Data Recovery Toolkit
+## PostgreSQL Database Backup and Restore
 
-[`data-recovery/`](data-recovery/) — recover specific payment requests from the hosted read-only recovery database to your own machine for safe inspection and staging dumps.
+[`data-recovery/`](data-recovery/) — refresh configured database sets either from durable full-database archives or by streaming directly from source to a validated local or hosted staging target.
 
-### What it does
-
-1. Read a CSV of payment request IDs.
-2. Start a local PostgreSQL container on port `5467` (if it is not already running).
-3. Flag which IDs exist in the hosted recovery tables and store the results in per-service `manualVerificationQueue` tables.
-4. Copy the matching rows — plus dependent rows — into your local database.
-5. Create a compressed staging dump that can be restored elsewhere.
-
-### Hidden details worth knowing
-
-| Feature | Behaviour |
-|---------|-----------|
-| **Lenient CSV parsing** | Any run of digits anywhere in `app/pr-id.csv` is treated as a payment-request ID. Comments and formatting do not matter. Duplicates are removed while preserving first-occurrence order. |
-| **Auto-start local DB** | `npm run recovery:flag` automatically creates/starts the Docker container and applies the base schema if the local database is not reachable. |
-| **Schema introspection cache** | Local service tables are created by introspecting the hosted schema; column types, lengths and non-primary indexes are preserved. Introspection results are cached in `.schema-cache/<db>.<table>.json`. |
-| **Per-service queues** | Each service has its own queue table (e.g. `manualVerificationQueue_processing`, `manualVerificationQueue_event_hub`) with `PENDING`/`VERIFIED`/`REJECTED`/`IN_PROGRESS` status tracking. pay-processing uses `paymentRequestId` as the key; other services use natural-key tuples such as `(frn, agreementNumber, schemeId)`. |
-| **Re-flagging is safe** | Re-running a flag updates existing queue rows without losing a `VERIFIED` status. Tracking is the exception: its queue is truncated before re-loading. |
-| **Idempotent inserts** | Pulled rows use `ON CONFLICT DO NOTHING`, so re-runs are safe. Use `--force` to re-fetch rows that already exist locally. Use `--limit N` for a small test run. |
-| **Dependent tables** | pay-processing automatically pulls `completedInvoiceLines` and `outbox` after `completedPaymentRequests`. Other services pull their configured child tables. Dependent pulls are resume-aware and only fetch for parents that still need children. |
-| **Event-hub JSON matching** | Event-hub pulls join against JSON columns (`data->>'fieldName'`) and create temporary tables on the hosted database to handle large tuple sets efficiently. |
-| **Staging dump filtering** | The dump script currently exports payment-processing and event-hub tables only; tracking/injection/request-editor/submission tables are not included. |
-| **Future write-back** | A `target-database.js` abstraction supports `RECOVERY_TARGET_MODE=hosted` and `RECOVERY_TARGET_SCHEMA`, but pulls currently always write to the local Docker database. |
+The refresh workflow does not use payment-request IDs, CSV files, or service-specific table lists. It preserves database-level objects supported by PostgreSQL archives, validates the staged restore, and retains the previous target offline for rollback after cutover. Backups contain source data as-is and are not anonymized.
 
 ### Quick start
 
+From the tool directory, edit `app/config/database-refresh.js` to choose the base database names and source/target environments. Put the source credentials in your local `~/.bashrc`, reload it with `source ~/.bashrc`, then create the configured backup set:
+
 ```bash
 cd resources/testing/documents/data-recovery
-cp pr-id.example.csv app/pr-id.csv
-# edit app/pr-id.csv with the IDs you need
 npm install
-npm run recovery:flag
-npm run recovery:pull
-npm run recovery:create-staging-dump
+npm run database:backup-set
 ```
 
-### Common commands
+Set target credentials, run `database:restore-set -- --manifest <backup-set>/database-refresh-set.json --dry-run`, review every target, then repeat with `--wipe --confirm-target-set` and the token printed by the dry run.
 
-```bash
-# Test the hosted recovery connection
-npm run recovery:test-connection
+If you do not need durable archive files, use `database:stream-set -- --dry-run`, then repeat with `--wipe --confirm-target-set` and its token.
 
-# Pull only one service
-node app/tools/pull/pull-pay-processing-data.js --limit 50
-
-# Pull dependent tables later
-npm run recovery:pull-dependent
-
-# View a summary of what has been recovered
-npm run recovery:summary
-npm run recovery:summary:service ffc-pay-submission
-```
-
-See [`data-recovery/README.md`](data-recovery/README.md) for full configuration, per-service commands and troubleshooting.
+See [`data-recovery/README.md`](data-recovery/README.md) for the complete local and hosted workflows, configuration reference, restore safeguards and recovery instructions.
 
 ---
 
@@ -255,8 +219,8 @@ See [`delinked-data-transformer/scripts/README.md`](delinked-data-transformer/sc
 - **Azure AD for hosted environments** — `dev`, `test`, `pre` and `prd` use Azure AD tokens. You must be authenticated to Azure (for example `az login`).
 - **Password auth for recovery** — the recovery database uses `RECOVERY_DB_USER` and `RECOVERY_DB_PASSWORD`.
 - **Local is throwaway** — local databases are started in Docker and can be recreated at any time.
-- **Dry-runs are safe** — every tool supports a `--dry-run` mode so you can preview work before copying or uploading data.
-- **Protected tables** — `databasechangelog*`, `databasechangeloglock*` and `etl*` tables are protected across all tools; they are never copied, transformed, truncated or uploaded.
+- **Dry-runs are safe** — the database restore and transformer offer dry-run modes; backups are read-only against the source.
+- **Protected tables** — the source-to-target transformer applies its Liquibase/ETL exclusions. Full database archives include the source database contents as-is.
 - **Identifiers are preserved** — tools that anonymise data (test-to-dev faker) keep business keys (`sbi`, `frn`, payment-request IDs) stable so references stay intact.
 
 ## Directory layout
@@ -264,7 +228,7 @@ See [`delinked-data-transformer/scripts/README.md`](delinked-data-transformer/sc
 ```text
 resources/testing/documents/
 ├── README.md                              # this file
-├── data-recovery/                         # recovery toolkit
+├── data-recovery/                         # PostgreSQL database backup and restore
 │   ├── README.md
 │   ├── docker-compose.yaml
 │   ├── package.json

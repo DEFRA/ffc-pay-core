@@ -1,6 +1,6 @@
 services:
   ffc-pay-local-recovery-postgres:
-    image: postgres:11.4-alpine
+    image: postgres:16
     environment:
       POSTGRES_DB: ffc_pay_local_recovery
       POSTGRES_USER: postgres
