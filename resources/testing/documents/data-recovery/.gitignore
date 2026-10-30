@@ -6,7 +6,7 @@ dumps/
 logs/
 *.log
 
-# Operational data
+# Local input data; retain the ignore rules in case an older checkout has these files
 app/pr-id.csv
 app/agreements.csv
 
