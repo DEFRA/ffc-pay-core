@@ -86,6 +86,9 @@ cd "${projectRoot}"
 cd ./fcp-pds-web && \
   docker compose build
 cd "${projectRoot}"
+cd ./fcp-pds-data-retention && \
+  docker compose build
+cd "${projectRoot}"
 cd ./ffc-doc-statement-data && \
   docker compose build
 cd "${projectRoot}"

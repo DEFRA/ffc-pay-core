@@ -234,17 +234,16 @@ Saves your Key Vault name, email and suffix in `~/.bashrc_setup.conf` so you onl
 
 ### Start
 
-Run all payment services.
+Run all payment, document and PDS services. PDS is used by both payments and documents, so it always runs.
 
-Runs `Seed` script if `ffc-pay-scripts` repository is cloned.
+Runs `Seed` script when payment services are started, if `ffc-pay-scripts` repository is cloned.
 
 [`./start`](start)
 
 #### Optional arguments
 
-- `-f` - include Azure Functions
-- `-s` - include Statement services
-- `-S` - only statement services
+- `-p` - only payment services, plus PDS
+- `-d` - only document services, plus PDS
 
 ### Stop
 
@@ -296,6 +295,137 @@ List current environment version for each microservice hosted in Kubernetes.
 Determine the Kubernetes resource usage for a namespace based on all microservices running at maximum capacity and scaling.
 
 [`./resource-quota`](resource-quota)
+
+## Dev tools
+
+Helpers for making the same git change across many repositories, e.g. a dependency upgrade in every service. They act on the same repositories as [`./update`](update) and need `bash`. Repositories that aren't cloned are ignored.
+
+Each script shows what it is about to do per repository and asks before making changes or pushing. Pass `-y` to skip the prompts. Run any script with `-h` for full usage.
+
+### Create branch
+
+Create a branch from the latest `origin/main` in every repository, or only those passed with `-r`. Repositories that already have the branch, locally or on origin, are skipped. Uncommitted changes are carried over to the new branch.
+
+[`./devtools/create-branch`](devtools/create-branch)
+
+```sh
+./devtools/create-branch -b DOC-1234 -r "ffc-pay-processing ffc-pay-submission" -p
+```
+
+#### Options
+
+- `-b` - branch to create (required)
+- `-s` - branch to create from (default `main`)
+- `-r` - only these repositories, space separated in one quoted argument, e.g. `-r "ffc-pay-web ffc-pay-tracking"`
+- `-p` - push the new branch and set upstream
+- `-y` - skip confirmation prompts
+
+### Switch
+
+Switch every repository that has a branch, locally or on origin, onto that branch, e.g. back to `main` or onto a teammate's branch. Repositories without the branch are left alone, unless `-m` is passed to switch them to `main` and fast-forward it. Repositories with uncommitted changes are skipped, unless `-s` is passed to stash them. Stashed changes are restored the next time you switch back to that branch with `-s`. Lists every switch and asks once before making them.
+
+[`./devtools/switch`](devtools/switch)
+
+```sh
+./devtools/switch -b main -s -u
+./devtools/switch -b DOC-1234 -s -u -m
+```
+
+#### Options
+
+- `-b` - branch to switch to (required)
+- `-r` - only these repositories, space separated in one quoted argument, e.g. `-r "ffc-pay-web ffc-pay-tracking"`
+- `-s` - stash uncommitted changes before switching, and restore any changes stashed on the target branch
+- `-u` - fast-forward the branch from origin, including repositories already on it
+- `-m` - switch repositories without the branch to `main` instead, and fast-forward `main`
+- `-y` - skip confirmation prompts
+
+### Commit
+
+Commit and push changes in every repository currently on a branch, using the same message. Shows each repository's diff and asks before committing, then prints a summary of committed, skipped and failed repositories.
+
+[`./devtools/commit`](devtools/commit)
+
+```sh
+./devtools/commit -b DOC-1234 -c "DOC-1234: relax npm audit threshold" -f "azure-pipelines.yml .snyk"
+```
+
+#### Options
+
+- `-b` - only include repositories on this branch (required)
+- `-c` - commit message (required)
+- `-f` - only commit these paths, space separated. Without it, all changes including new files are committed
+- `-y` - skip confirmation prompts
+
+### Create PR
+
+Open a pull request into `main` in every repository currently on a branch, using the [GitHub CLI](https://cli.github.com) (`gh auth login` first). Repositories where the branch isn't pushed, has no new commits or already has an open pull request are skipped. Prints the links when done.
+
+[`./devtools/create-pr`](devtools/create-pr)
+
+```sh
+./devtools/create-pr -b DOC-1234 -t "DOC-1234: migrate to Knex" -d "See DOC-1234" -D
+```
+
+#### Options
+
+- `-b` - only include repositories on this branch (required)
+- `-t` - pull request title (required)
+- `-d` - pull request description
+- `-s` - branch to merge into (default `main`)
+- `-D` - create as draft
+- `-y` - skip confirmation prompts
+
+### Merge main
+
+Pull `main` and merge it into the branch in every repository currently on that branch. Repositories with uncommitted changes are skipped. Conflicts are reported per repository without stopping the run, and the merge is left in progress for you to resolve.
+
+[`./devtools/merge-main`](devtools/merge-main)
+
+```sh
+./devtools/merge-main -b DOC-1234 -p
+```
+
+#### Options
+
+- `-b` - only include repositories on this branch (required)
+- `-s` - branch to merge in (default `main`)
+- `-a` - abort conflicting merges instead of leaving them in progress
+- `-p` - push the branch after a successful merge
+- `-y` - skip confirmation prompts
+
+### Sync
+
+Like [`./update`](update), but pulls the latest changes into whatever branch each repository is on instead of switching to `main`. Branches are only fast-forwarded. Repositories that have diverged from origin, would clash with uncommitted changes or have no upstream are reported and left alone. Nothing is pushed.
+
+[`./devtools/sync`](devtools/sync)
+
+```sh
+./devtools/sync -b DOC-1234 -m
+```
+
+#### Options
+
+- `-b` - only include repositories on this branch (default all repositories)
+- `-m` - also fast-forward local `main` without checking it out
+
+### Run
+
+Run the same shell command in every repository currently on a branch, e.g. `npm i && npm audit fix`. Asks once before running, keeps going if a repository fails and prints a summary. Nothing is committed - use [`./devtools/commit`](devtools/commit) afterwards.
+
+[`./devtools/run`](devtools/run)
+
+```sh
+./devtools/run -b DOC-1234 -x "npm i && npm audit fix"
+```
+
+#### Options
+
+- `-b` - only include repositories on this branch (required)
+- `-x` - shell command to run in each repository (required)
+- `-y` - skip confirmation prompts
+
+Except for Create branch and Switch, scripts that take `-b` skip repositories not on that branch. Repositories that have the branch but are on another one get a warning.
 
 ## Resources
 
