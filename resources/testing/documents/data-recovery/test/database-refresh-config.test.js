@@ -16,7 +16,7 @@ test('refresh config keeps base names separate from environment suffixes', () =>
     {
       baseName: 'ffc-pay-processing',
       sourceDatabase: 'ffc-pay-processing-prd',
-      targetDatabase: 'ffc-pay-processing-local'
+      targetDatabase: 'ffc_pay_processing'
     }
   )
 })
@@ -64,7 +64,8 @@ test('local target uses base database name with the configured environment', () 
   })
 
   assert.equal(profile.mode, 'local')
-  assert.equal(profile.config.database, 'ffc-pay-processing-local')
+  assert.equal(profile.config.database, 'ffc_pay_processing')
+  assert.equal(profile.config.port, 5467)
   assert.equal(getServiceDatabaseName('ffc-pay-processing', 'test', 'TARGET_ENV'), 'ffc-pay-processing-test')
 })
 

@@ -781,6 +781,22 @@ async function cleanupPreparedDatabaseRestore (prepared) {
   fs.rmSync(prepared.temporaryDirectory, { recursive: true, force: true })
 }
 
+async function checkDatabaseTargetAvailability (options = {}) {
+  const environment = options.environment || process.env
+  const serviceName = environment.RECOVERY_SERVICE_NAME?.trim() || null
+  const target = getTargetProfile(environment, { serviceName })
+  const maintenanceDatabase = environment.RECOVERY_TARGET_ADMIN_DATABASE?.trim() || 'postgres'
+  const connection = await createPostgresConnection({ ...target, database: maintenanceDatabase }, {
+    connectionName: 'target availability check'
+  })
+
+  try {
+    return getTargetConfirmation(target)
+  } finally {
+    await connection.close()
+  }
+}
+
 async function prepareDatabaseStreamRestore (options = {}) {
   const environment = options.environment || process.env
   const { serviceName, source } = getSourceProfile(environment)
@@ -962,6 +978,7 @@ module.exports = {
   dropDatabaseIfExists,
   replaceTargetDatabase,
   prepareDatabaseArchiveRestore,
+  checkDatabaseTargetAvailability,
   prepareDatabaseStreamRestore,
   commitPreparedDatabaseRestore,
   cleanupPreparedDatabaseRestore,
