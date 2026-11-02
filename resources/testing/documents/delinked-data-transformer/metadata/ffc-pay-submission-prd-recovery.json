@@ -1,0 +1,49 @@
+{
+  "databaseName": "ffc-pay-submission-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:44:29.374Z",
+  "tables": [
+    {
+      "name": "batchProperties",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "batches",
+      "keyColumn": "batchId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "invoiceLines",
+      "keyColumn": "invoiceLineId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "paymentRequests",
+      "keyColumn": "paymentRequestId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "queue",
+      "keyColumn": "queueId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "schemes",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "sequences",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}

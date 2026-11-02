@@ -1,0 +1,21 @@
+{
+  "name": "ffc-pay-database-refresh",
+  "version": "1.0.0",
+  "description": "PostgreSQL database backup and staged restore tooling for test-data refreshes.",
+  "scripts": {
+    "database:backup": "node app/tools/database-archive.js backup",
+    "database:restore": "node app/tools/database-archive.js restore",
+    "database:backup-set": "node app/tools/database-refresh-set.js backup",
+    "database:restore-set": "node app/tools/database-refresh-set.js restore",
+    "database:stream-set": "node app/tools/database-refresh-set.js stream",
+    "test": "node --test test/*.test.js",
+    "lint": "standard",
+    "lint:fix": "standard --fix"
+  },
+  "dependencies": {
+    "pg": "8.23.0"
+  },
+  "devDependencies": {
+    "standard": "17.1.2"
+  }
+}

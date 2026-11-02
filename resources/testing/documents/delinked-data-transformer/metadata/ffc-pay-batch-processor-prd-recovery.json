@@ -1,0 +1,37 @@
+{
+  "databaseName": "ffc-pay-batch-processor-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:38:21.630Z",
+  "tables": [
+    {
+      "name": "batches",
+      "keyColumn": "batchId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "lock",
+      "keyColumn": "lockId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "schemes",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "sequences",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "statuses",
+      "keyColumn": "statusId",
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}

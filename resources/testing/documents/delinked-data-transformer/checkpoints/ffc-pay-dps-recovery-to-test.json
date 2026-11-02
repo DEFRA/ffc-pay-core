@@ -1,0 +1,41 @@
+{
+  "serviceName": "ffc-pay-dps",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-dps-prd",
+  "targetDbName": "ffc-pay-dps-test",
+  "updatedAt": "2026-08-27T14:31:22.784Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "batches",
+      "keyColumn": "batchId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "customers",
+      "keyColumn": "customerId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "fileTypes",
+      "keyColumn": "fileTypeId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "lock",
+      "keyColumn": "lockId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "statuses",
+      "keyColumn": "statusId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}

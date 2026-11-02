@@ -1,0 +1,43 @@
+{
+  "databaseName": "ffc-pay-responses-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:44:20.725Z",
+  "tables": [
+    {
+      "name": "impsAcknowledgements",
+      "keyColumn": "impsAcknowledgementId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "impsBatchNumbers",
+      "keyColumn": "impsBatchNumberId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "impsReturns",
+      "keyColumn": "impsReturnId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "lock",
+      "keyColumn": "lockId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "schemes",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "sequences",
+      "keyColumn": "schemeId",
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}

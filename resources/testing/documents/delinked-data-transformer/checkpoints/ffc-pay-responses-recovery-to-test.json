@@ -1,0 +1,41 @@
+{
+  "serviceName": "ffc-pay-responses",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-responses-prd",
+  "targetDbName": "ffc-pay-responses-test",
+  "updatedAt": "2026-08-27T18:30:37.590Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "impsAcknowledgements",
+      "keyColumn": "impsAcknowledgementId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "impsBatchNumbers",
+      "keyColumn": "impsBatchNumberId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "impsReturns",
+      "keyColumn": "impsReturnId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "lock",
+      "keyColumn": "lockId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "sequences",
+      "keyColumn": "schemeId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}

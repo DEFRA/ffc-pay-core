@@ -1,0 +1,25 @@
+{
+  "databaseName": "ffc-pay-injection-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:42:19.963Z",
+  "tables": [
+    {
+      "name": "invoiceNumbers",
+      "keyColumn": "invoiceId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "lock",
+      "keyColumn": "lockId",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "manualUploads",
+      "keyColumn": "uploadId",
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}

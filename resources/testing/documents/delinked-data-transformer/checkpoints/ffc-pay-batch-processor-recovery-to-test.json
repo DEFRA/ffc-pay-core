@@ -1,0 +1,35 @@
+{
+  "serviceName": "ffc-pay-batch-processor",
+  "sourceEnvironment": "recovery",
+  "targetEnvironment": "test",
+  "sourceDbName": "ffc-pay-batch-processor-prd",
+  "targetDbName": "ffc-pay-batch-processor-test",
+  "updatedAt": "2026-08-27T14:30:18.584Z",
+  "status": "completed",
+  "tables": [
+    {
+      "name": "batches",
+      "keyColumn": "batchId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "lock",
+      "keyColumn": "lockId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "sequences",
+      "keyColumn": "schemeId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    },
+    {
+      "name": "statuses",
+      "keyColumn": "statusId",
+      "allowZeroRows": false,
+      "excludeFromValidation": false
+    }
+  ]
+}

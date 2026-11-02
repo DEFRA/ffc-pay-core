@@ -1,0 +1,43 @@
+{
+  "databaseName": "ffc-pay-event-hub-prd",
+  "environment": "recovery",
+  "savedAt": "2026-08-27T09:38:58.810Z",
+  "tables": [
+    {
+      "name": "batches",
+      "keyColumn": "id",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "holds",
+      "keyColumn": "id",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "payment_batch_events",
+      "keyColumn": "id",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "payment_frn_events",
+      "keyColumn": "id",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "payments",
+      "keyColumn": "id",
+      "include": true,
+      "source": "discovered"
+    },
+    {
+      "name": "warnings",
+      "keyColumn": "id",
+      "include": true,
+      "source": "discovered"
+    }
+  ]
+}
