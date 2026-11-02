@@ -3,6 +3,7 @@ const fs = require('fs')
 const os = require('os')
 const path = require('path')
 const test = require('node:test')
+const databaseRefresh = require('../app/config/database-refresh')
 const {
   SET_FORMAT,
   SET_VERSION,
@@ -98,7 +99,8 @@ test('per-database environments set source/target suffixes and clear single-data
   assert.equal(source.RECOVERY_SOURCE_DATABASE, undefined)
   assert.equal(target.RECOVERY_TARGET_ENV, 'local')
   assert.equal(target.RECOVERY_TARGET_MODE, 'local')
-  assert.equal(target.RECOVERY_TARGET_DATABASE, undefined)
+  assert.equal(target.RECOVERY_TARGET_DATABASE, 'ffc_pay_processing')
+  assert.equal(target.LOCAL_DB_PORT, '5467')
 })
 
 test('backup set writes private archives and a manifest for every selected database', async () => {
@@ -159,8 +161,8 @@ test('local restore plan uses one target database per base name and stable set c
     })
 
     assert.deepEqual(plan.map(entry => entry.target.database), [
-      'ffc-pay-processing-local',
-      'ffc-pay-submission-local'
+      'ffc_pay_processing',
+      'ffc_pay_submission'
     ])
     assert.equal(getTargetSetConfirmation(plan), getTargetSetConfirmation(plan))
     assert.notEqual(
@@ -172,17 +174,48 @@ test('local restore plan uses one target database per base name and stable set c
   }
 })
 
-test('stream plan resolves each source and target using configured environments', () => {
+test('stream plan resolves local target names and per-service ports with a default port', () => {
+  const config = {
+    ...testConfig(),
+    LOCAL_DATABASE_TARGETS: {
+      'ffc-pay-processing': { databaseName: 'ffc_pay_processing', port: 5443 }
+    }
+  }
   const plan = getStreamRestorePlan(['ffc-pay-processing'], {
-    config: testConfig(),
-    environment: { LOCAL_DB_HOST: 'localhost', LOCAL_DB_PORT: '55434' }
+    config,
+    environment: { LOCAL_DB_HOST: '127.0.0.1' }
   })
 
   assert.equal(plan[0].sourceDatabase, 'ffc-pay-processing-prd')
-  assert.equal(plan[0].targetDatabase, 'ffc-pay-processing-local')
-  assert.equal(plan[0].target.database, 'ffc-pay-processing-local')
+  assert.equal(plan[0].targetDatabase, 'ffc_pay_processing')
+  assert.equal(plan[0].target.database, 'ffc_pay_processing')
+  assert.equal(plan[0].target.port, 5443)
   assert.equal(plan[0].environment.RECOVERY_SOURCE_ENV, 'prd')
   assert.equal(plan[0].environment.RECOVERY_TARGET_ENV, 'local')
+
+  const defaultPlan = getStreamRestorePlan(['ffc-pay-submission'], {
+    config: testConfig(),
+    environment: {}
+  })
+  assert.equal(defaultPlan[0].target.database, 'ffc_pay_submission')
+  assert.equal(defaultPlan[0].target.port, 5467)
+})
+
+test('repository refresh config selects source databases and maps each localhost target', () => {
+  const plan = getStreamRestorePlan([], { config: databaseRefresh, environment: {} })
+
+  assert.deepEqual(
+    plan.map(entry => entry.sourceDatabase),
+    databaseRefresh.DATABASE_NAMES.map(baseName => `${baseName}-${databaseRefresh.SOURCE_ENV}`)
+  )
+  assert.deepEqual(
+    plan.map(entry => ({ host: entry.target.host, port: entry.target.port, database: entry.target.database })),
+    databaseRefresh.DATABASE_NAMES.map(baseName => ({
+      host: 'localhost',
+      port: databaseRefresh.LOCAL_DATABASE_TARGETS[baseName].port,
+      database: databaseRefresh.LOCAL_DATABASE_TARGETS[baseName].databaseName
+    }))
+  )
 })
 
 test('set dry run checks every database before returning the set confirmation', async () => {
@@ -291,6 +324,9 @@ test('stream set stages every database before committing targets', async () => {
     config,
     environment: {}
   }, {
+    checkDatabaseTargetAvailability: async options => {
+      events.push(`check:${options.environment.RECOVERY_SERVICE_NAME}`)
+    },
     prepareDatabaseStreamRestore: async options => {
       events.push(`prepare:${options.environment.RECOVERY_SERVICE_NAME}`)
       return {
@@ -308,7 +344,9 @@ test('stream set stages every database before committing targets', async () => {
     cleanupPreparedDatabaseRestore: async prepared => events.push(`cleanup:${prepared.stagingDatabase}`)
   })
 
-  assert.deepEqual(events.slice(0, 4), [
+  assert.deepEqual(events.slice(0, 6), [
+    'check:ffc-pay-processing',
+    'check:ffc-pay-submission',
     'prepare:ffc-pay-processing',
     'prepare:ffc-pay-submission',
     'commit:stage-1',
@@ -316,4 +354,31 @@ test('stream set stages every database before committing targets', async () => {
   ])
   assert.equal(result.databases.length, 2)
   assert.equal(events.filter(event => event.startsWith('cleanup:')).length, 2)
+})
+
+test('stream set does not start transfers when a target is unavailable', async () => {
+  const events = []
+  const config = testConfig()
+  const plan = getStreamRestorePlan([], { config, environment: {} })
+
+  await assert.rejects(streamDatabaseRefreshSet({
+    wipe: true,
+    confirmTargetSet: getTargetSetConfirmation(plan, 'stream'),
+    config,
+    environment: {}
+  }, {
+    checkDatabaseTargetAvailability: async options => {
+      const baseName = options.environment.RECOVERY_SERVICE_NAME
+      events.push(`check:${baseName}`)
+      if (baseName === 'ffc-pay-submission') throw new Error('target unavailable')
+    },
+    prepareDatabaseStreamRestore: async options => {
+      events.push(`prepare:${options.environment.RECOVERY_SERVICE_NAME}`)
+    }
+  }), /target unavailable/)
+
+  assert.deepEqual(events, [
+    'check:ffc-pay-processing',
+    'check:ffc-pay-submission'
+  ])
 })

@@ -17,6 +17,20 @@ The workflow is database-wide; it does not require payment-request IDs, a queue,
 - Restored objects are owned by the configured target database user. Set `RECOVERY_TARGET_APP_ROLES` to grant target-specific application roles access; do not assume source grants are appropriate in another environment.
 - The archive contains the source data as-is. It is not anonymized. Protect it as sensitive data and do not send production-derived data to a lower environment without an approved privacy policy.
 
+## Cutover And Retention
+
+For a streamed database, the live cutover works as follows:
+
+1. The source is streamed into a separate database on the target server, named like `<target>_stream_<token>`. This is a regular database, not a temporary table.
+2. The staged database is validated against the source, including its schema fingerprint, relation inventory, exact row counts, extensions, and locale.
+3. The live target is closed to new connections and existing sessions are disconnected.
+4. The live target is renamed to `<target>_previous_<token>` and kept offline.
+5. The staged database is renamed to the live target's original name. The data is not copied a second time.
+
+If validation fails, the live target has not been changed and the tool attempts to remove the incomplete staging database. For a database set, all databases are staged and validated before cutover begins, but the individual cutovers are sequential rather than atomic as one operation. An archive restore uses a staging name containing `_restore_` instead of `_stream_`.
+
+When a target already exists, the previous database is retained as a rollback point and is not deleted automatically. This preserves the pre-refresh data but uses additional target storage. The set runner attempts to roll back databases already cut over if a later database in the same set fails. After a successful run, the CLI does not currently provide an operator command to roll back or delete a previous database. Add explicit, confirmed rollback and cleanup operations before relying on this as a complete retention workflow; cleanup should only happen after the refreshed target has been verified and accepted.
+
 ## Prerequisites
 
 - Node.js 18 or newer.
@@ -45,7 +59,7 @@ export RECOVERY_SOURCE_DB_PORT=5432
 export RECOVERY_SOURCE_DB_SSL=true
 export RECOVERY_SOURCE_DB_SSL_MODE=require
 
-# Local PostgreSQL target settings for TARGET_ENV = 'local'
+# Fallback local PostgreSQL target settings for services without a per-service override
 export LOCAL_DB_HOST=localhost
 export LOCAL_DB_PORT=5467
 export LOCAL_DB_USER=postgres
@@ -81,11 +95,21 @@ const TARGET_ENV = 'local' // or 'dev', 'test', or another configured environmen
 
 const DATABASE_NAMES = [
 	'ffc-pay-processing',
-	'ffc-pay-submission'
+	'ffc-pay-submission',
+	'ffc-pay-event-hub'
 ]
+
+const LOCAL_DATABASE_TARGETS = {
+	'ffc-pay-event-hub': {
+		databaseName: 'ffc_pay_event_hub',
+		port: 5443
+	}
+}
 ```
 
-The repository config contains the full database list. Each selected base name is suffixed independently, for example `ffc-pay-processing-prd` to `ffc-pay-processing-local`. All databases in one set use the same source host and the same target host. Do not export `RECOVERY_SOURCE_DATABASE`, `RECOVERY_TARGET_DATABASE`, or `RECOVERY_SERVICE_NAME` when using set commands; the runner supplies those per database.
+The repository config contains the full database list. Source names use the configured environment suffix, for example `ffc-pay-processing-prd`. For `TARGET_ENV = 'local'`, the target database name defaults to the base name with hyphens replaced by underscores, and the port defaults to `LOCAL_DB_PORT` or `5467`. Add a `LOCAL_DATABASE_TARGETS` entry to override either value for a service; for example, the event-hub target above uses `127.0.0.1:5443/ffc_pay_event_hub`. All databases in one set use the same target host, but can use different ports. Do not export `RECOVERY_SOURCE_DATABASE`, `RECOVERY_TARGET_DATABASE`, or `RECOVERY_SERVICE_NAME` when using set commands; the runner supplies those per database.
+
+`DATABASE_NAMES` selects the source databases. `LOCAL_DATABASE_TARGETS` uses those base names as keys to map each selected database to its local destination name and port; it does not change source selection.
 
 Verify a resolved source connection with `psql` before starting a large set operation. This example matches `SOURCE_ENV = 'prd'` and base name `ffc-pay-processing`:
 
@@ -139,6 +163,8 @@ Review every endpoint, then run with the token printed by the dry run:
 npm run database:stream-set -- --wipe --confirm-target-set <token-from-dry-run>
 ```
 
+The live command checks every target's maintenance connection before it starts streaming any database. If a configured localhost target is unavailable, the set stops before data transfer begins.
+
 To stream only selected base names from `DATABASE_NAMES`, pass them to both commands:
 
 ```bash
@@ -156,7 +182,7 @@ The stream token is bound to the selected source names and target endpoints. The
 
 ## Restore The Set To Local
 
-Keep `TARGET_ENV = 'local'` in the config. The local server is a PostgreSQL host for the individually named targets, for example `ffc-pay-processing-local`; `LOCAL_DB_NAME` is not used as a shared data target when a base name is selected.
+Keep `TARGET_ENV = 'local'` in the config. Each target is resolved independently; for example, `ffc-pay-processing` becomes `ffc_pay_processing` on `LOCAL_DB_PORT` (default `5467`), while services with an entry in `LOCAL_DATABASE_TARGETS` use their configured database name and port. The source and target PostgreSQL major versions must match, including when a target is an app-specific local container.
 
 The bundled server uses PostgreSQL 16. If the existing Compose volume was created by PostgreSQL 11, it cannot be reused by PostgreSQL 16. To deliberately discard that old local volume and initialize the new server, run from this directory:
 

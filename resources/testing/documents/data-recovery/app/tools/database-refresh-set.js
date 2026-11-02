@@ -134,6 +134,22 @@ function getConfiguredDatabaseNames (requestedNames, config = databaseRefresh) {
   return selectedNames
 }
 
+function getLocalDatabaseTarget (baseName, config, environment) {
+  const configuredTarget = config.LOCAL_DATABASE_TARGETS?.[baseName] || {}
+  const databaseName = configuredTarget.databaseName || databaseProfiles.getLocalDatabaseName(baseName)
+  const port = Number(configuredTarget.port ?? environment.LOCAL_DB_PORT ?? 5467)
+
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error(`Local target port for "${baseName}" must be an integer between 1 and 65535`)
+  }
+
+  if (typeof databaseName !== 'string' || !databaseName.trim()) {
+    throw new Error(`Local target database name for "${baseName}" must be a non-empty string`)
+  }
+
+  return { databaseName, port }
+}
+
 function buildDatabaseEnvironment (baseName, side, environment = process.env, config = databaseRefresh) {
   const databaseEnvironment = {
     ...environment,
@@ -147,6 +163,11 @@ function buildDatabaseEnvironment (baseName, side, environment = process.env, co
   } else {
     databaseEnvironment.RECOVERY_TARGET_ENV = config.TARGET_ENV
     databaseEnvironment.RECOVERY_TARGET_MODE = config.TARGET_ENV === 'local' ? 'local' : 'hosted'
+    if (config.TARGET_ENV === 'local') {
+      const localTarget = getLocalDatabaseTarget(baseName, config, environment)
+      databaseEnvironment.RECOVERY_TARGET_DATABASE = localTarget.databaseName
+      databaseEnvironment.LOCAL_DB_PORT = String(localTarget.port)
+    }
   }
 
   return databaseEnvironment
@@ -188,7 +209,10 @@ async function createDatabaseBackupSet (options = {}, dependencies = {}) {
   try {
     const databases = []
     for (const baseName of databaseNames) {
-      const names = databaseProfiles.resolveDatabasePair(baseName, config.SOURCE_ENV, config.TARGET_ENV)
+      const localTarget = config.TARGET_ENV === 'local'
+        ? getLocalDatabaseTarget(baseName, config, environment)
+        : undefined
+      const names = databaseProfiles.resolveDatabasePair(baseName, config.SOURCE_ENV, config.TARGET_ENV, localTarget)
       const archiveFile = `${safeFilePart(names.sourceDatabase)}.dump`
       const archivePath = path.join(temporaryDirectory, archiveFile)
       const sourceEnvironment = buildDatabaseEnvironment(baseName, 'source', environment, config)
@@ -302,7 +326,10 @@ function getStreamRestorePlan (requestedNames, options = {}) {
   const databaseNames = getConfiguredDatabaseNames(requestedNames, config)
 
   return databaseNames.map(baseName => {
-    const names = databaseProfiles.resolveDatabasePair(baseName, config.SOURCE_ENV, config.TARGET_ENV)
+    const localTarget = config.TARGET_ENV === 'local'
+      ? getLocalDatabaseTarget(baseName, config, environment)
+      : undefined
+    const names = databaseProfiles.resolveDatabasePair(baseName, config.SOURCE_ENV, config.TARGET_ENV, localTarget)
     const sourceEnvironment = buildDatabaseEnvironment(baseName, 'source', environment, config)
     const targetEnvironment = buildDatabaseEnvironment(baseName, 'target', environment, config)
     const transferEnvironment = { ...sourceEnvironment, ...targetEnvironment }
@@ -466,6 +493,7 @@ async function streamDatabaseRefreshSet (options = {}, dependencies = {}) {
   }
 
   const prepareStream = dependencies.prepareDatabaseStreamRestore || archiveTool.prepareDatabaseStreamRestore
+  const checkTargetAvailability = dependencies.checkDatabaseTargetAvailability || archiveTool.checkDatabaseTargetAvailability
   const commitStream = dependencies.commitPreparedDatabaseRestore || archiveTool.commitPreparedDatabaseRestore
   const cleanupStream = dependencies.cleanupPreparedDatabaseRestore || archiveTool.cleanupPreparedDatabaseRestore
   const rollbackStream = dependencies.rollbackPreparedDatabaseRestore || rollbackCommittedDatabaseRestore
@@ -473,6 +501,11 @@ async function streamDatabaseRefreshSet (options = {}, dependencies = {}) {
   const committed = []
 
   try {
+    for (const entry of plan) {
+      console.log(`\n=== Checking target availability for ${entry.baseName}: ${entry.confirmation} ===`)
+      await checkTargetAvailability({ environment: entry.environment })
+    }
+
     for (const entry of plan) {
       console.log(`\n=== Streaming ${entry.sourceDatabase} to ${entry.confirmation} ===`)
       const database = await prepareStream({
@@ -550,6 +583,7 @@ module.exports = {
   parseArgs,
   usage,
   getConfiguredDatabaseNames,
+  getLocalDatabaseTarget,
   buildDatabaseEnvironment,
   createDatabaseBackupSet,
   readDatabaseBackupSet,

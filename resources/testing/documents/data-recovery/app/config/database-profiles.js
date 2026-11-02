@@ -13,18 +13,28 @@ function validateEnvironment (value, variableName) {
   return value
 }
 
-function getServiceDatabaseName (serviceName, environment, variableName) {
-  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(serviceName)) {
+function validateServiceName (serviceName) {
+  if (typeof serviceName !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(serviceName)) {
     throw new Error(`Invalid service name "${serviceName}"`)
   }
-  return `${serviceName}-${validateEnvironment(environment, variableName)}`
+  return serviceName
 }
 
-function resolveDatabasePair (baseName, sourceEnvironment, targetEnvironment) {
+function getServiceDatabaseName (serviceName, environment, variableName) {
+  return `${validateServiceName(serviceName)}-${validateEnvironment(environment, variableName)}`
+}
+
+function getLocalDatabaseName (serviceName) {
+  return validateServiceName(serviceName).replace(/-/g, '_')
+}
+
+function resolveDatabasePair (baseName, sourceEnvironment, targetEnvironment, localTarget = {}) {
   return {
     baseName,
     sourceDatabase: getServiceDatabaseName(baseName, sourceEnvironment, 'SOURCE_ENV'),
-    targetDatabase: getServiceDatabaseName(baseName, targetEnvironment, 'TARGET_ENV')
+    targetDatabase: targetEnvironment === 'local'
+      ? localTarget.databaseName || getLocalDatabaseName(baseName)
+      : getServiceDatabaseName(baseName, targetEnvironment, 'TARGET_ENV')
   }
 }
 
@@ -59,7 +69,9 @@ function resolveTargetProfile (serviceName, environment = process.env) {
     const targetEnvironment = getValue(environment, 'RECOVERY_TARGET_ENV')
     const database = getValue(environment, 'RECOVERY_TARGET_DATABASE') ||
       (serviceName && targetEnvironment
-        ? getServiceDatabaseName(serviceName, targetEnvironment, 'RECOVERY_TARGET_ENV')
+        ? targetEnvironment === 'local'
+          ? getLocalDatabaseName(serviceName)
+          : getServiceDatabaseName(serviceName, targetEnvironment, 'RECOVERY_TARGET_ENV')
         : getValue(environment, 'LOCAL_DB_NAME') || DEFAULT_LOCAL_DATABASE)
     const config = {
       host: getValue(environment, 'LOCAL_DB_HOST') || 'localhost',
@@ -106,6 +118,7 @@ function resolveTargetProfile (serviceName, environment = process.env) {
 
 module.exports = {
   getServiceDatabaseName,
+  getLocalDatabaseName,
   getSourceDatabaseName,
   getTargetMode,
   resolveDatabasePair,
