@@ -226,6 +226,8 @@ Build/rebuild Docker container for all microservices.
 Backs up your existing `~/.bashrc`, copies in the template, injects your email, suffix, and fetches Azure Key Vault secrets.  
 Saves your Key Vault name, email and suffix in `~/.bashrc_setup.conf` so you only enter them once.
 
+Also asks for your personal SonarCloud token, used by the [SonarCloud Quality Gate check](#sonarcloud-quality-gate-check). Leave it blank to skip, and you'll be asked again next time.
+
 [`./setup`](setup)
 
 #### Optional arguments
@@ -295,6 +297,58 @@ List current environment version for each microservice hosted in Kubernetes.
 Determine the Kubernetes resource usage for a namespace based on all microservices running at maximum capacity and scaling.
 
 [`./resource-quota`](resource-quota)
+
+## SonarCloud Quality Gate check
+
+Every FCP Node service can show its SonarCloud Quality Gate result for your branch locally, before you push. With `SONAR_TOKEN` set, `scripts/test` prints the result once the tests pass. Without it, `scripts/test` runs as before and ends with a note that the check isn't set up.
+
+The check only runs in branch mode, so nothing is posted to GitHub or your pull request. It uses the coverage your tests just produced (`test-output/lcov.info`), so the figures match SonarCloud for the same branch.
+
+### Getting a token
+
+1. Sign in to [SonarCloud](https://sonarcloud.io) with your GitHub account.
+2. Make sure you're a member of the [defra organisation](https://sonarcloud.io/organizations/defra). If not, ask a lead to add you. Without it the check fails with a 403.
+3. Generate a token at [My Account > Security](https://sonarcloud.io/account/security).
+4. Run [`./setup`](setup) and paste the token when asked. It checks the token works and that you're in the `defra` organisation, then writes `export SONAR_TOKEN=...` into `~/.bashrc`.
+5. Run `source ~/.bashrc`.
+
+To change your token later, run `./setup -r` and then `./setup`. Don't add `SONAR_TOKEN` to `~/.bashrc` by hand, because `./setup` replaces that file each time it runs.
+
+### Usage
+
+Run these from any service repository.
+
+| Command | What it does |
+| --- | --- |
+| `scripts/test` | Runs the tests, then the check if `SONAR_TOKEN` is set |
+| `scripts/sonar` | Runs the check, rerunning the tests only if the code has changed since they last passed |
+| `scripts/sonar --files` | Also lists files with uncovered new code, worst first |
+| `scripts/sonar --run-tests` | Always reruns the tests first |
+| `scripts/sonar --skip-tests` | Reuses `test-output/lcov.info` without running the tests |
+| `npm run test:sonar` | The same as `scripts/sonar`. Pass options after `--`, e.g. `npm run test:sonar -- --files` |
+| `scripts/sonar --help` | Shows all options |
+
+A failed Quality Gate exits with `1`, so `scripts/test` also fails even if every test passed. Set `SONAR_SKIP_AUTOCHECK=true` to run `scripts/test` without the check, for example when offline. Set `NO_COLOR=1` for plain output.
+
+### How it works
+
+The check itself is `scripts/sonar-check.js` in [ffc-shared-actions](https://github.com/DEFRA/ffc-shared-actions). Each service only has a `scripts/sonar` wrapper, a hook at the end of `scripts/test` and a `test:sonar` npm script. The wrapper downloads the latest check every time it runs, so fixes are made once in ffc-shared-actions. No per-service config is needed: the project key is the `name` in `package.json` and the branch comes from git.
+
+To try a change to the check before it's merged, point the wrapper at your branch:
+
+```sh
+SONAR_CHECK_URL=https://raw.githubusercontent.com/DEFRA/ffc-shared-actions/<branch>/scripts/sonar-check.js scripts/sonar
+```
+
+### Troubleshooting
+
+- `SonarCloud rejected SONAR_TOKEN (401)` - the token is wrong, expired or revoked. Generate a new one and run `./setup -r` then `./setup`.
+- `Your SonarCloud account can't access this project (403)` - you're not in the `defra` organisation.
+- `Failed to fetch the shared Sonar check` - GitHub couldn't be reached. Check your connection, or set `SONAR_SKIP_AUTOCHECK=true`.
+- `Timed out waiting for SonarCloud to process the analysis` - SonarCloud is busy. Retry with `scripts/sonar --skip-tests`.
+- `SONAR_TOKEN is not set` straight after running `./setup` - your current terminal hasn't loaded the new `~/.bashrc`. Open a new terminal or run `source ~/.bashrc`.
+- The check still runs after you remove the token - the token is still exported in your current terminal. Run `unset SONAR_TOKEN` or open a new terminal.
+- Coverage differs from the SonarCloud UI - run `scripts/sonar --run-tests` and refresh the UI.
 
 ## Dev tools
 

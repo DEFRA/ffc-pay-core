@@ -39,6 +39,36 @@ prompt_if_empty KEYVAULT   "Enter Key Vault name: "
 prompt_if_empty EMAIL      "Enter your email: "
 prompt_if_empty SUFFIX     "Enter your Service Bus suffix (no leading dash): "
 
+# ----------------- SonarCloud token (optional) ----------------- #
+# Used by each service's scripts/test to show the SonarCloud Quality Gate for your branch.
+# Picked up from your current shell if you already export it, otherwise asked for until set.
+if [[ -z "${SONAR_TOKEN:-}" ]]; then
+  echo
+  echo "🔍 SonarCloud token (optional, leave blank to skip for now)"
+  echo "   Lets scripts/test show your branch's SonarCloud Quality Gate before you push."
+  echo "   Generate one at https://sonarcloud.io/account/security (you must be in the defra organisation)."
+fi
+prompt_if_empty SONAR_TOKEN "Enter your SonarCloud token: "
+
+check_sonar_token() {
+  local valid orgs
+  valid=$(curl -sS --max-time 10 -u "${SONAR_TOKEN}:" https://sonarcloud.io/api/authentication/validate 2>/dev/null || true)
+  if [[ "$valid" != *'"valid":true'* ]]; then
+    echo "⚠️  SonarCloud did not accept that token. Check it, then run ./setup -r to enter it again."
+    return 0
+  fi
+  orgs=$(curl -sS --max-time 10 -u "${SONAR_TOKEN}:" "https://sonarcloud.io/api/organizations/search?member=true&ps=500" 2>/dev/null || true)
+  if [[ "$orgs" != *'"key":"defra"'* ]]; then
+    echo "⚠️  Token works, but your account is not in the defra SonarCloud organisation. Ask a lead to add you."
+    return 0
+  fi
+  echo "✅ SonarCloud token check passed."
+}
+
+if [[ -n "${SONAR_TOKEN}" ]]; then
+  check_sonar_token
+fi
+
 # Output inputs to config file if values are not null
 if [[ "$inputEmpty" == true ]]; then
   cat >"$config_file" <<EOF
@@ -46,7 +76,9 @@ if [[ "$inputEmpty" == true ]]; then
 KEYVAULT="${KEYVAULT}"
 EMAIL="${EMAIL}"
 SUFFIX="${SUFFIX}"
+SONAR_TOKEN="${SONAR_TOKEN}"
 EOF
+  chmod 600 "$config_file"
   echo "💾 Saved configuration to $config_file"
 fi
 
@@ -130,6 +162,12 @@ inject_inputs() {
     -e "s|__SUFFIX_PLACEHOLDER__|-${SUFFIX}|g" \
     -e "s|__POSTGRES_USER_PLACEHOLDER__|${EMAIL%@*}@defra.onmicrosoft.com|g" \
     "$bashrc"
+
+  if [[ -n "${SONAR_TOKEN}" ]]; then
+    sed -i "s|__SONAR_TOKEN_PLACEHOLDER__|${SONAR_TOKEN}|g" "$bashrc"
+  else
+    sed -i "s|^export SONAR_TOKEN=__SONAR_TOKEN_PLACEHOLDER__|# export SONAR_TOKEN=  #? Not set, run ./setup in ffc-pay-core to add it|" "$bashrc"
+  fi
 }
 msg_with_spinner "✍️  Injecting user inputs..." inject_inputs
 
@@ -174,4 +212,9 @@ echo
 echo -e "\033[1;32m✅ Setup complete!\033[0m"
 echo -e "\033[1;33m👉 To apply changes, run:\033[0m"
 echo -e "\033[1;36m   source ~/.bashrc\033[0m"
+if [[ -z "${SONAR_TOKEN}" ]]; then
+  echo
+  echo -e "\033[1;33m🔍 No SonarCloud token set, so scripts/test won't show the Quality Gate.\033[0m"
+  echo "   Run ./setup again when you have one."
+fi
 echo
