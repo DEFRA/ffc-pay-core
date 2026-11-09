@@ -181,6 +181,10 @@ export statementReceiverApiVersion=V1
 export statementReceiverEndpoint=https://ffc-doc-statement-receiver
 export PUBLISHING_FREQUENCY=60000
 
+# -------------------- SonarCloud -------------------- #
+#? Personal token for the local Quality Gate check run by each service's scripts/test
+export SONAR_TOKEN=__SONAR_TOKEN_PLACEHOLDER__
+
 # -------------------- Debugging -------------------- #
 #? Enable Postgres debugging if needed
 # export DEBUG="pg*" 
