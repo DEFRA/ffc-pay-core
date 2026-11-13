@@ -1,7 +1,7 @@
 const DEFAULT_SOURCE_ENV = 'prd'
 const DEFAULT_TARGET_ENV = 'local'
 
-function resolveRefreshEnvironments (environment = process.env) {
+const resolveRefreshEnvironments = (environment = process.env) => {
   const sourceEnvironment = environment.DATABASE_REFRESH_SOURCE_ENV
   const targetEnvironment = environment.DATABASE_REFRESH_TARGET_ENV
 

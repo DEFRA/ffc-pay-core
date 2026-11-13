@@ -11,7 +11,7 @@ const documentMapper = require('../app/faker/map-document-org-faker')
 
 const image = process.env.RECOVERY_TEST_POSTGRES_IMAGE
 
-function docker (args) {
+const docker = (args) => {
   const result = spawnSync('docker', args, { encoding: 'utf8' })
   assert.equal(result.status, 0, result.stderr || result.error?.message)
   return result.stdout.trim()
@@ -34,7 +34,7 @@ test('anonymisation against an isolated PostgreSQL server', { skip: !image, time
     const targetDatabase = 'ffc_doc_statement_data'
     const constructorTarget = 'ffc_doc_statement_constructor'
 
-    async function query (database, sql) {
+    const query = async (database, sql) => {
       const connection = await createPostgresConnection({ ...connectionConfig, database }, { max: 1 })
       try {
         return await connection.query(sql)
@@ -66,7 +66,7 @@ test('anonymisation against an isolated PostgreSQL server', { skip: !image, time
       `)
     }
 
-    async function readRows (database) {
+    const readRows = async (database) => {
       const { rows } = await query(database, 'SELECT to_jsonb(organisation) AS value FROM organisations organisation ORDER BY id')
       return rows.map(row => row.value)
     }

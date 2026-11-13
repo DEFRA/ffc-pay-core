@@ -1,11 +1,11 @@
 const crypto = require('crypto')
 
-function generateSeed (value) {
+const generateSeed = (value) => {
   const hash = crypto.createHash('md5').update(String(value).trim()).digest('hex')
   return parseInt(hash.substring(0, 8), 16)
 }
 
-function seedFakerWithPriority (faker, entity, priorityProps = ['frn', 'sbi']) {
+const seedFakerWithPriority = (faker, entity, priorityProps = ['frn', 'sbi']) => {
   for (const property of priorityProps) {
     const value = entity[property]
     if (!['string', 'number', 'bigint'].includes(typeof value) || !String(value).trim()) continue

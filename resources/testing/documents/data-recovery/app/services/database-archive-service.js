@@ -4,7 +4,7 @@ const { spawnSync } = require('child_process')
 
 const VALID_SSL_MODES = new Set(['require', 'verify-ca', 'verify-full'])
 
-function getEnvironmentValue (environment, keys) {
+const getEnvironmentValue = (environment, keys) => {
   for (const key of keys) {
     const value = environment[key]
     if (typeof value === 'string' && value.trim()) {
@@ -13,7 +13,7 @@ function getEnvironmentValue (environment, keys) {
   }
 }
 
-function getPgSslMode (databaseConfig, environment, side) {
+const getPgSslMode = (databaseConfig, environment, side) => {
   const source = side === 'source'
   const sslKeys = source
     ? ['RECOVERY_SOURCE_DB_SSL']
@@ -39,7 +39,7 @@ function getPgSslMode (databaseConfig, environment, side) {
   return mode
 }
 
-function buildConnectionArgs (databaseConfig) {
+const buildConnectionArgs = (databaseConfig) => {
   const required = ['host', 'port', 'user', 'password', 'database']
   const missing = required.filter(key => databaseConfig[key] === undefined || databaseConfig[key] === null || databaseConfig[key] === '')
   if (missing.length > 0) {
@@ -55,7 +55,7 @@ function buildConnectionArgs (databaseConfig) {
   ]
 }
 
-function buildToolEnvironment (databaseConfig, sslMode, environment = process.env) {
+const buildToolEnvironment = (databaseConfig, sslMode, environment = process.env) => {
   return {
     ...environment,
     PGHOST: String(databaseConfig.host),
@@ -66,7 +66,7 @@ function buildToolEnvironment (databaseConfig, sslMode, environment = process.en
   }
 }
 
-function parsePgMajorVersion (versionString) {
+const parsePgMajorVersion = (versionString) => {
   const match = /PostgreSQL\)\s+(\d+)(?:\.(\d+))?/.exec(versionString)
   if (!match) {
     throw new Error(`Could not read PostgreSQL version from "${versionString}"`)
@@ -76,7 +76,7 @@ function parsePgMajorVersion (versionString) {
   return major >= 10 ? major : Number(`${major}.${match[2] || 0}`)
 }
 
-function parseServerMajorVersion (versionNumber) {
+const parseServerMajorVersion = (versionNumber) => {
   const numericVersion = Number(versionNumber)
   if (!Number.isInteger(numericVersion) || numericVersion <= 0) {
     throw new Error(`Invalid PostgreSQL server version number "${versionNumber}"`)
@@ -91,15 +91,15 @@ function parseServerMajorVersion (versionNumber) {
   return Number(`${major}.${minor}`)
 }
 
-function quoteIdentifier (identifier) {
+const quoteIdentifier = (identifier) => {
   return `"${String(identifier).replace(/"/g, '""')}"`
 }
 
-function quoteLiteral (value) {
+const quoteLiteral = (value) => {
   return `'${String(value).replace(/'/g, "''")}'`
 }
 
-function buildCreateDatabaseSql (databaseName, metadata, serverMajor, owner) {
+const buildCreateDatabaseSql = (databaseName, metadata, serverMajor, owner) => {
   if (!metadata.encoding) {
     throw new Error('The source database encoding is missing from the archive metadata')
   }
@@ -133,17 +133,17 @@ function buildCreateDatabaseSql (databaseName, metadata, serverMajor, owner) {
   return `CREATE DATABASE ${quoteIdentifier(databaseName)} WITH ${options.join(' ')}`
 }
 
-function createTemporaryDatabaseName (targetDatabase, purpose, token) {
+const createTemporaryDatabaseName = (targetDatabase, purpose, token) => {
   const suffix = `_${purpose}_${token}`
   const prefix = String(targetDatabase).replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 63 - suffix.length)
   return `${prefix}${suffix}`
 }
 
-function getTargetConfirmation (databaseConfig) {
+const getTargetConfirmation = (databaseConfig) => {
   return `${databaseConfig.host}:${databaseConfig.port}/${databaseConfig.database}`
 }
 
-function assertRestoreConfirmation (databaseConfig, options = {}) {
+const assertRestoreConfirmation = (databaseConfig, options = {}) => {
   if (options.wipe !== true) {
     throw new Error('Restore requires --wipe because the target database will be replaced')
   }
@@ -155,7 +155,7 @@ function assertRestoreConfirmation (databaseConfig, options = {}) {
   return expected
 }
 
-function assertRestoreCompatibility (versions) {
+const assertRestoreCompatibility = (versions) => {
   if (versions.pgDumpMajor < versions.sourceMajor) {
     throw new Error(`pg_dump ${versions.pgDumpMajor} is older than source PostgreSQL ${versions.sourceMajor}`)
   }
@@ -171,7 +171,7 @@ function assertRestoreCompatibility (versions) {
   }
 }
 
-function isSameDatabase (sourceIdentity, targetIdentity, sourceConfig, targetConfig) {
+const isSameDatabase = (sourceIdentity, targetIdentity, sourceConfig, targetConfig) => {
   if (String(sourceIdentity.database).toLowerCase() !== String(targetConfig.database).toLowerCase()) {
     return false
   }
@@ -186,7 +186,7 @@ function isSameDatabase (sourceIdentity, targetIdentity, sourceConfig, targetCon
   return configuredEndpointMatches || reportedEndpointMatches
 }
 
-async function readDatabaseMetadata (connection) {
+const readDatabaseMetadata = async (connection) => {
   const { rows } = await connection.query(`
     SELECT current_database() AS database,
            inet_server_addr()::text AS server_address,
@@ -243,7 +243,7 @@ async function readDatabaseMetadata (connection) {
   return metadata
 }
 
-async function getDatabaseInventory (connection) {
+const getDatabaseInventory = async (connection) => {
   const { rows } = await connection.query(`
     SELECT n.nspname AS schema_name, c.relname AS relation_name, c.relkind AS relation_kind
     FROM pg_class c
@@ -262,7 +262,7 @@ async function getDatabaseInventory (connection) {
   }))
 }
 
-async function getExactDataCounts (connection, inventory) {
+const getExactDataCounts = async (connection, inventory) => {
   const dataRelations = inventory.filter(relation => ['r', 'm'].includes(relation.kind))
   const counts = []
 
@@ -278,7 +278,7 @@ async function getExactDataCounts (connection, inventory) {
   return counts
 }
 
-async function getDatabaseExtensions (connection) {
+const getDatabaseExtensions = async (connection) => {
   const { rows } = await connection.query(`
     SELECT extname AS name, extversion AS version
     FROM pg_extension
@@ -287,7 +287,7 @@ async function getDatabaseExtensions (connection) {
   return rows.map(row => ({ name: row.name, version: row.version }))
 }
 
-function runPgTool (command, args, options = {}) {
+const runPgTool = (command, args, options = {}) => {
   const result = spawnSync(command, args, {
     env: options.environment,
     stdio: options.stdio || ['ignore', 'inherit', 'inherit'],
@@ -309,7 +309,7 @@ function runPgTool (command, args, options = {}) {
   return result
 }
 
-function getPgToolVersion (command) {
+const getPgToolVersion = (command) => {
   const result = spawnSync(command, ['--version'], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'inherit'],
@@ -329,7 +329,7 @@ function getPgToolVersion (command) {
   return result.stdout.trim()
 }
 
-async function hashFile (filePath) {
+const hashFile = async (filePath) => {
   const hash = crypto.createHash('sha256')
   for await (const chunk of fs.createReadStream(filePath)) {
     hash.update(chunk)
@@ -337,7 +337,7 @@ async function hashFile (filePath) {
   return hash.digest('hex')
 }
 
-async function hashSchemaDumpFile (filePath) {
+const hashSchemaDumpFile = async (filePath) => {
   const hash = crypto.createHash('sha256')
   let pending = ''
   const hashLine = line => {
@@ -355,7 +355,7 @@ async function hashSchemaDumpFile (filePath) {
   return hash.digest('hex')
 }
 
-function normalizeSchemaDumpLine (line) {
+const normalizeSchemaDumpLine = (line) => {
   const normalized = line.endsWith('\r') ? line.slice(0, -1) : line
   if (!normalized.trim() || /^\\(?:un)?restrict\b/.test(normalized) || /^\s*--/.test(normalized)) return null
   if (/^SET default_table_access_method = (?:"heap"|'heap'|heap);$/i.test(normalized)) return null
@@ -363,7 +363,7 @@ function normalizeSchemaDumpLine (line) {
   return normalized
 }
 
-function findFirstSchemaDumpDifference (sourcePath, targetPath) {
+const findFirstSchemaDumpDifference = (sourcePath, targetPath) => {
   const sourceLines = fs.readFileSync(sourcePath, 'utf8')
     .split('\n')
     .map(normalizeSchemaDumpLine)
@@ -389,7 +389,7 @@ function findFirstSchemaDumpDifference (sourcePath, targetPath) {
   return null
 }
 
-function compareDatabaseLocales (source, target) {
+const compareDatabaseLocales = (source, target) => {
   const fields = ['encoding', 'collation', 'ctype', 'localeProvider', 'icuLocale']
   const differences = fields
     .filter(field => source[field] !== target[field])
@@ -406,7 +406,7 @@ function compareDatabaseLocales (source, target) {
   }
 }
 
-function compareDatabaseExtensions (sourceExtensions, targetExtensions) {
+const compareDatabaseExtensions = (sourceExtensions, targetExtensions) => {
   const sourceVersions = new Map(sourceExtensions.map(extension => [extension.name, extension.version]))
   const targetVersions = new Map(targetExtensions.map(extension => [extension.name, extension.version]))
   const names = [...new Set([...sourceVersions.keys(), ...targetVersions.keys()])].sort()

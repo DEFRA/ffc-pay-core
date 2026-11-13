@@ -1,6 +1,6 @@
 const { Pool } = require('pg')
 
-function maskConfig (config) {
+const maskConfig = (config) => {
   return {
     host: config.host,
     port: config.port,
@@ -9,11 +9,11 @@ function maskConfig (config) {
   }
 }
 
-function delay (ms) {
+const delay = (ms) => {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-async function connectWithRetry (pool, options = {}) {
+const connectWithRetry = async (pool, options = {}) => {
   const maxAttempts = options.maxAttempts || 5
   let lastError
 
@@ -39,7 +39,7 @@ async function connectWithRetry (pool, options = {}) {
   throw new Error(`Failed to connect to ${options.connectionName || 'PostgreSQL'} after ${maxAttempts} attempts: ${lastError.message}`)
 }
 
-async function createPostgresConnection (databaseConfig, options = {}) {
+const createPostgresConnection = async (databaseConfig, options = {}) => {
   const config = {
     ...databaseConfig,
     max: options.max || databaseConfig.max || 5,
