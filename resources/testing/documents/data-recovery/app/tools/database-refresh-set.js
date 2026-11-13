@@ -21,7 +21,7 @@ const {
 const SET_FORMAT = 'ffc-pay-database-refresh-set'
 const SET_VERSION = 1
 
-function parseArgs (argv = process.argv.slice(2)) {
+const parseArgs = (argv = process.argv.slice(2)) => {
   const [action, ...rest] = argv
   const options = {
     action,
@@ -105,7 +105,7 @@ function parseArgs (argv = process.argv.slice(2)) {
   return options
 }
 
-function usage () {
+const usage = () => {
   return [
     'Usage:',
     '  npm run database:backup-set -- [--output-dir <directory>] [--database <base-name> ...]',
@@ -118,7 +118,7 @@ function usage () {
   ].join('\n')
 }
 
-function getConfiguredDatabaseNames (requestedNames, config = databaseRefresh) {
+const getConfiguredDatabaseNames = (requestedNames, config = databaseRefresh) => {
   const configuredNames = config.DATABASE_NAMES
   if (!Array.isArray(configuredNames) || configuredNames.length === 0) {
     throw new Error('DATABASE_NAMES in app/config/database-refresh.js must contain at least one base database name')
@@ -143,7 +143,7 @@ function getConfiguredDatabaseNames (requestedNames, config = databaseRefresh) {
   return selectedNames
 }
 
-function getLocalDatabaseTarget (baseName, config, environment) {
+const getLocalDatabaseTarget = (baseName, config, environment) => {
   const configuredTarget = config.LOCAL_DATABASE_TARGETS?.[baseName] || {}
   const databaseName = configuredTarget.databaseName || databaseProfiles.getLocalDatabaseName(baseName)
   const port = Number(configuredTarget.port ?? environment.LOCAL_DB_PORT ?? 5467)
@@ -159,7 +159,7 @@ function getLocalDatabaseTarget (baseName, config, environment) {
   return { databaseName, port }
 }
 
-function buildDatabaseEnvironment (baseName, side, environment = process.env, config = databaseRefresh) {
+const buildDatabaseEnvironment = (baseName, side, environment = process.env, config = databaseRefresh) => {
   const databaseEnvironment = {
     ...environment,
     RECOVERY_SERVICE_NAME: baseName
@@ -190,16 +190,16 @@ function buildDatabaseEnvironment (baseName, side, environment = process.env, co
   return databaseEnvironment
 }
 
-function getSetRunToken () {
+const getSetRunToken = () => {
   const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)
   return `${timestamp}_${crypto.randomBytes(4).toString('hex')}`
 }
 
-function safeFilePart (value) {
+const safeFilePart = (value) => {
   return String(value).replace(/[^a-zA-Z0-9_-]/g, '_')
 }
 
-function writePrivateJson (filePath, value) {
+const writePrivateJson = (filePath, value) => {
   const descriptor = fs.openSync(filePath, 'wx', 0o600)
   try {
     fs.writeFileSync(descriptor, `${JSON.stringify(value, null, 2)}\n`, 'utf8')
@@ -208,7 +208,7 @@ function writePrivateJson (filePath, value) {
   }
 }
 
-async function createDatabaseBackupSet (options = {}, dependencies = {}) {
+const createDatabaseBackupSet = async (options = {}, dependencies = {}) => {
   const config = options.config || databaseRefresh
   const environment = options.environment || process.env
   const databaseNames = getConfiguredDatabaseNames(options.databaseNames || [], config)
@@ -265,7 +265,7 @@ async function createDatabaseBackupSet (options = {}, dependencies = {}) {
   }
 }
 
-function readDatabaseBackupSet (manifestPath, config = databaseRefresh) {
+const readDatabaseBackupSet = (manifestPath, config = databaseRefresh) => {
   const resolvedManifestPath = path.resolve(manifestPath)
   if (!fs.existsSync(resolvedManifestPath)) throw new Error(`Backup-set manifest not found: ${resolvedManifestPath}`)
 
@@ -318,7 +318,7 @@ function readDatabaseBackupSet (manifestPath, config = databaseRefresh) {
   return { manifest, manifestPath: resolvedManifestPath, databases }
 }
 
-function applyAnonymisationPlan (plan, enabled) {
+const applyAnonymisationPlan = (plan, enabled) => {
   if (!enabled) return plan
   const configured = plan.map(entry => {
     assertAnonymisationTarget(entry.environment, entry.target)
@@ -335,7 +335,7 @@ function applyAnonymisationPlan (plan, enabled) {
   return configured
 }
 
-function getRestorePlan (backupSet, options = {}) {
+const getRestorePlan = (backupSet, options = {}) => {
   const config = options.config || databaseRefresh
   const environment = options.environment || process.env
 
@@ -354,7 +354,7 @@ function getRestorePlan (backupSet, options = {}) {
   }), options.anonymise)
 }
 
-function getStreamRestorePlan (requestedNames, options = {}) {
+const getStreamRestorePlan = (requestedNames, options = {}) => {
   const config = options.config || databaseRefresh
   const environment = options.environment || process.env
   const databaseNames = getConfiguredDatabaseNames(requestedNames, config)
@@ -383,14 +383,14 @@ function getStreamRestorePlan (requestedNames, options = {}) {
   }), options.anonymise)
 }
 
-function getTargetSetConfirmation (plan, operation = 'archive') {
+const getTargetSetConfirmation = (plan, operation = 'archive') => {
   const setIdentity = plan
     .map(entry => `${operation}:${entry.baseName}:${entry.sourceDatabase || ''}=${entry.confirmation}:${entry.archiveSha256 || ''}`)
     .join('\n')
   return crypto.createHash('sha256').update(setIdentity).digest('hex').slice(0, 16)
 }
 
-async function dryRunDatabaseRestoreSet (plan, options = {}, dependencies = {}) {
+const dryRunDatabaseRestoreSet = async (plan, options = {}, dependencies = {}) => {
   const restoreArchive = dependencies.restoreDatabaseArchive || archiveTool.restoreDatabaseArchive
   const results = []
   for (const entry of plan) {
@@ -409,7 +409,7 @@ async function dryRunDatabaseRestoreSet (plan, options = {}, dependencies = {}) 
   return { dryRun: true, confirmation, targets: plan.map(entry => entry.confirmation), results }
 }
 
-async function dryRunDatabaseStreamSet (plan, dependencies = {}) {
+const dryRunDatabaseStreamSet = async (plan, dependencies = {}) => {
   const prepareStream = dependencies.prepareDatabaseStreamRestore || archiveTool.prepareDatabaseStreamRestore
   const results = []
   for (const entry of plan) {
@@ -423,7 +423,7 @@ async function dryRunDatabaseStreamSet (plan, dependencies = {}) {
   return { dryRun: true, confirmation, targets: plan.map(entry => entry.confirmation), results }
 }
 
-async function rollbackCommittedDatabaseRestore (prepared) {
+const rollbackCommittedDatabaseRestore = async (prepared) => {
   const connection = prepared.maintenanceConnection
   const targetDatabase = prepared.target.database
 
@@ -445,7 +445,7 @@ async function rollbackCommittedDatabaseRestore (prepared) {
   await archiveTool.dropDatabaseIfExists(connection, failedDatabase)
 }
 
-async function restoreDatabaseBackupSet (options = {}, dependencies = {}) {
+const restoreDatabaseBackupSet = async (options = {}, dependencies = {}) => {
   const config = options.config || databaseRefresh
   const environment = options.environment || process.env
   const readSet = dependencies.readDatabaseBackupSet || readDatabaseBackupSet
@@ -518,7 +518,7 @@ async function restoreDatabaseBackupSet (options = {}, dependencies = {}) {
   }
 }
 
-async function streamDatabaseRefreshSet (options = {}, dependencies = {}) {
+const streamDatabaseRefreshSet = async (options = {}, dependencies = {}) => {
   const config = options.config || databaseRefresh
   const environment = options.environment || process.env
   const plan = getStreamRestorePlan(options.databaseNames || [], { config, environment, anonymise: options.anonymise })
@@ -596,7 +596,7 @@ async function streamDatabaseRefreshSet (options = {}, dependencies = {}) {
   }
 }
 
-async function main (argv = process.argv.slice(2)) {
+const main = async (argv = process.argv.slice(2)) => {
   const options = parseArgs(argv)
   if (options.help) {
     console.log(usage())

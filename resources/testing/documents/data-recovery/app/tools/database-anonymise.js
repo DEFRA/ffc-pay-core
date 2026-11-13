@@ -10,7 +10,7 @@ const {
   anonymiseDatabase
 } = require('../services/database-anonymisation-service')
 
-function parseArgs (argv = process.argv.slice(2)) {
+const parseArgs = (argv = process.argv.slice(2)) => {
   const options = { databaseName: null, dryRun: false, confirmTarget: null, help: false }
   for (let index = 0; index < argv.length; index++) {
     const argument = argv[index]
@@ -35,7 +35,7 @@ function parseArgs (argv = process.argv.slice(2)) {
   return options
 }
 
-function usage () {
+const usage = () => {
   return [
     'Usage:',
     '  npm run database:anonymise -- --database <base-name> --dry-run',
@@ -46,7 +46,7 @@ function usage () {
   ].join('\n')
 }
 
-async function anonymiseDatabaseTarget (options, dependencies = {}) {
+const anonymiseDatabaseTarget = async (options, dependencies = {}) => {
   const config = options.refreshConfig || databaseRefresh
   const environment = buildDatabaseEnvironment(options.databaseName, 'target', options.environment || process.env, config)
   const target = resolveTargetProfile(options.databaseName, environment).config
@@ -66,7 +66,7 @@ async function anonymiseDatabaseTarget (options, dependencies = {}) {
   return { target: confirmation, ...result }
 }
 
-async function main (argv = process.argv.slice(2)) {
+const main = async (argv = process.argv.slice(2)) => {
   const options = parseArgs(argv)
   if (options.help) {
     console.log(usage())

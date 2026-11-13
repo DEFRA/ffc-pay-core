@@ -4,7 +4,7 @@ const { seedFakerWithPriority } = require('./faker-seed-entity')
 const PROFILE_VERSION = 'organisation-v1'
 const faker = new Faker({ locale: [enGB, en] })
 
-function createOrganisationProfile (organisation) {
+const createOrganisationProfile = (organisation) => {
   seedFakerWithPriority(faker, organisation)
   const houseNumber = faker.number.int({ min: 1, max: 300 })
   const street = faker.location.street()
@@ -29,7 +29,7 @@ function createOrganisationProfile (organisation) {
   }
 }
 
-function mapOrganisationFields (organisation, fieldMap, identifiers = organisation) {
+const mapOrganisationFields = (organisation, fieldMap, identifiers = organisation) => {
   const result = { ...organisation }
   const fields = Object.entries(fieldMap)
   if (fields.length === 0) return result

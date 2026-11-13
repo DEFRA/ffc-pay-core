@@ -11,7 +11,7 @@ const FIELD_MAP = Object.freeze({
   emailAddress: 'emailAddress'
 })
 
-function anonymizeOrganisation (organisation, identifiers = organisation) {
+const anonymizeOrganisation = (organisation, identifiers = organisation) => {
   return mapOrganisationFields(organisation, FIELD_MAP, identifiers)
 }
 

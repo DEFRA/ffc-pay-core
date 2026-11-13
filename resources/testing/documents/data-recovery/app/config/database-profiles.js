@@ -2,34 +2,34 @@ const DEFAULT_TARGET_MODE = 'hosted'
 const DEFAULT_LOCAL_DATABASE = 'ffc_pay_local_recovery'
 const { createDatabasePasswordProvider, getDatabaseAuthMode, getDatabaseTenantId } = require('../database/database-auth')
 
-function getValue (environment, key) {
+const getValue = (environment, key) => {
   const value = environment[key]
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
-function validateEnvironment (value, variableName) {
+const validateEnvironment = (value, variableName) => {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(value)) {
     throw new Error(`${variableName} must contain only letters, numbers, hyphens, and underscores`)
   }
   return value
 }
 
-function validateServiceName (serviceName) {
+const validateServiceName = (serviceName) => {
   if (typeof serviceName !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(serviceName)) {
     throw new Error(`Invalid service name "${serviceName}"`)
   }
   return serviceName
 }
 
-function getServiceDatabaseName (serviceName, environment, variableName) {
+const getServiceDatabaseName = (serviceName, environment, variableName) => {
   return `${validateServiceName(serviceName)}-${validateEnvironment(environment, variableName)}`
 }
 
-function getLocalDatabaseName (serviceName) {
+const getLocalDatabaseName = (serviceName) => {
   return validateServiceName(serviceName).replace(/-/g, '_')
 }
 
-function resolveDatabasePair (baseName, sourceEnvironment, targetEnvironment, localTarget = {}) {
+const resolveDatabasePair = (baseName, sourceEnvironment, targetEnvironment, localTarget = {}) => {
   return {
     baseName,
     sourceDatabase: getServiceDatabaseName(baseName, sourceEnvironment, 'SOURCE_ENV'),
@@ -39,7 +39,7 @@ function resolveDatabasePair (baseName, sourceEnvironment, targetEnvironment, lo
   }
 }
 
-function getSourceDatabaseName (serviceName, environment = process.env) {
+const getSourceDatabaseName = (serviceName, environment = process.env) => {
   const explicitDatabase = getValue(environment, 'RECOVERY_SOURCE_DATABASE')
   if (explicitDatabase) {
     return explicitDatabase
@@ -53,7 +53,7 @@ function getSourceDatabaseName (serviceName, environment = process.env) {
   return getServiceDatabaseName(serviceName, sourceEnvironment, 'RECOVERY_SOURCE_ENV')
 }
 
-function getTargetMode (environment = process.env) {
+const getTargetMode = (environment = process.env) => {
   const configuredMode = getValue(environment, 'RECOVERY_TARGET_MODE')
   const targetEnvironment = getValue(environment, 'RECOVERY_TARGET_ENV')
   const mode = configuredMode || (targetEnvironment === 'local' ? 'local' : DEFAULT_TARGET_MODE)
@@ -63,7 +63,7 @@ function getTargetMode (environment = process.env) {
   return mode
 }
 
-function resolveTargetProfile (serviceName, environment = process.env) {
+const resolveTargetProfile = (serviceName, environment = process.env) => {
   const mode = getTargetMode(environment)
 
   if (mode === 'local') {

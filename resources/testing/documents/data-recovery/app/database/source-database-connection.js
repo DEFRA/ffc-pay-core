@@ -2,14 +2,14 @@ const { getSourceDatabaseName } = require('../config/database-profiles')
 const { createPostgresConnection } = require('./postgres-connection')
 const { createDatabasePasswordProvider, getDatabaseAuthMode, getDatabaseTenantId } = require('./database-auth')
 
-function getEnvironmentValue (environment, key) {
+const getEnvironmentValue = (environment, key) => {
   const value = environment[key]
   if (typeof value === 'string' && value.trim()) {
     return value.trim()
   }
 }
 
-function validateSourceConfig (options = {}) {
+const validateSourceConfig = (options = {}) => {
   const environment = options.environment || process.env
   const serviceName = options.serviceName || getEnvironmentValue(environment, 'RECOVERY_SERVICE_NAME')
   const authMode = getDatabaseAuthMode(environment, 'source', serviceName)
@@ -34,7 +34,7 @@ function validateSourceConfig (options = {}) {
   }
 }
 
-function buildSourceConfig (options = {}) {
+const buildSourceConfig = (options = {}) => {
   const environment = options.environment || process.env
   validateSourceConfig(options)
   const serviceName = options.serviceName || getEnvironmentValue(environment, 'RECOVERY_SERVICE_NAME')
@@ -73,7 +73,7 @@ function buildSourceConfig (options = {}) {
   return config
 }
 
-async function createSourceConnection (options = {}) {
+const createSourceConnection = async (options = {}) => {
   const config = buildSourceConfig(options)
   return createPostgresConnection(config, {
     applicationName: options.applicationName || 'database_archive_source',

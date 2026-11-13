@@ -3,12 +3,12 @@ const databaseRefresh = require('../config/database-refresh')
 
 const POSTGRES_SCOPE = 'https://ossrdbms-aad.database.windows.net/.default'
 
-function getEnvironmentValue (environment, key) {
+const getEnvironmentValue = (environment, key) => {
   const value = environment[key]
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
-function getDatabaseAuthMode (environment, side, serviceName, config = databaseRefresh) {
+const getDatabaseAuthMode = (environment, side, serviceName, config = databaseRefresh) => {
   const key = side === 'source' ? 'RECOVERY_SOURCE_DB_AUTH' : 'RECOVERY_TARGET_DB_AUTH'
   const defaultMode = side === 'source' ? config.DEFAULT_SOURCE_AUTH : config.DEFAULT_HOSTED_TARGET_AUTH
   const override = config.DATABASE_AUTH_OVERRIDES?.[serviceName || environment.RECOVERY_SERVICE_NAME]?.[side]
@@ -21,7 +21,7 @@ function getDatabaseAuthMode (environment, side, serviceName, config = databaseR
   return mode
 }
 
-function getDatabaseTenantId (environment, side, serviceName, config = databaseRefresh) {
+const getDatabaseTenantId = (environment, side, serviceName, config = databaseRefresh) => {
   const key = side === 'source' ? 'RECOVERY_SOURCE_DB_TENANT_ID' : 'RECOVERY_TARGET_DB_TENANT_ID'
   const override = config.DATABASE_AUTH_OVERRIDES?.[serviceName || environment.RECOVERY_SERVICE_NAME]?.[side]
   return override?.tenantId || getEnvironmentValue(environment, key) ||
@@ -29,7 +29,7 @@ function getDatabaseTenantId (environment, side, serviceName, config = databaseR
     getEnvironmentValue(environment, 'AZURE_TENANT_ID')
 }
 
-function createDatabasePasswordProvider (environment, side, password, options = {}) {
+const createDatabasePasswordProvider = (environment, side, password, options = {}) => {
   const serviceName = options.serviceName || getEnvironmentValue(environment, 'RECOVERY_SERVICE_NAME')
   const config = options.config || databaseRefresh
   const mode = options.mode || getDatabaseAuthMode(environment, side, serviceName, config)

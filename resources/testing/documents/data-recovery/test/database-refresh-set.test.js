@@ -20,7 +20,7 @@ const {
   streamDatabaseRefreshSet
 } = require('../app/tools/database-refresh-set')
 
-function createTestSet (directory, baseNames = ['ffc-pay-processing', 'ffc-pay-submission']) {
+const createTestSet = (directory, baseNames = ['ffc-pay-processing', 'ffc-pay-submission']) => {
   const databases = baseNames.map(baseName => {
     const sourceDatabase = `${baseName}-prd`
     const archive = `${sourceDatabase}.dump`
@@ -54,7 +54,7 @@ function createTestSet (directory, baseNames = ['ffc-pay-processing', 'ffc-pay-s
   return { manifest, manifestPath }
 }
 
-function testConfig (targetEnvironment = 'local', databaseNames = ['ffc-pay-processing', 'ffc-pay-submission']) {
+const testConfig = (targetEnvironment = 'local', databaseNames = ['ffc-pay-processing', 'ffc-pay-submission']) => {
   return { SOURCE_ENV: 'prd', TARGET_ENV: targetEnvironment, DATABASE_NAMES: databaseNames }
 }
 

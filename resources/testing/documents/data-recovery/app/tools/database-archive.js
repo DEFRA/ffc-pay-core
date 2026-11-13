@@ -46,7 +46,7 @@ const ARCHIVE_VERSION = 1
 const TARGET_APP_ROLES_ENV = 'RECOVERY_TARGET_APP_ROLES'
 const pipelineAsync = promisify(pipeline)
 
-function parseArgs (argv = process.argv.slice(2)) {
+const parseArgs = (argv = process.argv.slice(2)) => {
   const [action, ...rest] = argv
   const options = { action, dryRun: false, wipe: false, anonymise: false, confirmTarget: null, output: null, archive: null, help: false }
 
@@ -93,7 +93,7 @@ function parseArgs (argv = process.argv.slice(2)) {
   return options
 }
 
-function usage () {
+const usage = () => {
   return [
     'Usage:',
     '  npm run database:backup -- [--output <archive.dump>]',
@@ -103,18 +103,18 @@ function usage () {
   ].join('\n')
 }
 
-function getSourceProfile (environment) {
+const getSourceProfile = (environment) => {
   const serviceName = environment.RECOVERY_SERVICE_NAME?.trim() || null
   const source = buildSourceConfig({ serviceName, environment })
   return { serviceName, source }
 }
 
-function getTargetProfile (environment, archiveSource) {
+const getTargetProfile = (environment, archiveSource) => {
   const serviceName = environment.RECOVERY_SERVICE_NAME?.trim() || archiveSource.serviceName
   return resolveTargetProfile(serviceName, environment).config
 }
 
-function getRestoreAnonymisation (options, environment, target, serviceName) {
+const getRestoreAnonymisation = (options, environment, target, serviceName) => {
   if (!options.anonymise) return null
   assertAnonymisationTarget(environment, target)
   const description = describeAnonymisation(serviceName)
@@ -122,14 +122,14 @@ function getRestoreAnonymisation (options, environment, target, serviceName) {
   return description
 }
 
-function assertConfirmedRestore (target, options, anonymisation) {
+const assertConfirmedRestore = (target, options, anonymisation) => {
   if (anonymisation && options.confirmTarget !== getAnonymisationConfirmation(target, anonymisation)) {
     throw new Error(`--confirm-target must exactly match the anonymisation dry-run token: ${getAnonymisationConfirmation(target, anonymisation)}`)
   }
   assertRestoreConfirmation(target, anonymisation ? { ...options, confirmTarget: getTargetConfirmation(target) } : options)
 }
 
-function logAnonymisationPlan (description) {
+const logAnonymisationPlan = (description) => {
   if (!description) return
   for (const table of description.tables) {
     console.log(`[DRY RUN] Anonymise ${table.schema}.${table.table}: ${Object.keys(table.fieldMap).join(', ')} (${description.profileVersion})`)
@@ -137,7 +137,7 @@ function logAnonymisationPlan (description) {
   console.log('[DRY RUN] Schema, identifier coverage and write hooks will be checked in staging before masking.')
 }
 
-function getToolVersions () {
+const getToolVersions = () => {
   const pgDump = getPgToolVersion('pg_dump')
   const pgRestore = getPgToolVersion('pg_restore')
   return {
@@ -148,25 +148,25 @@ function getToolVersions () {
   }
 }
 
-async function getConnectionEnvironment (config, environment, side) {
+const getConnectionEnvironment = async (config, environment, side) => {
   const password = typeof config.password === 'function' ? await config.password() : config.password
   return buildToolEnvironment({ ...config, password }, getPgSslMode(config, environment, side), environment)
 }
 
-function getTimestampToken () {
+const getTimestampToken = () => {
   const timestamp = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)
   return `${timestamp}_${crypto.randomBytes(4).toString('hex')}`
 }
 
-function getSafeFilePart (value) {
+const getSafeFilePart = (value) => {
   return String(value).replace(/[^a-zA-Z0-9_-]/g, '_')
 }
 
-function getDefaultArchivePath (databaseName) {
+const getDefaultArchivePath = (databaseName) => {
   return path.resolve(__dirname, '../..', 'dumps', `${getSafeFilePart(databaseName)}-${getTimestampToken()}.dump`)
 }
 
-function assertFreshDatabaseSnapshot (metadata) {
+const assertFreshDatabaseSnapshot = (metadata) => {
   if (!['libc', 'icu'].includes(metadata.localeProvider)) {
     throw new Error(`Database locale provider "${metadata.localeProvider}" is not supported for automatic restore`)
   }
@@ -175,13 +175,13 @@ function assertFreshDatabaseSnapshot (metadata) {
   }
 }
 
-async function exportSourceSnapshot (client) {
+const exportSourceSnapshot = async (client) => {
   await client.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY')
   const { rows } = await client.query('SELECT pg_export_snapshot() AS snapshot_id')
   return rows[0].snapshot_id
 }
 
-function buildDumpArgs (databaseConfig, snapshotId, outputPath, schemaOnly = false) {
+const buildDumpArgs = (databaseConfig, snapshotId, outputPath, schemaOnly = false) => {
   const args = [
     ...buildConnectionArgs(databaseConfig),
     '--no-owner',
@@ -201,7 +201,7 @@ function buildDumpArgs (databaseConfig, snapshotId, outputPath, schemaOnly = fal
   return args
 }
 
-function buildDumpStreamArgs (databaseConfig, snapshotId) {
+const buildDumpStreamArgs = (databaseConfig, snapshotId) => {
   return [
     ...buildConnectionArgs(databaseConfig),
     '--no-owner',
@@ -213,7 +213,7 @@ function buildDumpStreamArgs (databaseConfig, snapshotId) {
   ]
 }
 
-function waitForSuccessfulExit (child, command) {
+const waitForSuccessfulExit = (child, command) => {
   return new Promise((resolve, reject) => {
     child.once('error', reject)
     child.once('close', (code, signal) => {
@@ -226,7 +226,7 @@ function waitForSuccessfulExit (child, command) {
   })
 }
 
-async function streamPgDumpToRestore (sourceConfig, stagingConfig, snapshotId, environment) {
+const streamPgDumpToRestore = async (sourceConfig, stagingConfig, snapshotId, environment) => {
   const sourceToolEnvironment = await getConnectionEnvironment(sourceConfig, environment, 'source')
   const targetToolEnvironment = await getConnectionEnvironment(stagingConfig, environment, 'target')
   const dump = spawn('pg_dump', buildDumpStreamArgs(sourceConfig, snapshotId), {
@@ -272,18 +272,18 @@ async function streamPgDumpToRestore (sourceConfig, stagingConfig, snapshotId, e
   }
 }
 
-async function runSchemaDump (databaseConfig, snapshotId, outputPath, environment, side) {
+const runSchemaDump = async (databaseConfig, snapshotId, outputPath, environment, side) => {
   runPgTool('pg_dump', buildDumpArgs(databaseConfig, snapshotId, outputPath, true), {
     environment: await getConnectionEnvironment(databaseConfig, environment, side)
   })
 }
 
-function publishFileWithoutOverwrite (temporaryPath, finalPath) {
+const publishFileWithoutOverwrite = (temporaryPath, finalPath) => {
   fs.linkSync(temporaryPath, finalPath)
   fs.unlinkSync(temporaryPath)
 }
 
-async function collectSourceSnapshot (connection, sourceConfig, environment, versions, temporaryDirectory) {
+const collectSourceSnapshot = async (connection, sourceConfig, environment, versions, temporaryDirectory) => {
   const client = await connection.pool.connect()
   let transactionOpen = false
 
@@ -319,7 +319,7 @@ async function collectSourceSnapshot (connection, sourceConfig, environment, ver
   }
 }
 
-async function createDatabaseArchive (options = {}) {
+const createDatabaseArchive = async (options = {}) => {
   const environment = options.environment || process.env
   const { serviceName, source } = getSourceProfile(environment)
   const versions = getToolVersions()
@@ -418,7 +418,7 @@ async function createDatabaseArchive (options = {}) {
   }
 }
 
-function readArchiveManifest (archivePath) {
+const readArchiveManifest = (archivePath) => {
   const manifestPath = `${archivePath}.json`
   if (!fs.existsSync(archivePath)) throw new Error(`Archive not found: ${archivePath}`)
   if (!fs.existsSync(manifestPath)) throw new Error(`Archive metadata not found: ${manifestPath}`)
@@ -443,7 +443,7 @@ function readArchiveManifest (archivePath) {
   return { manifest, manifestPath }
 }
 
-async function validateArchiveFile (archivePath, manifest, versions, environment, target) {
+const validateArchiveFile = async (archivePath, manifest, versions, environment, target) => {
   const actualChecksum = await hashFile(archivePath)
   if (actualChecksum !== manifest.sha256) {
     throw new Error('Archive SHA-256 does not match its metadata; the archive may be incomplete or modified')
@@ -459,12 +459,12 @@ async function validateArchiveFile (archivePath, manifest, versions, environment
   }
 }
 
-async function databaseExists (connection, databaseName) {
+const databaseExists = async (connection, databaseName) => {
   const { rows } = await connection.query('SELECT 1 FROM pg_database WHERE datname = $1', [databaseName])
   return rows.length > 0
 }
 
-async function validateAvailableExtensions (connection, extensions, options = {}) {
+const validateAvailableExtensions = async (connection, extensions, options = {}) => {
   if (extensions.length === 0) return
   const names = extensions.map(extension => extension.name)
   const requireExactVersions = options.requireExactVersions === true
@@ -484,11 +484,11 @@ async function validateAvailableExtensions (connection, extensions, options = {}
   }
 }
 
-function normalizeInventory (inventory) {
+const normalizeInventory = (inventory) => {
   return inventory.map(({ schema, name, kind }) => ({ schema, name, kind }))
 }
 
-async function validateRestoredDatabase (targetConfig, stagingDatabase, manifest, environment, temporaryDirectory, options = {}) {
+const validateRestoredDatabase = async (targetConfig, stagingDatabase, manifest, environment, temporaryDirectory, options = {}) => {
   const stagingConfig = { ...targetConfig, database: stagingDatabase }
   const connection = await createPostgresConnection(stagingConfig, { connectionName: 'staging database' })
 
@@ -553,13 +553,13 @@ async function validateRestoredDatabase (targetConfig, stagingDatabase, manifest
   }
 }
 
-function getTargetAppRoles (environment) {
+const getTargetAppRoles = (environment) => {
   const value = environment[TARGET_APP_ROLES_ENV]
   if (!value?.trim()) return []
   return [...new Set(value.split(',').map(role => role.trim()).filter(Boolean))]
 }
 
-async function anonymiseStagedDatabase (context, dependencies = {}) {
+const anonymiseStagedDatabase = async (context, dependencies = {}) => {
   const mask = dependencies.anonymiseDatabase || anonymiseDatabase
   const validate = dependencies.validateRestoredDatabase || validateRestoredDatabase
   const anonymisation = await mask({
@@ -579,7 +579,7 @@ async function anonymiseStagedDatabase (context, dependencies = {}) {
   return { anonymisation, validation }
 }
 
-async function applyTargetAppRoles (connection, databaseName, owner, environment) {
+const applyTargetAppRoles = async (connection, databaseName, owner, environment) => {
   const roles = getTargetAppRoles(environment)
   if (roles.length === 0) return []
 
@@ -617,14 +617,14 @@ async function applyTargetAppRoles (connection, databaseName, owner, environment
   return roles
 }
 
-async function terminateDatabaseConnections (connection, databaseName) {
+const terminateDatabaseConnections = async (connection, databaseName) => {
   await connection.query(
     'SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()',
     [databaseName]
   )
 }
 
-async function replaceTargetDatabase (connection, targetDatabase, stagingDatabase, backupDatabase) {
+const replaceTargetDatabase = async (connection, targetDatabase, stagingDatabase, backupDatabase) => {
   const lockName = `database-archive:${targetDatabase}`
   await connection.query('SELECT pg_advisory_lock(hashtextextended($1, 0))', [lockName])
 
@@ -675,13 +675,13 @@ async function replaceTargetDatabase (connection, targetDatabase, stagingDatabas
   }
 }
 
-async function dropDatabaseIfExists (connection, databaseName) {
+const dropDatabaseIfExists = async (connection, databaseName) => {
   if (!await databaseExists(connection, databaseName)) return
   await terminateDatabaseConnections(connection, databaseName)
   await connection.query(`DROP DATABASE ${quoteIdentifier(databaseName)}`)
 }
 
-async function prepareDatabaseArchiveRestore (options = {}) {
+const prepareDatabaseArchiveRestore = async (options = {}) => {
   const environment = options.environment || process.env
   const archivePath = path.resolve(options.archive)
   const { manifest } = readArchiveManifest(archivePath)
@@ -809,7 +809,7 @@ async function prepareDatabaseArchiveRestore (options = {}) {
   }
 }
 
-async function commitPreparedDatabaseRestore (prepared) {
+const commitPreparedDatabaseRestore = async (prepared) => {
   const previousDatabase = await replaceTargetDatabase(
     prepared.maintenanceConnection,
     prepared.target.database,
@@ -834,7 +834,7 @@ async function commitPreparedDatabaseRestore (prepared) {
   }
 }
 
-async function cleanupPreparedDatabaseRestore (prepared) {
+const cleanupPreparedDatabaseRestore = async (prepared) => {
   if (prepared.stageCreated && prepared.stagingDatabase) {
     await dropDatabaseIfExists(prepared.maintenanceConnection, prepared.stagingDatabase).catch(error => {
       console.error(`Could not remove incomplete staging database ${prepared.stagingDatabase}: ${error.message}`)
@@ -848,7 +848,7 @@ async function cleanupPreparedDatabaseRestore (prepared) {
   fs.rmSync(prepared.temporaryDirectory, { recursive: true, force: true })
 }
 
-async function checkDatabaseTargetAvailability (options = {}) {
+const checkDatabaseTargetAvailability = async (options = {}) => {
   const environment = options.environment || process.env
   const serviceName = environment.RECOVERY_SERVICE_NAME?.trim() || null
   const target = getTargetProfile(environment, { serviceName })
@@ -864,7 +864,7 @@ async function checkDatabaseTargetAvailability (options = {}) {
   }
 }
 
-async function prepareDatabaseStreamRestore (options = {}) {
+const prepareDatabaseStreamRestore = async (options = {}) => {
   const environment = options.environment || process.env
   const { serviceName, source } = getSourceProfile(environment)
   const target = getTargetProfile(environment, { serviceName, database: source.database })
@@ -1016,7 +1016,7 @@ async function prepareDatabaseStreamRestore (options = {}) {
   }
 }
 
-async function restoreDatabaseArchive (options = {}) {
+const restoreDatabaseArchive = async (options = {}) => {
   const prepared = await prepareDatabaseArchiveRestore(options)
   if (prepared.dryRun) return prepared
 
@@ -1027,7 +1027,7 @@ async function restoreDatabaseArchive (options = {}) {
   }
 }
 
-async function main (argv = process.argv.slice(2)) {
+const main = async (argv = process.argv.slice(2)) => {
   const options = parseArgs(argv)
   if (options.help) {
     console.log(usage())

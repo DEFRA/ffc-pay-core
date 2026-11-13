@@ -16,7 +16,7 @@ const mapping = getAnonymisationMappings(serviceName)[0]
 const target = { host: 'localhost', port: 5467, database: 'ffc_doc_statement_data' }
 const environment = { RECOVERY_TARGET_ENV: 'local' }
 
-function databaseFixture (options = {}) {
+const databaseFixture = (options = {}) => {
   const queries = []
   const updates = []
   const rows = options.rows || [

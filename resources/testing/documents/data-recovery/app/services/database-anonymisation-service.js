@@ -8,14 +8,14 @@ const { quoteIdentifier, getTargetConfirmation } = require('./database-archive-s
 const DEFAULT_BATCH_SIZE = 500
 const TARGET_ENVIRONMENTS = new Set(['local', 'dev', 'test', 'pre', 'recovery'])
 
-function assertAnonymisationTarget (environment, target) {
+const assertAnonymisationTarget = (environment, target) => {
   const targetEnvironment = environment.RECOVERY_TARGET_ENV || (environment.RECOVERY_TARGET_MODE === 'local' ? 'local' : '')
   if (!TARGET_ENVIRONMENTS.has(targetEnvironment) || /(?:^|[-_])(?:prd|prod|production)(?:$|[-_])/i.test(target.database)) {
     throw new Error('Anonymisation requires an explicit non-production target environment and database')
   }
 }
 
-function getAnonymisationMappings (serviceName, config = configuration) {
+const getAnonymisationMappings = (serviceName, config = configuration) => {
   const mappings = config[serviceName] || []
   if (!Array.isArray(mappings)) throw new Error(`Anonymisation mappings for ${serviceName} must be an array`)
   const tables = new Set()
@@ -38,7 +38,7 @@ function getAnonymisationMappings (serviceName, config = configuration) {
   return mappings
 }
 
-function describeAnonymisation (serviceName, config = configuration) {
+const describeAnonymisation = (serviceName, config = configuration) => {
   const mappings = getAnonymisationMappings(serviceName, config)
   const tables = mappings.map(mapping => ({
     schema: mapping.schema,
@@ -55,15 +55,15 @@ function describeAnonymisation (serviceName, config = configuration) {
   }
 }
 
-function getAnonymisationConfirmation (target, description) {
+const getAnonymisationConfirmation = (target, description) => {
   return `${getTargetConfirmation(target)}#anonymise=${description.fingerprint.slice(0, 16)}`
 }
 
-function qualifiedTable (mapping) {
+const qualifiedTable = (mapping) => {
   return `${quoteIdentifier(mapping.schema)}.${quoteIdentifier(mapping.table)}`
 }
 
-async function inspectTable (client, mapping) {
+const inspectTable = async (client, mapping) => {
   const parameters = [mapping.schema, mapping.table]
   const { rows: columns } = await client.query(`
     SELECT attribute.attname AS name, type.typname AS type, relation.relkind AS relation_kind,
@@ -132,7 +132,7 @@ async function inspectTable (client, mapping) {
   return { mapping, primaryKeys, totalRows: Number(seeds[0].total_rows) }
 }
 
-async function readProtectedDataFingerprint (client, mapping) {
+const readProtectedDataFingerprint = async (client, mapping) => {
   const { rows } = await client.query(`
     SELECT COUNT(*)::text AS row_count,
       COALESCE(SUM(('x' || SUBSTR(MD5((TO_JSONB(recovery_row) - $1::text[])::text), 1, 16))::bit(64)::bigint::numeric), 0)::text AS protected_hash_1,
@@ -142,7 +142,7 @@ async function readProtectedDataFingerprint (client, mapping) {
   return rows[0]
 }
 
-function buildMaskedRows (rows, mapping, primaryKeys) {
+const buildMaskedRows = (rows, mapping, primaryKeys) => {
   const maskedRows = []
   const allowed = new Set(Object.keys(mapping.fieldMap))
   for (const row of rows) {
@@ -165,7 +165,7 @@ function buildMaskedRows (rows, mapping, primaryKeys) {
   return maskedRows
 }
 
-async function anonymiseTable (client, inspected, batchSize) {
+const anonymiseTable = async (client, inspected, batchSize) => {
   const { mapping, primaryKeys, totalRows } = inspected
   const table = qualifiedTable(mapping)
   const before = await readProtectedDataFingerprint(client, mapping)
@@ -196,7 +196,7 @@ async function anonymiseTable (client, inspected, batchSize) {
   return { schema: mapping.schema, table: mapping.table, processedRows, updatedRows }
 }
 
-async function anonymiseDatabase (options, dependencies = {}) {
+const anonymiseDatabase = async (options, dependencies = {}) => {
   const environment = options.environment || process.env
   assertAnonymisationTarget(environment, options.target)
   const config = options.config || configuration
