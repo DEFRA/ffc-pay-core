@@ -5,7 +5,13 @@ const fs = require('fs')
 const path = require('path')
 const databaseRefresh = require('../config/database-refresh')
 const databaseProfiles = require('../config/database-profiles')
+const { getDatabaseAuthMode, getDatabaseTenantId } = require('../database/database-auth')
 const archiveTool = require('./database-archive')
+const {
+  assertAnonymisationTarget,
+  describeAnonymisation,
+  getAnonymisationConfirmation
+} = require('../services/database-anonymisation-service')
 const {
   createTemporaryDatabaseName,
   getTargetConfirmation,
@@ -22,6 +28,7 @@ function parseArgs (argv = process.argv.slice(2)) {
     help: false,
     dryRun: false,
     wipe: false,
+    anonymise: false,
     outputDir: null,
     manifest: null,
     confirmTargetSet: null,
@@ -55,6 +62,8 @@ function parseArgs (argv = process.argv.slice(2)) {
       options.dryRun = true
     } else if (arg === '--wipe') {
       options.wipe = true
+    } else if (arg === '--anonymise') {
+      options.anonymise = true
     } else if (arg === '--help' || arg === '-h') {
       options.help = true
     } else {
@@ -65,7 +74,7 @@ function parseArgs (argv = process.argv.slice(2)) {
   if (options.help) return options
 
   if (action === 'backup') {
-    if (options.manifest || options.dryRun || options.wipe || options.confirmTargetSet) {
+    if (options.manifest || options.dryRun || options.wipe || options.confirmTargetSet || options.anonymise) {
       throw new Error('Backup accepts only --output-dir and --database')
     }
   } else if (action === 'restore') {
@@ -100,10 +109,10 @@ function usage () {
   return [
     'Usage:',
     '  npm run database:backup-set -- [--output-dir <directory>] [--database <base-name> ...]',
-    '  npm run database:restore-set -- --manifest <set-manifest.json> --dry-run',
-    '  npm run database:restore-set -- --manifest <set-manifest.json> --wipe --confirm-target-set <token>',
-    '  npm run database:stream-set -- --dry-run [--database <base-name> ...]',
-    '  npm run database:stream-set -- --wipe --confirm-target-set <token> [--database <base-name> ...]',
+    '  npm run database:restore-set -- --manifest <set-manifest.json> --dry-run [--anonymise]',
+    '  npm run database:restore-set -- --manifest <set-manifest.json> --wipe --confirm-target-set <token> [--anonymise]',
+    '  npm run database:stream-set -- --dry-run [--database <base-name> ...] [--anonymise]',
+    '  npm run database:stream-set -- --wipe --confirm-target-set <token> [--database <base-name> ...] [--anonymise]',
     '',
     'The base database names and SOURCE_ENV/TARGET_ENV are configured in app/config/database-refresh.js.'
   ].join('\n')
@@ -155,6 +164,14 @@ function buildDatabaseEnvironment (baseName, side, environment = process.env, co
     ...environment,
     RECOVERY_SERVICE_NAME: baseName
   }
+  const authModeKey = side === 'source' ? 'RECOVERY_SOURCE_DB_AUTH' : 'RECOVERY_TARGET_DB_AUTH'
+  const tenantIdKey = side === 'source' ? 'RECOVERY_SOURCE_DB_TENANT_ID' : 'RECOVERY_TARGET_DB_TENANT_ID'
+  const authMode = side === 'target' && config.TARGET_ENV === 'local'
+    ? 'password'
+    : getDatabaseAuthMode(environment, side, baseName, config)
+  const tenantId = getDatabaseTenantId(environment, side, baseName, config)
+  databaseEnvironment[authModeKey] = authMode
+  if (tenantId) databaseEnvironment[tenantIdKey] = tenantId
   delete databaseEnvironment.RECOVERY_SOURCE_DATABASE
   delete databaseEnvironment.RECOVERY_TARGET_DATABASE
 
@@ -301,11 +318,28 @@ function readDatabaseBackupSet (manifestPath, config = databaseRefresh) {
   return { manifest, manifestPath: resolvedManifestPath, databases }
 }
 
+function applyAnonymisationPlan (plan, enabled) {
+  if (!enabled) return plan
+  const configured = plan.map(entry => {
+    assertAnonymisationTarget(entry.environment, entry.target)
+    const anonymisation = describeAnonymisation(entry.baseName)
+    return {
+      ...entry,
+      anonymisation,
+      confirmation: anonymisation.tables.length > 0 ? getAnonymisationConfirmation(entry.target, anonymisation) : entry.confirmation
+    }
+  })
+  if (!configured.some(entry => entry.anonymisation.tables.length > 0)) {
+    throw new Error('No selected databases have anonymisation mappings; configure app/config/database-anonymisation.js first')
+  }
+  return configured
+}
+
 function getRestorePlan (backupSet, options = {}) {
   const config = options.config || databaseRefresh
   const environment = options.environment || process.env
 
-  return backupSet.databases.map(entry => {
+  return applyAnonymisationPlan(backupSet.databases.map(entry => {
     const targetEnvironment = buildDatabaseEnvironment(entry.baseName, 'target', environment, config)
     const target = archiveTool.getTargetProfile(targetEnvironment, {
       serviceName: entry.baseName,
@@ -317,7 +351,7 @@ function getRestorePlan (backupSet, options = {}) {
       target,
       confirmation: getTargetConfirmation(target)
     }
-  })
+  }), options.anonymise)
 }
 
 function getStreamRestorePlan (requestedNames, options = {}) {
@@ -325,7 +359,7 @@ function getStreamRestorePlan (requestedNames, options = {}) {
   const environment = options.environment || process.env
   const databaseNames = getConfiguredDatabaseNames(requestedNames, config)
 
-  return databaseNames.map(baseName => {
+  return applyAnonymisationPlan(databaseNames.map(baseName => {
     const localTarget = config.TARGET_ENV === 'local'
       ? getLocalDatabaseTarget(baseName, config, environment)
       : undefined
@@ -346,7 +380,7 @@ function getStreamRestorePlan (requestedNames, options = {}) {
       target,
       confirmation: getTargetConfirmation(target)
     }
-  })
+  }), options.anonymise)
 }
 
 function getTargetSetConfirmation (plan, operation = 'archive') {
@@ -363,14 +397,15 @@ async function dryRunDatabaseRestoreSet (plan, options = {}, dependencies = {}) 
     results.push(await restoreArchive({
       archive: entry.archivePath,
       environment: entry.environment,
+      anonymise: Boolean(entry.anonymisation?.tables.length),
       dryRun: true
     }))
   }
 
   const confirmation = getTargetSetConfirmation(plan)
   console.log('\nDatabase restore-set dry run passed. Targets:')
-  for (const entry of plan) console.log(`  ${entry.baseName}: ${entry.confirmation}`)
-  console.log(`Live restore requires --wipe --confirm-target-set ${confirmation}`)
+  for (const entry of plan) console.log(`  ${entry.baseName}: ${entry.confirmation}${entry.anonymisation?.tables.length === 0 ? ' [no mapping: unchanged]' : ''}`)
+  console.log(`Live restore requires --wipe --confirm-target-set ${confirmation}${options.anonymise ? ' --anonymise' : ''}`)
   return { dryRun: true, confirmation, targets: plan.map(entry => entry.confirmation), results }
 }
 
@@ -378,13 +413,13 @@ async function dryRunDatabaseStreamSet (plan, dependencies = {}) {
   const prepareStream = dependencies.prepareDatabaseStreamRestore || archiveTool.prepareDatabaseStreamRestore
   const results = []
   for (const entry of plan) {
-    results.push(await prepareStream({ environment: entry.environment, dryRun: true }))
+    results.push(await prepareStream({ environment: entry.environment, dryRun: true, anonymise: Boolean(entry.anonymisation?.tables.length) }))
   }
 
   const confirmation = getTargetSetConfirmation(plan, 'stream')
   console.log('\nDatabase stream dry run passed. Targets:')
-  for (const entry of plan) console.log(`  ${entry.baseName}: ${entry.sourceDatabase} -> ${entry.confirmation}`)
-  console.log(`Live stream requires --wipe --confirm-target-set ${confirmation}`)
+  for (const entry of plan) console.log(`  ${entry.baseName}: ${entry.sourceDatabase} -> ${entry.confirmation}${entry.anonymisation?.tables.length === 0 ? ' [no mapping: unchanged]' : ''}`)
+  console.log(`Live stream requires --wipe --confirm-target-set ${confirmation}${plan.some(entry => entry.anonymisation) ? ' --anonymise' : ''}`)
   return { dryRun: true, confirmation, targets: plan.map(entry => entry.confirmation), results }
 }
 
@@ -415,7 +450,7 @@ async function restoreDatabaseBackupSet (options = {}, dependencies = {}) {
   const environment = options.environment || process.env
   const readSet = dependencies.readDatabaseBackupSet || readDatabaseBackupSet
   const backupSet = readSet(options.manifest, config)
-  const plan = getRestorePlan(backupSet, { config, environment })
+  const plan = getRestorePlan(backupSet, { config, environment, anonymise: options.anonymise })
   const confirmation = getTargetSetConfirmation(plan)
 
   if (options.dryRun) return dryRunDatabaseRestoreSet(plan, options, dependencies)
@@ -434,9 +469,11 @@ async function restoreDatabaseBackupSet (options = {}, dependencies = {}) {
   try {
     for (const entry of plan) {
       console.log(`\n=== Staging ${entry.baseName} for ${entry.confirmation} ===`)
+      if (entry.anonymisation?.tables.length === 0) console.log(`No anonymisation mapping for ${entry.baseName}; its data will remain unchanged.`)
       const database = await prepareArchive({
         archive: entry.archivePath,
         environment: entry.environment,
+        anonymise: Boolean(entry.anonymisation?.tables.length),
         wipe: true,
         confirmTarget: entry.confirmation
       })
@@ -472,7 +509,8 @@ async function restoreDatabaseBackupSet (options = {}, dependencies = {}) {
       databases: prepared.map(database => ({
         baseName: database.baseName,
         target: database.confirmation,
-        previousDatabase: database.previousDatabase || null
+        previousDatabase: database.previousDatabase || null,
+        ...(options.anonymise ? { anonymisation: database.anonymisation || { status: 'not-configured' } } : {})
       }))
     }
   } finally {
@@ -483,7 +521,7 @@ async function restoreDatabaseBackupSet (options = {}, dependencies = {}) {
 async function streamDatabaseRefreshSet (options = {}, dependencies = {}) {
   const config = options.config || databaseRefresh
   const environment = options.environment || process.env
-  const plan = getStreamRestorePlan(options.databaseNames || [], { config, environment })
+  const plan = getStreamRestorePlan(options.databaseNames || [], { config, environment, anonymise: options.anonymise })
   const confirmation = getTargetSetConfirmation(plan, 'stream')
 
   if (options.dryRun) return dryRunDatabaseStreamSet(plan, dependencies)
@@ -508,8 +546,10 @@ async function streamDatabaseRefreshSet (options = {}, dependencies = {}) {
 
     for (const entry of plan) {
       console.log(`\n=== Streaming ${entry.sourceDatabase} to ${entry.confirmation} ===`)
+      if (entry.anonymisation?.tables.length === 0) console.log(`No anonymisation mapping for ${entry.baseName}; its data will remain unchanged.`)
       const database = await prepareStream({
         environment: entry.environment,
+        anonymise: Boolean(entry.anonymisation?.tables.length),
         wipe: true,
         confirmTarget: entry.confirmation
       })
@@ -547,7 +587,8 @@ async function streamDatabaseRefreshSet (options = {}, dependencies = {}) {
         sourceDatabase: database.sourceDatabase,
         target: database.confirmation,
         streamedArchiveSha256: database.streamedArchiveSha256,
-        previousDatabase: database.previousDatabase || null
+        previousDatabase: database.previousDatabase || null,
+        ...(options.anonymise ? { anonymisation: database.anonymisation || { status: 'not-configured' } } : {})
       }))
     }
   } finally {

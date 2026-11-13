@@ -26,6 +26,7 @@ const {
 const fs = require('fs')
 const os = require('os')
 const path = require('path')
+const { getConnectionEnvironment } = require('../app/tools/database-archive')
 
 test('libpq SSL mode matches source and target connection settings', () => {
   assert.equal(getPgSslMode({ ssl: true }, {}, 'source'), 'require')
@@ -43,6 +44,20 @@ test('connection arguments keep credentials out of the process arguments', () =>
   assert.deepEqual(args, ['--host', 'db.example', '--port', '5432', '--username', 'backup-user', '--dbname', 'payments', '--no-password'])
   assert.equal(args.includes('secret'), false)
   assert.equal(environment.PGPASSWORD, 'secret')
+  assert.equal(environment.PGSSLMODE, 'require')
+})
+
+test('PostgreSQL tool environment resolves async Entra tokens into PGPASSWORD', async () => {
+  const environment = await getConnectionEnvironment({
+    host: 'source.example',
+    port: 5432,
+    user: 'reader',
+    password: async () => 'entra-access-token',
+    database: 'payments-prd',
+    ssl: true
+  }, {}, 'source')
+
+  assert.equal(environment.PGPASSWORD, 'entra-access-token')
   assert.equal(environment.PGSSLMODE, 'require')
 })
 

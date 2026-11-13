@@ -1,5 +1,20 @@
-const SOURCE_ENV = 'prd'
-const TARGET_ENV = 'local'
+const DEFAULT_SOURCE_ENV = 'prd'
+const DEFAULT_TARGET_ENV = 'local'
+
+function resolveRefreshEnvironments (environment = process.env) {
+  const sourceEnvironment = environment.DATABASE_REFRESH_SOURCE_ENV
+  const targetEnvironment = environment.DATABASE_REFRESH_TARGET_ENV
+
+  return {
+    SOURCE_ENV: typeof sourceEnvironment === 'string' && sourceEnvironment.trim() ? sourceEnvironment.trim() : DEFAULT_SOURCE_ENV,
+    TARGET_ENV: typeof targetEnvironment === 'string' && targetEnvironment.trim() ? targetEnvironment.trim() : DEFAULT_TARGET_ENV
+  }
+}
+
+const { SOURCE_ENV, TARGET_ENV } = resolveRefreshEnvironments()
+const DEFAULT_SOURCE_AUTH = 'entra'
+const DEFAULT_HOSTED_TARGET_AUTH = 'entra'
+const DATABASE_AUTH_OVERRIDES = {}
 
 // Base database names only; the selected environments are appended by the profile resolver.
 const DATABASE_NAMES = [
@@ -15,7 +30,11 @@ const DATABASE_NAMES = [
   'ffc-pay-responses',
   'ffc-pay-submission',
   'ffc-pay-tracking',
-  'fcp-pds-data-retention'
+  'fcp-pds-data-retention',
+  'ffc-doc-statement-data',
+  'ffc-doc-statement-constructor',
+  'ffc-doc-statement-generator',
+  'ffc-doc-statement-publisher'
 ]
 
 const LOCAL_DATABASE_TARGETS = {
@@ -70,12 +89,32 @@ const LOCAL_DATABASE_TARGETS = {
   'fcp-pds-data-retention': {
     databaseName: 'fcp_pds_data_retention',
     port: 5462
+  },
+  'ffc-doc-statement-data': {
+    databaseName: 'ffc_doc_statement_data',
+    port: 5482
+  },
+  'ffc-doc-statement-constructor': {
+    databaseName: 'ffc_doc_statement_constructor',
+    port: 5486
+  },
+  'ffc-doc-statement-generator': {
+    databaseName: 'ffc_doc_statement_generator',
+    port: 5488
+  },
+  'ffc-doc-statement-publisher': {
+    databaseName: 'ffc_doc_statement_publisher',
+    port: 5487
   }
 }
 
 module.exports = {
+  resolveRefreshEnvironments,
   SOURCE_ENV,
   TARGET_ENV,
+  DEFAULT_SOURCE_AUTH,
+  DEFAULT_HOSTED_TARGET_AUTH,
+  DATABASE_AUTH_OVERRIDES,
   DATABASE_NAMES,
   LOCAL_DATABASE_TARGETS
 }
