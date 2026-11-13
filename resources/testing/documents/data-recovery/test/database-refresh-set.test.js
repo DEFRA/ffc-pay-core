@@ -64,6 +64,7 @@ test('set CLI accepts database subsets and requires safe restore options', () =>
     help: false,
     dryRun: false,
     wipe: false,
+    anonymise: false,
     outputDir: null,
     manifest: null,
     confirmTargetSet: null,
@@ -96,11 +97,39 @@ test('per-database environments set source/target suffixes and clear single-data
 
   assert.equal(source.RECOVERY_SOURCE_ENV, 'prd')
   assert.equal(source.RECOVERY_SERVICE_NAME, 'ffc-pay-processing')
+  assert.equal(source.RECOVERY_SOURCE_DB_AUTH, 'entra')
   assert.equal(source.RECOVERY_SOURCE_DATABASE, undefined)
   assert.equal(target.RECOVERY_TARGET_ENV, 'local')
   assert.equal(target.RECOVERY_TARGET_MODE, 'local')
+  assert.equal(target.RECOVERY_TARGET_DB_AUTH, 'password')
   assert.equal(target.RECOVERY_TARGET_DATABASE, 'ffc_pay_processing')
   assert.equal(target.LOCAL_DB_PORT, '5467')
+})
+
+test('per-database environments apply configured auth mode and tenant overrides', () => {
+  const config = {
+    ...testConfig('test'),
+    DEFAULT_SOURCE_AUTH: 'entra',
+    DEFAULT_HOSTED_TARGET_AUTH: 'entra',
+    DATABASE_AUTH_OVERRIDES: {
+      'ffc-pay-processing': {
+        source: { mode: 'password' },
+        target: { mode: 'entra', tenantId: 'service-tenant' }
+      }
+    }
+  }
+  const environment = {
+    RECOVERY_SOURCE_DB_AUTH: 'entra',
+    RECOVERY_SOURCE_DB_PASSWORD: 'source-password',
+    RECOVERY_TARGET_DB_AUTH: 'password',
+    RECOVERY_TARGET_DB_TENANT_ID: 'global-target-tenant'
+  }
+  const source = buildDatabaseEnvironment('ffc-pay-processing', 'source', environment, config)
+  const target = buildDatabaseEnvironment('ffc-pay-processing', 'target', environment, config)
+
+  assert.equal(source.RECOVERY_SOURCE_DB_AUTH, 'password')
+  assert.equal(target.RECOVERY_TARGET_DB_AUTH, 'entra')
+  assert.equal(target.RECOVERY_TARGET_DB_TENANT_ID, 'service-tenant')
 })
 
 test('backup set writes private archives and a manifest for every selected database', async () => {
@@ -381,4 +410,74 @@ test('stream set does not start transfers when a target is unavailable', async (
     'check:ffc-pay-processing',
     'check:ffc-pay-submission'
   ])
+})
+
+test('set anonymisation is opt-in and changes confirmation only for configured databases', () => {
+  assert.throws(() => parseArgs(['backup', '--anonymise']), /Backup accepts only/)
+  assert.equal(parseArgs(['stream', '--dry-run', '--anonymise']).anonymise, true)
+  assert.equal(parseArgs(['restore', '--manifest', 'set.json', '--dry-run', '--anonymise']).anonymise, true)
+  const config = testConfig('local', ['ffc-doc-statement-data', 'ffc-pay-processing'])
+  const normal = getStreamRestorePlan([], { config, environment: {} })
+  const masked = getStreamRestorePlan([], { config, environment: {}, anonymise: true })
+  assert.notEqual(getTargetSetConfirmation(normal, 'stream'), getTargetSetConfirmation(masked, 'stream'))
+  assert.match(masked[0].confirmation, /#anonymise=/)
+  assert.equal(masked[1].confirmation, normal[1].confirmation)
+  assert.equal(masked[1].anonymisation.tables.length, 0)
+  assert.throws(() => getStreamRestorePlan([], { config: testConfig(), environment: {}, anonymise: true }), /No selected databases/)
+})
+
+test('masked stream dry run passes masking only to configured database preparation', async () => {
+  const config = testConfig('local', ['ffc-doc-statement-data', 'ffc-pay-processing'])
+  const prepared = []
+  await streamDatabaseRefreshSet({ config, environment: {}, dryRun: true, anonymise: true }, {
+    prepareDatabaseStreamRestore: async options => { prepared.push(options); return { dryRun: true } }
+  })
+  assert.deepEqual(prepared.map(options => options.anonymise), [true, false])
+  assert.ok(prepared.every(options => options.dryRun))
+})
+
+test('a normal refresh token cannot authorise an anonymised stream', async () => {
+  const config = testConfig('local', ['ffc-doc-statement-data'])
+  const plan = getStreamRestorePlan([], { config, environment: {} })
+  await assert.rejects(streamDatabaseRefreshSet({
+    config,
+    environment: {},
+    anonymise: true,
+    wipe: true,
+    confirmTargetSet: getTargetSetConfirmation(plan, 'stream')
+  }), /must exactly match/)
+})
+
+test('masking failure during set preparation prevents all cutovers and cleans prepared databases', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'database-refresh-anonymise-test-'))
+  const events = []
+  try {
+    const names = ['ffc-doc-statement-data', 'ffc-doc-statement-constructor']
+    const config = testConfig('local', names)
+    const { manifestPath } = createTestSet(directory, names)
+    const backupSet = readDatabaseBackupSet(manifestPath, config)
+    const plan = getRestorePlan(backupSet, { config, environment: {}, anonymise: true })
+    await assert.rejects(restoreDatabaseBackupSet({
+      manifest: manifestPath,
+      config,
+      environment: {},
+      anonymise: true,
+      wipe: true,
+      confirmTargetSet: getTargetSetConfirmation(plan)
+    }, {
+      readDatabaseBackupSet: () => backupSet,
+      prepareDatabaseArchiveRestore: async options => {
+        assert.equal(options.anonymise, true)
+        assert.match(options.confirmTarget, /#anonymise=/)
+        events.push('prepare')
+        if (events.length === 2) throw new Error('Anonymisation failed')
+        return { stagingDatabase: 'first-stage', stageCreated: true }
+      },
+      commitPreparedDatabaseRestore: async () => events.push('commit'),
+      cleanupPreparedDatabaseRestore: async () => events.push('cleanup')
+    }), /Anonymisation failed/)
+    assert.deepEqual(events, ['prepare', 'prepare', 'cleanup'])
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true })
+  }
 })

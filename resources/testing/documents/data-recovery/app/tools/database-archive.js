@@ -11,6 +11,12 @@ const { buildSourceConfig } = require('../database/source-database-connection')
 const { createPostgresConnection } = require('../database/postgres-connection')
 const { resolveTargetProfile } = require('../config/database-profiles')
 const {
+  assertAnonymisationTarget,
+  describeAnonymisation,
+  getAnonymisationConfirmation,
+  anonymiseDatabase
+} = require('../services/database-anonymisation-service')
+const {
   getPgSslMode,
   buildConnectionArgs,
   buildToolEnvironment,
@@ -42,7 +48,7 @@ const pipelineAsync = promisify(pipeline)
 
 function parseArgs (argv = process.argv.slice(2)) {
   const [action, ...rest] = argv
-  const options = { action, dryRun: false, wipe: false, confirmTarget: null, output: null, archive: null, help: false }
+  const options = { action, dryRun: false, wipe: false, anonymise: false, confirmTarget: null, output: null, archive: null, help: false }
 
   if (!action || action === '--help' || action === '-h') {
     options.help = true
@@ -67,6 +73,8 @@ function parseArgs (argv = process.argv.slice(2)) {
       options.wipe = true
     } else if (arg === '--dry-run') {
       options.dryRun = true
+    } else if (arg === '--anonymise') {
+      options.anonymise = true
     } else if (arg === '--help' || arg === '-h') {
       options.help = true
     } else {
@@ -79,6 +87,7 @@ function parseArgs (argv = process.argv.slice(2)) {
   if (action === 'restore' && options.output) throw new Error('Use --archive with restore, not --output')
   if (action === 'restore' && !options.archive) throw new Error('Restore requires --archive <file>')
   if (action === 'backup' && options.wipe) throw new Error('--wipe is only valid with restore')
+  if (action === 'backup' && options.anonymise) throw new Error('--anonymise is only valid with restore')
   if (options.dryRun && action === 'backup') throw new Error('--dry-run is only valid with restore')
 
   return options
@@ -88,7 +97,7 @@ function usage () {
   return [
     'Usage:',
     '  npm run database:backup -- [--output <archive.dump>]',
-    '  npm run database:restore -- --archive <archive.dump> --wipe --confirm-target <host:port/database> [--dry-run]',
+    '  npm run database:restore -- --archive <archive.dump> --wipe --confirm-target <confirmation> [--dry-run] [--anonymise]',
     '',
     'The source and target are selected through RECOVERY_SOURCE_* and RECOVERY_TARGET_* environment variables.'
   ].join('\n')
@@ -105,6 +114,29 @@ function getTargetProfile (environment, archiveSource) {
   return resolveTargetProfile(serviceName, environment).config
 }
 
+function getRestoreAnonymisation (options, environment, target, serviceName) {
+  if (!options.anonymise) return null
+  assertAnonymisationTarget(environment, target)
+  const description = describeAnonymisation(serviceName)
+  if (description.tables.length === 0) throw new Error(`No anonymisation mappings configured for ${serviceName}`)
+  return description
+}
+
+function assertConfirmedRestore (target, options, anonymisation) {
+  if (anonymisation && options.confirmTarget !== getAnonymisationConfirmation(target, anonymisation)) {
+    throw new Error(`--confirm-target must exactly match the anonymisation dry-run token: ${getAnonymisationConfirmation(target, anonymisation)}`)
+  }
+  assertRestoreConfirmation(target, anonymisation ? { ...options, confirmTarget: getTargetConfirmation(target) } : options)
+}
+
+function logAnonymisationPlan (description) {
+  if (!description) return
+  for (const table of description.tables) {
+    console.log(`[DRY RUN] Anonymise ${table.schema}.${table.table}: ${Object.keys(table.fieldMap).join(', ')} (${description.profileVersion})`)
+  }
+  console.log('[DRY RUN] Schema, identifier coverage and write hooks will be checked in staging before masking.')
+}
+
 function getToolVersions () {
   const pgDump = getPgToolVersion('pg_dump')
   const pgRestore = getPgToolVersion('pg_restore')
@@ -116,8 +148,9 @@ function getToolVersions () {
   }
 }
 
-function getConnectionEnvironment (config, environment, side) {
-  return buildToolEnvironment(config, getPgSslMode(config, environment, side), environment)
+async function getConnectionEnvironment (config, environment, side) {
+  const password = typeof config.password === 'function' ? await config.password() : config.password
+  return buildToolEnvironment({ ...config, password }, getPgSslMode(config, environment, side), environment)
 }
 
 function getTimestampToken () {
@@ -194,8 +227,10 @@ function waitForSuccessfulExit (child, command) {
 }
 
 async function streamPgDumpToRestore (sourceConfig, stagingConfig, snapshotId, environment) {
+  const sourceToolEnvironment = await getConnectionEnvironment(sourceConfig, environment, 'source')
+  const targetToolEnvironment = await getConnectionEnvironment(stagingConfig, environment, 'target')
   const dump = spawn('pg_dump', buildDumpStreamArgs(sourceConfig, snapshotId), {
-    env: getConnectionEnvironment(sourceConfig, environment, 'source'),
+    env: sourceToolEnvironment,
     stdio: ['ignore', 'pipe', 'pipe']
   })
   const restoreArgs = [
@@ -208,7 +243,7 @@ async function streamPgDumpToRestore (sourceConfig, stagingConfig, snapshotId, e
     '--verbose'
   ]
   const restore = spawn('pg_restore', restoreArgs, {
-    env: getConnectionEnvironment(stagingConfig, environment, 'target'),
+    env: targetToolEnvironment,
     stdio: ['pipe', 'ignore', 'pipe']
   })
 
@@ -237,9 +272,9 @@ async function streamPgDumpToRestore (sourceConfig, stagingConfig, snapshotId, e
   }
 }
 
-function runSchemaDump (databaseConfig, snapshotId, outputPath, environment, side) {
+async function runSchemaDump (databaseConfig, snapshotId, outputPath, environment, side) {
   runPgTool('pg_dump', buildDumpArgs(databaseConfig, snapshotId, outputPath, true), {
-    environment: getConnectionEnvironment(databaseConfig, environment, side)
+    environment: await getConnectionEnvironment(databaseConfig, environment, side)
   })
 }
 
@@ -273,7 +308,7 @@ async function collectSourceSnapshot (connection, sourceConfig, environment, ver
     const rowCounts = await getExactDataCounts(client, inventory)
     const extensions = await getDatabaseExtensions(client)
     const schemaPath = path.join(temporaryDirectory, 'source-schema.sql')
-    runSchemaDump(sourceConfig, snapshotId, schemaPath, environment, 'source')
+    await runSchemaDump(sourceConfig, snapshotId, schemaPath, environment, 'source')
     const schemaSha256 = await hashSchemaDumpFile(schemaPath)
 
     return { client, snapshotId, metadata, inventory, rowCounts, extensions, schemaSha256, schemaPath }
@@ -310,12 +345,12 @@ async function createDatabaseArchive (options = {}) {
     snapshot = await collectSourceSnapshot(connection, source, environment, versions, temporaryDirectory)
     const archiveTemporaryPath = path.join(temporaryDirectory, path.basename(outputPath))
     runPgTool('pg_dump', buildDumpArgs(source, snapshot.snapshotId, archiveTemporaryPath), {
-      environment: getConnectionEnvironment(source, environment, 'source')
+      environment: await getConnectionEnvironment(source, environment, 'source')
     })
     fs.chmodSync(archiveTemporaryPath, 0o600)
 
     runPgTool('pg_restore', ['--list', archiveTemporaryPath], {
-      environment: getConnectionEnvironment(source, environment, 'source'),
+      environment: await getConnectionEnvironment(source, environment, 'source'),
       stdio: ['ignore', 'ignore', 'inherit']
     })
 
@@ -415,7 +450,7 @@ async function validateArchiveFile (archivePath, manifest, versions, environment
   }
 
   runPgTool('pg_restore', ['--list', archivePath], {
-    environment: getConnectionEnvironment(target, environment, 'target'),
+    environment: await getConnectionEnvironment(target, environment, 'target'),
     stdio: ['ignore', 'ignore', 'inherit']
   })
 
@@ -522,6 +557,26 @@ function getTargetAppRoles (environment) {
   const value = environment[TARGET_APP_ROLES_ENV]
   if (!value?.trim()) return []
   return [...new Set(value.split(',').map(role => role.trim()).filter(Boolean))]
+}
+
+async function anonymiseStagedDatabase (context, dependencies = {}) {
+  const mask = dependencies.anonymiseDatabase || anonymiseDatabase
+  const validate = dependencies.validateRestoredDatabase || validateRestoredDatabase
+  const anonymisation = await mask({
+    target: { ...context.target, database: context.stagingDatabase },
+    serviceName: context.serviceName,
+    environment: context.environment
+  })
+  const validation = await validate(
+    context.target,
+    context.stagingDatabase,
+    context.manifest,
+    context.environment,
+    context.temporaryDirectory,
+    context.validationOptions
+  )
+  console.log(`Staging anonymisation and post-mask validation passed (${anonymisation.profileVersion}).`)
+  return { anonymisation, validation }
 }
 
 async function applyTargetAppRoles (connection, databaseName, owner, environment) {
@@ -631,6 +686,8 @@ async function prepareDatabaseArchiveRestore (options = {}) {
   const archivePath = path.resolve(options.archive)
   const { manifest } = readArchiveManifest(archivePath)
   const target = getTargetProfile(environment, manifest.source)
+  const serviceName = environment.RECOVERY_SERVICE_NAME?.trim() || manifest.source.serviceName
+  const anonymisationPlan = getRestoreAnonymisation(options, environment, target, serviceName)
   const versions = getToolVersions()
   const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'ffc-pay-database-restore-'))
   const maintenanceDatabase = environment.RECOVERY_TARGET_ADMIN_DATABASE?.trim() || 'postgres'
@@ -666,7 +723,7 @@ async function prepareDatabaseArchiveRestore (options = {}) {
       throw new Error('Source and target resolve to the same PostgreSQL database; refusing to restore')
     }
 
-    const confirmation = getTargetConfirmation(target)
+    const confirmation = anonymisationPlan ? getAnonymisationConfirmation(target, anonymisationPlan) : getTargetConfirmation(target)
     await validateAvailableExtensions(maintenanceConnection, manifest.verification.extensions, {
       requireExactVersions: environment.RECOVERY_REQUIRE_EXACT_EXTENSION_VERSIONS === 'true'
     })
@@ -674,11 +731,12 @@ async function prepareDatabaseArchiveRestore (options = {}) {
       console.log(`[DRY RUN] Archive checksum and TOC are valid: ${archivePath}`)
       console.log(`[DRY RUN] Source database: ${manifest.source.database} on PostgreSQL ${manifest.source.serverMajor}`)
       console.log(`[DRY RUN] Target database: ${confirmation} on PostgreSQL ${targetServer.serverMajor}`)
-      console.log(`[DRY RUN] A live restore requires --wipe --confirm-target '${confirmation}'`)
-      return { dryRun: true, target: confirmation }
+      logAnonymisationPlan(anonymisationPlan)
+      console.log(`[DRY RUN] A live restore requires --wipe --confirm-target '${confirmation}'${options.anonymise ? ' --anonymise' : ''}`)
+      return { dryRun: true, target: confirmation, ...(anonymisationPlan ? { anonymisation: anonymisationPlan } : {}) }
     }
 
-    assertRestoreConfirmation(target, options)
+    assertConfirmedRestore(target, options, anonymisationPlan)
     const token = getTimestampToken()
     stagingDatabase = createTemporaryDatabaseName(target.database, 'restore', token)
     const backupDatabase = createTemporaryDatabaseName(target.database, 'previous', token)
@@ -702,11 +760,18 @@ async function prepareDatabaseArchiveRestore (options = {}) {
       archivePath
     ]
     runPgTool('pg_restore', restoreArgs, {
-      environment: getConnectionEnvironment(stagingConfig, environment, 'target')
+      environment: await getConnectionEnvironment(stagingConfig, environment, 'target')
     })
 
-    const validation = await validateRestoredDatabase(target, stagingDatabase, manifest, environment, temporaryDirectory)
+    let validation = await validateRestoredDatabase(target, stagingDatabase, manifest, environment, temporaryDirectory)
     console.log(`Staging validation passed: ${validation.relationCount} relations, ${validation.rowCount} exact row counts, ${validation.extensionCount} extensions.`)
+
+    let anonymisation
+    if (anonymisationPlan) {
+      const masked = await anonymiseStagedDatabase({ target, stagingDatabase, serviceName, manifest, environment, temporaryDirectory })
+      validation = masked.validation
+      anonymisation = masked.anonymisation
+    }
 
     const stagingRoleConnection = await createPostgresConnection(stagingConfig, { connectionName: 'staging role setup' })
     let grantedRoles
@@ -728,6 +793,7 @@ async function prepareDatabaseArchiveRestore (options = {}) {
       maintenanceConnection,
       temporaryDirectory,
       validation,
+      ...(anonymisation ? { anonymisation } : {}),
       stageCreated
     }
   } finally {
@@ -763,7 +829,8 @@ async function commitPreparedDatabaseRestore (prepared) {
   return {
     target: prepared.confirmation,
     previousDatabase,
-    validation: prepared.validation
+    validation: prepared.validation,
+    ...(prepared.anonymisation ? { anonymisation: prepared.anonymisation } : {})
   }
 }
 
@@ -801,6 +868,7 @@ async function prepareDatabaseStreamRestore (options = {}) {
   const environment = options.environment || process.env
   const { serviceName, source } = getSourceProfile(environment)
   const target = getTargetProfile(environment, { serviceName, database: source.database })
+  const anonymisationPlan = getRestoreAnonymisation(options, environment, target, serviceName)
   const versions = getToolVersions()
   const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'ffc-pay-database-stream-'))
   const maintenanceDatabase = environment.RECOVERY_TARGET_ADMIN_DATABASE?.trim() || 'postgres'
@@ -842,15 +910,16 @@ async function prepareDatabaseStreamRestore (options = {}) {
     await validateAvailableExtensions(maintenanceConnection, snapshot.extensions, {
       requireExactVersions: environment.RECOVERY_REQUIRE_EXACT_EXTENSION_VERSIONS === 'true'
     })
-    const confirmation = getTargetConfirmation(target)
+    const confirmation = anonymisationPlan ? getAnonymisationConfirmation(target, anonymisationPlan) : getTargetConfirmation(target)
     if (options.dryRun) {
       console.log(`[DRY RUN] Source is readable: ${snapshot.metadata.database} on PostgreSQL ${snapshot.metadata.serverMajor}`)
       console.log(`[DRY RUN] Target is compatible: ${confirmation} on PostgreSQL ${targetServer.serverMajor}`)
-      console.log(`[DRY RUN] A live stream requires --wipe --confirm-target '${confirmation}'`)
-      return { dryRun: true, sourceDatabase: snapshot.metadata.database, target: confirmation }
+      logAnonymisationPlan(anonymisationPlan)
+      console.log(`[DRY RUN] A live stream requires --wipe --confirm-target '${confirmation}'${options.anonymise ? ' --anonymise' : ''}`)
+      return { dryRun: true, sourceDatabase: snapshot.metadata.database, target: confirmation, ...(anonymisationPlan ? { anonymisation: anonymisationPlan } : {}) }
     }
 
-    assertRestoreConfirmation(target, options)
+    assertConfirmedRestore(target, options, anonymisationPlan)
     const token = getTimestampToken()
     stagingDatabase = createTemporaryDatabaseName(target.database, 'stream', token)
     const backupDatabase = createTemporaryDatabaseName(target.database, 'previous', token)
@@ -884,10 +953,25 @@ async function prepareDatabaseStreamRestore (options = {}) {
         extensions: sourceSnapshot.extensions
       }
     }
-    const validation = await validateRestoredDatabase(target, stagingDatabase, streamManifest, environment, temporaryDirectory, {
+    let validation = await validateRestoredDatabase(target, stagingDatabase, streamManifest, environment, temporaryDirectory, {
       sourceSchemaPath: sourceSnapshot.schemaPath
     })
     console.log(`Streaming stage validated: ${validation.relationCount} relations, ${validation.rowCount} exact row counts, ${validation.extensionCount} extensions.`)
+
+    let anonymisation
+    if (anonymisationPlan) {
+      const masked = await anonymiseStagedDatabase({
+        target,
+        stagingDatabase,
+        serviceName,
+        manifest: streamManifest,
+        environment,
+        temporaryDirectory,
+        validationOptions: { sourceSchemaPath: sourceSnapshot.schemaPath }
+      })
+      validation = masked.validation
+      anonymisation = masked.anonymisation
+    }
 
     const stagingRoleConnection = await createPostgresConnection(stagingConfig, { connectionName: 'stream staging role setup' })
     let grantedRoles
@@ -911,6 +995,7 @@ async function prepareDatabaseStreamRestore (options = {}) {
       maintenanceConnection,
       temporaryDirectory,
       validation,
+      ...(anonymisation ? { anonymisation } : {}),
       stageCreated
     }
   } finally {
@@ -968,10 +1053,12 @@ module.exports = {
   buildDumpArgs,
   getSourceProfile,
   getTargetProfile,
+  getConnectionEnvironment,
   createDatabaseArchive,
   readArchiveManifest,
   validateAvailableExtensions,
   validateRestoredDatabase,
+  anonymiseStagedDatabase,
   applyTargetAppRoles,
   databaseExists,
   terminateDatabaseConnections,

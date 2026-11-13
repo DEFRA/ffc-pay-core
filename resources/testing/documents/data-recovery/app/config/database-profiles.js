@@ -1,5 +1,6 @@
 const DEFAULT_TARGET_MODE = 'hosted'
 const DEFAULT_LOCAL_DATABASE = 'ffc_pay_local_recovery'
+const { createDatabasePasswordProvider, getDatabaseAuthMode, getDatabaseTenantId } = require('../database/database-auth')
 
 function getValue (environment, key) {
   const value = environment[key]
@@ -91,15 +92,25 @@ function resolveTargetProfile (serviceName, environment = process.env) {
   if (!database) {
     throw new Error('Set RECOVERY_TARGET_DATABASE or RECOVERY_SERVICE_NAME with RECOVERY_TARGET_ENV')
   }
+  const authMode = getDatabaseAuthMode(environment, 'target', serviceName)
+  if (authMode === 'entra' && !getDatabaseTenantId(environment, 'target', serviceName)) {
+    throw new Error('Set RECOVERY_TARGET_DB_TENANT_ID, RECOVERY_DB_TENANT_ID, or AZURE_TENANT_ID when RECOVERY_TARGET_DB_AUTH=entra')
+  }
+  const password = createDatabasePasswordProvider(
+    environment,
+    'target',
+    getValue(environment, 'RECOVERY_TARGET_DB_PASSWORD'),
+    { serviceName }
+  )
   const config = {
     host: getValue(environment, 'RECOVERY_TARGET_DB_HOST'),
     port: Number(getValue(environment, 'RECOVERY_TARGET_DB_PORT') || 5432),
     user: getValue(environment, 'RECOVERY_TARGET_DB_USER'),
-    password: getValue(environment, 'RECOVERY_TARGET_DB_PASSWORD'),
+    password,
     database
   }
   const missing = Object.entries(config)
-    .filter(([key, value]) => !value && key !== 'port')
+    .filter(([key, value]) => !value && key !== 'port' && !(key === 'password' && authMode === 'entra'))
     .map(([key]) => key)
   if (missing.length > 0) {
     throw new Error(`Missing hosted target database configuration: ${missing.join(', ')}`)
